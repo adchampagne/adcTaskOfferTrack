@@ -199,7 +199,7 @@ export const notificationsApi = {
 // Telegram API
 export const telegramApi = {
   getLink: async () => {
-    const { data } = await api.get<{ linked: boolean; link_url?: string; telegram_username?: string }>('/telegram/link');
+    const { data } = await api.get<{ linked: boolean; link_url?: string; telegram_username?: string; code?: string }>('/telegram/link');
     return data;
   },
 
