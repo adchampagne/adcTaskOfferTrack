@@ -21,6 +21,9 @@ import partnersRoutes from './routes/partners';
 import offersRoutes from './routes/offers';
 import tasksRoutes from './routes/tasks';
 import filesRoutes from './routes/files';
+import notificationsRoutes from './routes/notifications';
+import telegramRoutes from './routes/telegram';
+import { startPolling } from './services/telegramPolling';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -38,6 +41,8 @@ app.use('/api/partners', partnersRoutes);
 app.use('/api/offers', offersRoutes);
 app.use('/api/tasks', tasksRoutes);
 app.use('/api/files', filesRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/telegram', telegramRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -48,6 +53,9 @@ app.get('/api/health', (_req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Сервер запущен на порту ${PORT}`);
   console.log(`📝 API доступно по адресу: http://localhost:${PORT}/api`);
+  
+  // Запускаем Telegram polling для получения сообщений от бота
+  startPolling();
 });
 
 export default app;

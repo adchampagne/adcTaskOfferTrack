@@ -50,9 +50,11 @@ export type TaskType =
 
 export interface Task {
   id: string;
+  task_number: number;
   title: string;
   description: string | null;
   task_type: TaskType;
+  geo: string | null;
   customer_id: string;
   executor_id: string;
   deadline: string;

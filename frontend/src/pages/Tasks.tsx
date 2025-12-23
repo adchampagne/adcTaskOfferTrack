@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { tasksApi, authApi, filesApi } from '../api';
 import { useAuthStore } from '../store/authStore';
-import { Task, TaskStatus, TaskType, taskTypeLabels, taskStatusLabels, User as UserType, TaskFile } from '../types';
+import { Task, TaskStatus, TaskType, taskTypeLabels, taskStatusLabels, User as UserType, TaskFile, geoOptions } from '../types';
 import { format, isPast, isToday, isTomorrow, formatDistanceToNow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -148,6 +148,7 @@ interface TaskFormData {
   title: string;
   description: string;
   task_type: TaskType;
+  geo?: string;
   executor_id: string;
   deadline: string;
   files?: File[];
@@ -159,27 +160,33 @@ function TaskModal({
   currentUserId,
   onClose,
   onSave,
+  pendingFiles,
+  setPendingFiles,
 }: {
   task?: Task;
   users: UserType[];
   currentUserId: string;
   onClose: () => void;
   onSave: (data: TaskFormData) => void;
+  pendingFiles: File[];
+  setPendingFiles: React.Dispatch<React.SetStateAction<File[]>>;
 }) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   const [formData, setFormData] = useState<TaskFormData>({
     title: task?.title || '',
     description: task?.description || '',
     task_type: task?.task_type || 'create_landing',
+    geo: task?.geo || '',
     executor_id: task?.executor_id || '',
     deadline: task?.deadline 
       ? format(new Date(task.deadline), "yyyy-MM-dd'T'HH:mm")
       : format(new Date(Date.now() + 24 * 60 * 60 * 1000), "yyyy-MM-dd'T'HH:mm"),
   });
+
+  const needsGeo = formData.task_type === 'create_landing';
 
   // Загрузка существующих файлов для редактирования
   const { data: existingFiles = [], isLoading: filesLoading } = useQuery({
@@ -192,6 +199,10 @@ function TaskModal({
     e.preventDefault();
     if (!formData.title.trim() || !formData.executor_id || !formData.deadline) {
       toast.error('Заполните обязательные поля');
+      return;
+    }
+    if (needsGeo && !formData.geo) {
+      toast.error('Для задачи "Завести ленд" укажите GEO');
       return;
     }
     onSave({ ...formData, files: pendingFiles });
@@ -276,7 +287,7 @@ function TaskModal({
               </label>
               <select
                 value={formData.task_type}
-                onChange={(e) => setFormData({ ...formData, task_type: e.target.value as TaskType })}
+                onChange={(e) => setFormData({ ...formData, task_type: e.target.value as TaskType, geo: '' })}
                 className="glass-input w-full"
               >
                 {Object.entries(taskTypeLabels).map(([value, label]) => (
@@ -306,6 +317,27 @@ function TaskModal({
               </select>
             </div>
           </div>
+
+          {/* GEO field for create_landing */}
+          {needsGeo && (
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-2">
+                GEO (страна) *
+              </label>
+              <select
+                value={formData.geo}
+                onChange={(e) => setFormData({ ...formData, geo: e.target.value })}
+                className="glass-input w-full"
+              >
+                <option value="">Выберите страну...</option>
+                {geoOptions.map((g) => (
+                  <option key={g.code} value={g.code}>
+                    {g.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-dark-300 mb-2">
@@ -515,7 +547,8 @@ function TaskViewModal({
                 </span>
               </div>
               <h2 className={`text-2xl font-bold ${task.status === 'completed' ? 'text-dark-400 line-through' : 'text-dark-100'}`}>
-                {task.title}
+                {task.task_number && <span className="text-primary-400">#{task.task_number}</span>} {task.title}
+                {task.geo && <span className="ml-2 text-sm font-normal text-dark-400 bg-dark-700/50 px-2 py-0.5 rounded">{task.geo.toUpperCase()}</span>}
               </h2>
             </div>
             <button
@@ -849,11 +882,19 @@ function TaskCard({
               <h3 className={`font-semibold text-lg ${
                 task.status === 'completed' ? 'text-dark-400 line-through' : 'text-dark-100'
               }`}>
+                {task.task_number && <span className="text-primary-400 mr-1">#{task.task_number}</span>}
                 {task.title}
               </h3>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-dark-700/50 text-dark-300 text-xs rounded mt-1">
-                {taskTypeLabels[task.task_type]}
-              </span>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-dark-700/50 text-dark-300 text-xs rounded">
+                  {taskTypeLabels[task.task_type]}
+                </span>
+                {task.geo && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 text-blue-400 text-xs rounded border border-blue-500/30">
+                    {task.geo.toUpperCase()}
+                  </span>
+                )}
+              </div>
             </div>
             
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
@@ -928,6 +969,7 @@ function Tasks() {
   const [viewingTask, setViewingTask] = useState<Task | undefined>();
   const [filter, setFilter] = useState<'all' | 'my' | 'created'>('my');
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'active' | 'all'>('active');
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
@@ -956,6 +998,7 @@ function Tasks() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       setShowModal(false);
+      setPendingFiles([]);
       toast.success('Задача создана');
     },
     onError: (error: unknown) => {
@@ -982,6 +1025,7 @@ function Tasks() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       setEditingTask(undefined);
+      setPendingFiles([]);
       toast.success('Задача обновлена');
     },
     onError: (error: unknown) => {
@@ -1192,8 +1236,11 @@ function Tasks() {
           onClose={() => {
             setShowModal(false);
             setEditingTask(undefined);
+            setPendingFiles([]);
           }}
           onSave={handleSave}
+          pendingFiles={pendingFiles}
+          setPendingFiles={setPendingFiles}
         />
       )}
 

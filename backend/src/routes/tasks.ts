@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import db from '../database';
+import db, { getNextTaskNumber } from '../database';
 import { authenticateToken } from '../middleware/auth';
 import { Task, TaskWithUsers } from '../types';
+import { notifyTaskAssigned, notifyStatusChanged } from './notifications';
 
 const router = Router();
 
@@ -109,10 +110,16 @@ router.get('/:id', authenticateToken, (req: Request, res: Response): void => {
 // Создать таск (все могут)
 router.post('/', authenticateToken, (req: Request, res: Response): void => {
   try {
-    const { title, description, task_type, executor_id, deadline } = req.body;
+    const { title, description, task_type, executor_id, deadline, geo } = req.body;
 
     if (!title || !task_type || !executor_id || !deadline) {
       res.status(400).json({ error: 'Заголовок, тип, исполнитель и дедлайн обязательны' });
+      return;
+    }
+
+    // Для задач типа "завести ленд" требуем GEO
+    if (task_type === 'create_landing' && !geo) {
+      res.status(400).json({ error: 'Для задачи "Завести ленд" необходимо указать GEO' });
       return;
     }
 
@@ -124,11 +131,12 @@ router.post('/', authenticateToken, (req: Request, res: Response): void => {
 
     const id = uuidv4();
     const customer_id = req.user?.userId;
+    const task_number = getNextTaskNumber();
 
     db.prepare(`
-      INSERT INTO tasks (id, title, description, task_type, customer_id, executor_id, deadline)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(id, title, description || null, task_type, customer_id, executor_id, deadline);
+      INSERT INTO tasks (id, task_number, title, description, task_type, geo, customer_id, executor_id, deadline)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, task_number, title, description || null, task_type, geo || null, customer_id, executor_id, deadline);
 
     const task = db.prepare(`
       SELECT t.*, 
@@ -139,6 +147,9 @@ router.post('/', authenticateToken, (req: Request, res: Response): void => {
       LEFT JOIN users e ON t.executor_id = e.id
       WHERE t.id = ?
     `).get(id) as TaskWithUsers;
+
+    // Отправляем уведомление исполнителю
+    notifyTaskAssigned(task, task.customer_name || 'Пользователь');
 
     res.status(201).json(task);
   } catch (error) {
@@ -188,6 +199,12 @@ router.patch('/:id/status', authenticateToken, (req: Request, res: Response): vo
       WHERE t.id = ?
     `).get(id) as TaskWithUsers;
 
+    // Получаем имя пользователя, который изменил статус
+    const currentUser = db.prepare('SELECT full_name FROM users WHERE id = ?').get(req.user?.userId) as { full_name: string } | undefined;
+    
+    // Отправляем уведомления об изменении статуса
+    notifyStatusChanged(task, status, req.user?.userId || '', currentUser?.full_name || 'Пользователь');
+
     res.json(task);
   } catch (error) {
     console.error('Update task status error:', error);
@@ -198,7 +215,7 @@ router.patch('/:id/status', authenticateToken, (req: Request, res: Response): vo
 // Обновить таск
 router.put('/:id', authenticateToken, (req: Request, res: Response): void => {
   try {
-    const { title, description, task_type, executor_id, deadline } = req.body;
+    const { title, description, task_type, executor_id, deadline, geo } = req.body;
     const { id } = req.params;
 
     const existing = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as Task | undefined;
@@ -221,15 +238,23 @@ router.put('/:id', authenticateToken, (req: Request, res: Response): void => {
       }
     }
 
+    // Для задач типа "завести ленд" требуем GEO
+    const finalTaskType = task_type || existing.task_type;
+    if (finalTaskType === 'create_landing' && !geo && !existing.geo) {
+      res.status(400).json({ error: 'Для задачи "Завести ленд" необходимо указать GEO' });
+      return;
+    }
+
     db.prepare(`
       UPDATE tasks 
       SET title = COALESCE(?, title),
           description = COALESCE(?, description),
           task_type = COALESCE(?, task_type),
+          geo = COALESCE(?, geo),
           executor_id = COALESCE(?, executor_id),
           deadline = COALESCE(?, deadline)
       WHERE id = ?
-    `).run(title, description, task_type, executor_id, deadline, id);
+    `).run(title, description, task_type, geo, executor_id, deadline, id);
 
     const task = db.prepare(`
       SELECT t.*, 

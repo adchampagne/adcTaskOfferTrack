@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { User, Partner, Offer, Task, TaskStatus, TaskFile } from '../types';
+import { User, Partner, Offer, Task, TaskStatus, TaskFile, Notification } from '../types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -163,6 +163,58 @@ export const tasksApi = {
 
   delete: async (id: string) => {
     const { data } = await api.delete(`/tasks/${id}`);
+    return data;
+  },
+};
+
+// Notifications API
+export const notificationsApi = {
+  getAll: async (unreadOnly?: boolean) => {
+    const params = unreadOnly ? { unread_only: 'true' } : {};
+    const { data } = await api.get<Notification[]>('/notifications', { params });
+    return data;
+  },
+
+  getUnreadCount: async () => {
+    const { data } = await api.get<{ count: number }>('/notifications/unread-count');
+    return data.count;
+  },
+
+  markAsRead: async (id: string) => {
+    const { data } = await api.patch(`/notifications/${id}/read`);
+    return data;
+  },
+
+  markAllAsRead: async () => {
+    const { data } = await api.patch('/notifications/read-all');
+    return data;
+  },
+
+  delete: async (id: string) => {
+    const { data } = await api.delete(`/notifications/${id}`);
+    return data;
+  },
+};
+
+// Telegram API
+export const telegramApi = {
+  getLink: async () => {
+    const { data } = await api.get<{ linked: boolean; link_url?: string; telegram_username?: string }>('/telegram/link');
+    return data;
+  },
+
+  getStatus: async () => {
+    const { data } = await api.get<{ linked: boolean; telegram_username?: string }>('/telegram/status');
+    return data;
+  },
+
+  unlink: async () => {
+    const { data } = await api.delete('/telegram/unlink');
+    return data;
+  },
+
+  sendTest: async () => {
+    const { data } = await api.post('/telegram/test');
     return data;
   },
 };

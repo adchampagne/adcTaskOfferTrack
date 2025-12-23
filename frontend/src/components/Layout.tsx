@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -6,14 +7,18 @@ import {
   CheckSquare, 
   Users, 
   LogOut,
-  Zap
+  Zap,
+  Send
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { roleLabels } from '../types';
+import Notifications from './Notifications';
+import TelegramSettings from './TelegramSettings';
 
 function Layout() {
   const { user, logout, hasRole } = useAuthStore();
   const navigate = useNavigate();
+  const [showTelegramSettings, setShowTelegramSettings] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -77,7 +82,15 @@ function Layout() {
                 {user?.role && roleLabels[user.role]}
               </p>
             </div>
+            <Notifications />
           </div>
+          <button
+            onClick={() => setShowTelegramSettings(true)}
+            className="w-full nav-link text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 mb-2"
+          >
+            <Send className="w-5 h-5" />
+            <span>Telegram</span>
+          </button>
           <button
             onClick={handleLogout}
             className="w-full nav-link text-red-400 hover:text-red-300 hover:bg-red-500/10"
@@ -87,6 +100,11 @@ function Layout() {
           </button>
         </div>
       </aside>
+      
+      <TelegramSettings 
+        isOpen={showTelegramSettings} 
+        onClose={() => setShowTelegramSettings(false)} 
+      />
 
       {/* Main content */}
       <main className="flex-1 p-4 overflow-auto">

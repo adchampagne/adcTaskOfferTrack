@@ -44,9 +44,11 @@ export type TaskType =
 
 export interface Task {
   id: string;
+  task_number?: number;
   title: string;
   description: string | null;
   task_type: TaskType;
+  geo: string | null;
   customer_id: string;
   executor_id: string;
   deadline: string;
@@ -56,6 +58,25 @@ export interface Task {
   customer_name?: string;
   executor_name?: string;
 }
+
+// Популярные GEO коды
+export const geoOptions = [
+  { code: 'ru', label: '🇷🇺 Россия' },
+  { code: 'us', label: '🇺🇸 США' },
+  { code: 'de', label: '🇩🇪 Германия' },
+  { code: 'uk', label: '🇬🇧 Великобритания' },
+  { code: 'fr', label: '🇫🇷 Франция' },
+  { code: 'es', label: '🇪🇸 Испания' },
+  { code: 'it', label: '🇮🇹 Италия' },
+  { code: 'pl', label: '🇵🇱 Польша' },
+  { code: 'ua', label: '🇺🇦 Украина' },
+  { code: 'kz', label: '🇰🇿 Казахстан' },
+  { code: 'br', label: '🇧🇷 Бразилия' },
+  { code: 'in', label: '🇮🇳 Индия' },
+  { code: 'jp', label: '🇯🇵 Япония' },
+  { code: 'au', label: '🇦🇺 Австралия' },
+  { code: 'ca', label: '🇨🇦 Канада' },
+];
 
 export interface TaskFile {
   id: string;
@@ -67,6 +88,25 @@ export interface TaskFile {
   uploaded_by: string;
   created_at: string;
   uploader_name?: string;
+}
+
+export type NotificationType = 
+  | 'task_assigned'
+  | 'task_status_changed'
+  | 'task_deadline_soon'
+  | 'task_overdue'
+  | 'task_completed';
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  task_id: string | null;
+  is_read: number;
+  created_at: string;
+  task_title?: string;
 }
 
 export const taskTypeLabels: Record<TaskType, string> = {
