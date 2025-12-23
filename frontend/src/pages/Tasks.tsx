@@ -939,8 +939,6 @@ function Tasks() {
     queryFn: () => tasksApi.getAll(),
   });
 
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-
   const createMutation = useMutation({
     mutationFn: async (data: TaskFormData) => {
       const task = await tasksApi.create(data);
@@ -958,7 +956,6 @@ function Tasks() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       setShowModal(false);
-      setPendingFiles([]);
       toast.success('Задача создана');
     },
     onError: (error: unknown) => {
@@ -985,7 +982,6 @@ function Tasks() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       setEditingTask(undefined);
-      setPendingFiles([]);
       toast.success('Задача обновлена');
     },
     onError: (error: unknown) => {
