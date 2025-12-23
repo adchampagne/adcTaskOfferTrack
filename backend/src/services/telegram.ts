@@ -1,6 +1,6 @@
 import db from '../database';
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8477264438:AAGwCOnC7lnrnQ9YhA9vYJnzH-vZVRMe7JQ';
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
 interface TelegramMessage {
@@ -23,6 +23,15 @@ interface TelegramUpdate {
   message?: TelegramMessage;
 }
 
+interface TelegramApiResponse {
+  ok: boolean;
+  result?: {
+    username?: string;
+    [key: string]: unknown;
+  };
+  description?: string;
+}
+
 // Отправить сообщение в Telegram
 export async function sendTelegramMessage(chatId: string, text: string, parseMode: 'HTML' | 'Markdown' = 'HTML'): Promise<boolean> {
   try {
@@ -36,7 +45,7 @@ export async function sendTelegramMessage(chatId: string, text: string, parseMod
       }),
     });
 
-    const result = await response.json();
+    const result = await response.json() as TelegramApiResponse;
     if (!result.ok) {
       console.error('Telegram send error:', result);
       return false;
@@ -201,16 +210,16 @@ async function linkTelegramAccount(code: string, chatId: string, username?: stri
 }
 
 // Имя бота (будет получено при первом запросе)
-let botUsername: string | null = null;
+let botUsername: string = 'OfferTrackerBot';
 
 // Получить имя бота
 async function getBotUsername(): Promise<string> {
-  if (botUsername) return botUsername;
+  if (botUsername !== 'OfferTrackerBot') return botUsername;
   
   try {
     const response = await fetch(`${TELEGRAM_API_URL}/getMe`);
-    const result = await response.json();
-    if (result.ok && result.result.username) {
+    const result = await response.json() as TelegramApiResponse;
+    if (result.ok && result.result?.username) {
       botUsername = result.result.username;
       return botUsername;
     }
@@ -218,7 +227,7 @@ async function getBotUsername(): Promise<string> {
     console.error('Failed to get bot username:', e);
   }
   
-  return 'OfferTrackerBot'; // fallback
+  return botUsername;
 }
 
 // Получить ссылку для привязки Telegram

@@ -1,8 +1,8 @@
-import Database from 'better-sqlite3';
+import Database, { Database as DatabaseType } from 'better-sqlite3';
 import path from 'path';
 
 const dbPath = path.join(__dirname, '..', 'data', 'tracker.db');
-const db = new Database(dbPath);
+const db: DatabaseType = new Database(dbPath);
 
 // Включаем внешние ключи
 db.pragma('foreign_keys = ON');

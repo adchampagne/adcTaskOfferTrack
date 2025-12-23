@@ -18,6 +18,9 @@ build/
 # Database
 backend/data/
 
+# Uploads
+backend/uploads/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*

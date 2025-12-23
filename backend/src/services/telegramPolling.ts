@@ -1,6 +1,6 @@
 import { handleTelegramUpdate } from './telegram';
 
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8477264438:AAGwCOnC7lnrnQ9YhA9vYJnzH-vZVRMe7JQ';
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
 let lastUpdateId = 0;
@@ -24,6 +24,12 @@ interface TelegramUpdate {
   };
 }
 
+interface TelegramApiResponse<T = unknown> {
+  ok: boolean;
+  result?: T;
+  description?: string;
+}
+
 async function getUpdates(): Promise<TelegramUpdate[]> {
   try {
     const response = await fetch(`${TELEGRAM_API_URL}/getUpdates`, {
@@ -36,7 +42,7 @@ async function getUpdates(): Promise<TelegramUpdate[]> {
       }),
     });
 
-    const result = await response.json();
+    const result = await response.json() as TelegramApiResponse<TelegramUpdate[]>;
     
     if (!result.ok) {
       console.error('Telegram getUpdates error:', result);
@@ -100,9 +106,9 @@ export function stopPolling(): void {
 export async function getBotInfo(): Promise<{ username: string } | null> {
   try {
     const response = await fetch(`${TELEGRAM_API_URL}/getMe`);
-    const result = await response.json();
+    const result = await response.json() as TelegramApiResponse<{ username: string }>;
     
-    if (result.ok) {
+    if (result.ok && result.result) {
       return result.result;
     }
     return null;
