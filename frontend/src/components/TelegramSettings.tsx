@@ -40,8 +40,8 @@ export default function TelegramSettings({ isOpen, onClose }: TelegramSettingsPr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md border border-slate-700">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4">
+      <div className="bg-slate-800 sm:rounded-2xl rounded-none shadow-2xl w-full h-full sm:h-auto sm:max-w-md border-0 sm:border border-slate-700 overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-700">
           <div className="flex items-center gap-3">
@@ -148,11 +148,11 @@ export default function TelegramSettings({ isOpen, onClose }: TelegramSettingsPr
 
               {/* Код привязки */}
               {data?.code && (
-                <div className="bg-slate-900 rounded-xl p-6 text-center">
+                <div className="bg-slate-900 rounded-xl p-4 sm:p-6 text-center">
                   <p className="text-slate-400 text-sm mb-3">Ваш код привязки:</p>
                   <div 
                     onClick={copyCode}
-                    className="text-4xl font-mono font-bold text-blue-400 tracking-[0.3em] cursor-pointer hover:text-blue-300 transition-colors select-all"
+                    className="text-3xl sm:text-4xl font-mono font-bold text-blue-400 tracking-[0.2em] sm:tracking-[0.3em] cursor-pointer hover:text-blue-300 transition-colors select-all"
                   >
                     {data.code}
                   </div>

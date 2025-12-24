@@ -9,7 +9,7 @@ import {
 import { tasksApi, authApi, filesApi } from '../api';
 import { useAuthStore } from '../store/authStore';
 import { Task, TaskStatus, TaskType, taskTypeLabels, taskStatusLabels, User as UserType, TaskFile, geoOptions } from '../types';
-import { format, isPast, isToday, isTomorrow, formatDistanceToNow } from 'date-fns';
+import { format, isPast, isToday, isTomorrow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 
@@ -240,15 +240,15 @@ function TaskModal({
   const otherUsers = users.filter(u => u.id !== currentUserId);
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="glass-card w-full max-w-2xl p-6 animate-scale-in max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4">
+      <div className="glass-card w-full h-full sm:h-auto sm:max-w-2xl p-4 sm:p-6 animate-scale-in sm:max-h-[90vh] overflow-y-auto sm:rounded-2xl rounded-none">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-dark-100">
+          <h2 className="text-lg sm:text-xl font-bold text-dark-100">
             {task ? 'Редактировать задачу' : 'Новая задача'}
           </h2>
           <button
             onClick={onClose}
-            className="text-dark-400 hover:text-dark-200 transition-colors"
+            className="text-dark-400 hover:text-dark-200 transition-colors p-2 -mr-2"
           >
             <X className="w-6 h-6" />
           </button>
@@ -280,7 +280,7 @@ function TaskModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">
                 Тип задачи *
@@ -532,28 +532,28 @@ function TaskViewModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="glass-card w-full max-w-2xl p-0 animate-scale-in max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4">
+      <div className="glass-card w-full h-full sm:h-auto sm:max-w-2xl p-0 animate-scale-in sm:max-h-[90vh] overflow-hidden flex flex-col sm:rounded-2xl rounded-none">
         {/* Header */}
-        <div className={`p-6 border-b border-dark-700 ${isOverdue ? 'bg-red-500/5' : isDueToday ? 'bg-yellow-500/5' : ''}`}>
-          <div className="flex items-start justify-between gap-4">
+        <div className={`p-4 sm:p-6 border-b border-dark-700 ${isOverdue ? 'bg-red-500/5' : isDueToday ? 'bg-yellow-500/5' : ''}`}>
+          <div className="flex items-start justify-between gap-2 sm:gap-4">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3 mb-2">
-                <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(task.status)}`}>
+              <div className="flex items-center gap-2 sm:gap-3 mb-2 flex-wrap">
+                <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(task.status)}`}>
                   {taskStatusLabels[task.status]}
                 </span>
                 <span className="px-2 py-1 bg-dark-700/50 text-dark-300 text-xs rounded">
                   {taskTypeLabels[task.task_type]}
                 </span>
               </div>
-              <h2 className={`text-2xl font-bold ${task.status === 'completed' ? 'text-dark-400 line-through' : 'text-dark-100'}`}>
+              <h2 className={`text-lg sm:text-2xl font-bold ${task.status === 'completed' ? 'text-dark-400 line-through' : 'text-dark-100'}`}>
                 {task.task_number && <span className="text-primary-400">#{task.task_number}</span>} {task.title}
-                {task.geo && <span className="ml-2 text-sm font-normal text-dark-400 bg-dark-700/50 px-2 py-0.5 rounded">{task.geo.toUpperCase()}</span>}
+                {task.geo && <span className="ml-2 text-xs sm:text-sm font-normal text-dark-400 bg-dark-700/50 px-2 py-0.5 rounded">{task.geo.toUpperCase()}</span>}
               </h2>
             </div>
             <button
               onClick={onClose}
-              className="text-dark-400 hover:text-dark-200 transition-colors p-2 hover:bg-dark-700/50 rounded-lg"
+              className="text-dark-400 hover:text-dark-200 transition-colors p-2 hover:bg-dark-700/50 rounded-lg flex-shrink-0"
             >
               <X className="w-6 h-6" />
             </button>
@@ -561,32 +561,32 @@ function TaskViewModal({
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1">
           {/* Description */}
-          <div className="mb-6">
+          <div className="mb-4 sm:mb-6">
             <h3 className="text-sm font-medium text-dark-400 mb-2 flex items-center gap-2">
               <FileText className="w-4 h-4" />
               Описание
             </h3>
-            <div className="bg-dark-800/50 rounded-xl p-4 border border-dark-700/50">
+            <div className="bg-dark-800/50 rounded-xl p-3 sm:p-4 border border-dark-700/50">
               {task.description ? (
-                <p className="text-dark-200 whitespace-pre-wrap">{task.description}</p>
+                <p className="text-dark-200 whitespace-pre-wrap text-sm sm:text-base">{task.description}</p>
               ) : (
-                <p className="text-dark-500 italic">Описание не указано</p>
+                <p className="text-dark-500 italic text-sm">Описание не указано</p>
               )}
             </div>
           </div>
 
           {/* Participants */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            <div className="bg-dark-800/50 rounded-xl p-4 border border-dark-700/50">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <div className="bg-dark-800/50 rounded-xl p-3 sm:p-4 border border-dark-700/50">
               <h3 className="text-xs font-medium text-dark-500 mb-2">Заказчик</h3>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-semibold">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-semibold text-sm sm:text-base">
                   {task.customer_name?.charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <p className="font-medium text-dark-100">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-dark-100 truncate text-sm sm:text-base">
                     {isMyCreatedTask ? 'Вы' : task.customer_name}
                   </p>
                   <p className="text-xs text-dark-500">создал задачу</p>
@@ -594,14 +594,14 @@ function TaskViewModal({
               </div>
             </div>
 
-            <div className="bg-dark-800/50 rounded-xl p-4 border border-dark-700/50">
+            <div className="bg-dark-800/50 rounded-xl p-3 sm:p-4 border border-dark-700/50">
               <h3 className="text-xs font-medium text-dark-500 mb-2">Исполнитель</h3>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-semibold">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-semibold text-sm sm:text-base">
                   {task.executor_name?.charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <p className="font-medium text-dark-100">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium text-dark-100 truncate text-sm sm:text-base">
                     {isMyTask ? 'Вы' : task.executor_name}
                   </p>
                   <p className="text-xs text-dark-500">выполняет задачу</p>
@@ -611,53 +611,54 @@ function TaskViewModal({
           </div>
 
           {/* Timeline */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-dark-800/50 rounded-xl p-4 border border-dark-700/50">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <div className="bg-dark-800/50 rounded-xl p-3 sm:p-4 border border-dark-700/50">
               <h3 className="text-xs font-medium text-dark-500 mb-1">Создано</h3>
-              <p className="text-dark-200 font-medium">
-                {format(new Date(task.created_at), 'd MMMM yyyy', { locale: ru })}
+              <p className="text-dark-200 font-medium text-sm sm:text-base">
+                {format(new Date(task.created_at), 'd MMM yyyy', { locale: ru })}
               </p>
               <p className="text-xs text-dark-500">
                 {format(new Date(task.created_at), 'HH:mm')}
               </p>
             </div>
 
-            <div className={`rounded-xl p-4 border ${isOverdue ? 'bg-red-500/10 border-red-500/30' : isDueToday ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-dark-800/50 border-dark-700/50'}`}>
+            <div className={`rounded-xl p-3 sm:p-4 border ${isOverdue ? 'bg-red-500/10 border-red-500/30' : isDueToday ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-dark-800/50 border-dark-700/50'}`}>
               <h3 className="text-xs font-medium text-dark-500 mb-1 flex items-center gap-1">
                 {isOverdue && <AlertCircle className="w-3 h-3 text-red-400" />}
                 Дедлайн
               </h3>
-              <p className={`font-medium ${isOverdue ? 'text-red-400' : isDueToday ? 'text-yellow-400' : 'text-dark-200'}`}>
-                {format(new Date(task.deadline), 'd MMMM yyyy', { locale: ru })}
+              <p className={`font-medium text-sm sm:text-base ${isOverdue ? 'text-red-400' : isDueToday ? 'text-yellow-400' : 'text-dark-200'}`}>
+                {format(new Date(task.deadline), 'd MMM yyyy', { locale: ru })}
               </p>
               <p className={`text-xs ${isOverdue ? 'text-red-400/70' : 'text-dark-500'}`}>
-                {format(new Date(task.deadline), 'HH:mm')} • {formatDistanceToNow(new Date(task.deadline), { locale: ru, addSuffix: true })}
+                {format(new Date(task.deadline), 'HH:mm')}
               </p>
             </div>
 
-            <div className="bg-dark-800/50 rounded-xl p-4 border border-dark-700/50">
+            <div className="bg-dark-800/50 rounded-xl p-3 sm:p-4 border border-dark-700/50">
               <h3 className="text-xs font-medium text-dark-500 mb-1">Завершено</h3>
               {task.completed_at ? (
                 <>
-                  <p className="text-green-400 font-medium">
-                    {format(new Date(task.completed_at), 'd MMMM yyyy', { locale: ru })}
+                  <p className="text-green-400 font-medium text-sm sm:text-base">
+                    {format(new Date(task.completed_at), 'd MMM yyyy', { locale: ru })}
                   </p>
                   <p className="text-xs text-dark-500">
                     {format(new Date(task.completed_at), 'HH:mm')}
                   </p>
                 </>
               ) : (
-                <p className="text-dark-500 italic">Ещё не завершено</p>
+                <p className="text-dark-500 italic text-sm">Ещё не завершено</p>
               )}
             </div>
           </div>
 
           {/* Files section */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-3">
+          <div className="mb-4 sm:mb-6">
+            <div className="flex items-center justify-between mb-3 gap-2">
               <h3 className="text-sm font-medium text-dark-400 flex items-center gap-2">
                 <Paperclip className="w-4 h-4" />
-                Файлы ({files.length})
+                <span className="hidden sm:inline">Файлы ({files.length})</span>
+                <span className="sm:hidden">({files.length})</span>
               </h3>
               {canUpload && (
                 <>
@@ -672,14 +673,14 @@ function TaskViewModal({
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={isUploading}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-primary-500/10 text-primary-400 border border-primary-500/30 rounded-lg hover:bg-primary-500/20 transition-colors disabled:opacity-50"
+                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 text-xs sm:text-sm bg-primary-500/10 text-primary-400 border border-primary-500/30 rounded-lg hover:bg-primary-500/20 transition-colors disabled:opacity-50"
                   >
                     {isUploading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <Upload className="w-4 h-4" />
                     )}
-                    {isUploading ? 'Загрузка...' : 'Загрузить'}
+                    <span className="hidden sm:inline">{isUploading ? 'Загрузка...' : 'Загрузить'}</span>
                   </button>
                 </>
               )}
@@ -717,40 +718,40 @@ function TaskViewModal({
 
           {/* Status change */}
           {canChangeStatus && task.status !== 'completed' && task.status !== 'cancelled' && (
-            <div className="bg-dark-800/50 rounded-xl p-4 border border-dark-700/50">
+            <div className="bg-dark-800/50 rounded-xl p-3 sm:p-4 border border-dark-700/50">
               <h3 className="text-xs font-medium text-dark-500 mb-3">Изменить статус</h3>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
                 {task.status !== 'pending' && (
                   <button
                     onClick={() => onStatusChange('pending')}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/20 transition-colors"
+                    className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/20 transition-colors text-xs sm:text-sm"
                   >
                     <Clock className="w-4 h-4" />
-                    Ожидает
+                    <span className="hidden sm:inline">Ожидает</span>
                   </button>
                 )}
                 {task.status !== 'in_progress' && (
                   <button
                     onClick={() => onStatusChange('in_progress')}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition-colors"
+                    className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition-colors text-xs sm:text-sm"
                   >
                     <PlayCircle className="w-4 h-4" />
-                    В работе
+                    <span className="hidden sm:inline">В работе</span>
                   </button>
                 )}
                 <button
                   onClick={() => onStatusChange('completed')}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20 transition-colors"
+                  className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20 transition-colors text-xs sm:text-sm"
                 >
                   <CheckCircle className="w-4 h-4" />
-                  Завершить
+                  <span className="hidden sm:inline">Завершить</span>
                 </button>
                 <button
                   onClick={() => onStatusChange('cancelled')}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-colors"
+                  className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-colors text-xs sm:text-sm"
                 >
                   <XCircle className="w-4 h-4" />
-                  Отменить
+                  <span className="hidden sm:inline">Отменить</span>
                 </button>
               </div>
             </div>
@@ -759,13 +760,14 @@ function TaskViewModal({
 
         {/* Footer */}
         <div className="p-4 border-t border-dark-700 flex gap-3">
-          <button onClick={onClose} className="btn-secondary flex-1">
+          <button onClick={onClose} className="btn-secondary flex-1 text-sm sm:text-base">
             Закрыть
           </button>
           {canEdit && (
-            <button onClick={onEdit} className="btn-primary flex-1 flex items-center justify-center gap-2">
+            <button onClick={onEdit} className="btn-primary flex-1 flex items-center justify-center gap-2 text-sm sm:text-base">
               <Edit2 className="w-4 h-4" />
-              Редактировать
+              <span className="hidden sm:inline">Редактировать</span>
+              <span className="sm:hidden">Изменить</span>
             </button>
           )}
         </div>
@@ -837,7 +839,7 @@ function TaskCard({
 
   return (
     <div 
-      className={`glass-card p-5 animate-fade-in transition-all cursor-pointer hover:border-primary-500/30 ${
+      className={`glass-card p-3 sm:p-5 animate-fade-in transition-all cursor-pointer hover:border-primary-500/30 ${
         isOverdue 
           ? 'border-red-500/30 bg-red-500/5' 
           : isDueToday 
@@ -846,9 +848,30 @@ function TaskCard({
       }`}
       onClick={onView}
     >
-      <div className="flex items-start gap-4">
-        {/* Status buttons */}
-        <div className="flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
+      {/* Mobile: Status badge at top */}
+      <div className="sm:hidden flex items-center justify-between gap-2 mb-3">
+        <span className={`status-badge status-${task.status}`}>
+          {taskStatusLabels[task.status]}
+        </span>
+        <div className={`flex items-center gap-1 text-xs ${
+          isOverdue ? 'text-red-400' : isDueToday ? 'text-yellow-400' : 'text-dark-400'
+        }`}>
+          {isOverdue && <AlertCircle className="w-3 h-3" />}
+          <Calendar className="w-3 h-3" />
+          <span>
+            {isDueToday 
+              ? format(new Date(task.deadline), 'HH:mm')
+              : isDueTomorrow
+                ? 'Завтра'
+                : format(new Date(task.deadline), 'd MMM', { locale: ru })
+            }
+          </span>
+        </div>
+      </div>
+
+      <div className="flex items-start gap-2 sm:gap-4">
+        {/* Status buttons - hidden on mobile */}
+        <div className="hidden sm:flex flex-col gap-1" onClick={(e) => e.stopPropagation()}>
           <StatusButton 
             status="pending" 
             currentStatus={task.status} 
@@ -877,15 +900,15 @@ function TaskCard({
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h3 className={`font-semibold text-lg ${
+          <div className="flex items-start justify-between gap-2 sm:gap-4">
+            <div className="flex-1 min-w-0">
+              <h3 className={`font-semibold text-base sm:text-lg truncate ${
                 task.status === 'completed' ? 'text-dark-400 line-through' : 'text-dark-100'
               }`}>
                 {task.task_number && <span className="text-primary-400 mr-1">#{task.task_number}</span>}
                 {task.title}
               </h3>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-dark-700/50 text-dark-300 text-xs rounded">
                   {taskTypeLabels[task.task_type]}
                 </span>
@@ -897,7 +920,7 @@ function TaskCard({
               </div>
             </div>
             
-            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
               <button
                 onClick={onView}
                 className="p-2 text-dark-400 hover:text-primary-400 hover:bg-dark-700/50 rounded-lg transition-colors"
@@ -906,22 +929,22 @@ function TaskCard({
                 <Eye className="w-4 h-4" />
               </button>
               {canEdit && (
-                <button
-                  onClick={onEdit}
-                  className="p-2 text-dark-400 hover:text-primary-400 hover:bg-dark-700/50 rounded-lg transition-colors"
-                  title="Редактировать"
-                >
-                  <Edit2 className="w-4 h-4" />
-                </button>
-              )}
-              {canEdit && (
-                <button
-                  onClick={onDelete}
-                  className="p-2 text-dark-400 hover:text-red-400 hover:bg-dark-700/50 rounded-lg transition-colors"
-                  title="Удалить"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                <>
+                  <button
+                    onClick={onEdit}
+                    className="hidden sm:block p-2 text-dark-400 hover:text-primary-400 hover:bg-dark-700/50 rounded-lg transition-colors"
+                    title="Редактировать"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={onDelete}
+                    className="hidden sm:block p-2 text-dark-400 hover:text-red-400 hover:bg-dark-700/50 rounded-lg transition-colors"
+                    title="Удалить"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -930,17 +953,18 @@ function TaskCard({
             <p className="text-dark-400 text-sm mt-2 line-clamp-2">{task.description}</p>
           )}
 
-          <div className="flex flex-wrap items-center gap-4 mt-4 text-sm">
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-dark-500" />
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-3 sm:mt-4 text-xs sm:text-sm">
+            <div className="flex items-center gap-1 sm:gap-2">
+              <User className="w-3 h-3 sm:w-4 sm:h-4 text-dark-500" />
               <span className="text-dark-400">
-                {isMyCreatedTask ? 'Вы' : task.customer_name}
-                <ArrowRight className="w-3 h-3 inline mx-1 text-dark-600" />
-                {isMyTask ? 'Вам' : task.executor_name}
+                {isMyCreatedTask ? 'Вы' : task.customer_name?.split(' ')[0]}
+                <ArrowRight className="w-3 h-3 inline mx-0.5 sm:mx-1 text-dark-600" />
+                {isMyTask ? 'Вам' : task.executor_name?.split(' ')[0]}
               </span>
             </div>
             
-            <div className={`flex items-center gap-2 ${
+            {/* Desktop deadline */}
+            <div className={`hidden sm:flex items-center gap-2 ${
               isOverdue ? 'text-red-400' : isDueToday ? 'text-yellow-400' : 'text-dark-400'
             }`}>
               {isOverdue && <AlertCircle className="w-4 h-4" />}
@@ -1097,54 +1121,57 @@ function Tasks() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4 animate-slide-down">
+      <div className="flex items-start sm:items-center justify-between flex-wrap gap-3 sm:gap-4 animate-slide-down">
         <div>
-          <h1 className="text-2xl font-bold text-dark-100 flex items-center gap-3">
-            <CheckSquare className="w-8 h-8 text-primary-400" />
+          <h1 className="text-xl sm:text-2xl font-bold text-dark-100 flex items-center gap-2 sm:gap-3">
+            <CheckSquare className="w-6 h-6 sm:w-8 sm:h-8 text-primary-400" />
             Задачи
           </h1>
-          <p className="text-dark-400 mt-1">
+          <p className="text-dark-400 mt-1 text-sm sm:text-base hidden sm:block">
             Управление задачами команды
           </p>
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="btn-primary flex items-center gap-2"
+          className="btn-primary flex items-center gap-2 text-sm sm:text-base px-4 sm:px-6 py-2.5 sm:py-3"
         >
-          <Plus className="w-5 h-5" />
-          Новая задача
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+          <span className="hidden sm:inline">Новая задача</span>
+          <span className="sm:hidden">Создать</span>
         </button>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4">
-        <div className="flex bg-dark-800 rounded-xl p-1">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 overflow-x-auto pb-1">
+        <div className="flex bg-dark-800 rounded-xl p-1 min-w-max">
           <button
             onClick={() => setFilter('my')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
               filter === 'my' 
                 ? 'bg-primary-500 text-white' 
                 : 'text-dark-400 hover:text-dark-200'
             }`}
           >
-            Мне назначены
+            <span className="hidden sm:inline">Мне назначены</span>
+            <span className="sm:hidden">Мне</span>
           </button>
           <button
             onClick={() => setFilter('created')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
               filter === 'created' 
                 ? 'bg-primary-500 text-white' 
                 : 'text-dark-400 hover:text-dark-200'
             }`}
           >
-            Я создал
+            <span className="hidden sm:inline">Я создал</span>
+            <span className="sm:hidden">Создал</span>
           </button>
           {hasRole('admin') && (
             <button
               onClick={() => setFilter('all')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                 filter === 'all' 
                   ? 'bg-primary-500 text-white' 
                   : 'text-dark-400 hover:text-dark-200'
@@ -1155,10 +1182,10 @@ function Tasks() {
           )}
         </div>
 
-        <div className="flex bg-dark-800 rounded-xl p-1">
+        <div className="flex bg-dark-800 rounded-xl p-1 min-w-max">
           <button
             onClick={() => setStatusFilter('active')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
               statusFilter === 'active' 
                 ? 'bg-dark-600 text-white' 
                 : 'text-dark-400 hover:text-dark-200'
@@ -1168,17 +1195,18 @@ function Tasks() {
           </button>
           <button
             onClick={() => setStatusFilter('completed')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
               statusFilter === 'completed' 
                 ? 'bg-dark-600 text-white' 
                 : 'text-dark-400 hover:text-dark-200'
             }`}
           >
-            Завершённые
+            <span className="hidden sm:inline">Завершённые</span>
+            <span className="sm:hidden">Готово</span>
           </button>
           <button
             onClick={() => setStatusFilter('all')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
               statusFilter === 'all' 
                 ? 'bg-dark-600 text-white' 
                 : 'text-dark-400 hover:text-dark-200'

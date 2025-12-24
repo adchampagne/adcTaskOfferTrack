@@ -18,14 +18,14 @@ function StatCard({
   gradient: string;
 }) {
   return (
-    <div className="glass-card p-6 animate-fade-in">
-      <div className="flex items-center gap-4">
-        <div className={`w-14 h-14 rounded-xl ${gradient} flex items-center justify-center shadow-lg`}>
-          <Icon className="w-7 h-7 text-white" />
+    <div className="glass-card p-4 sm:p-6 animate-fade-in">
+      <div className="flex items-center gap-3 sm:gap-4">
+        <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl ${gradient} flex items-center justify-center shadow-lg flex-shrink-0`}>
+          <Icon className="w-5 h-5 sm:w-7 sm:h-7 text-white" />
         </div>
-        <div>
-          <p className="text-3xl font-bold text-dark-100">{value}</p>
-          <p className="text-sm text-dark-400">{label}</p>
+        <div className="min-w-0">
+          <p className="text-2xl sm:text-3xl font-bold text-dark-100">{value}</p>
+          <p className="text-xs sm:text-sm text-dark-400 truncate">{label}</p>
         </div>
       </div>
     </div>
@@ -37,30 +37,30 @@ function TaskCard({ task }: { task: Task }) {
   const isDueToday = isToday(new Date(task.deadline));
 
   return (
-    <div className={`p-4 rounded-xl border transition-colors ${
+    <div className={`p-3 sm:p-4 rounded-xl border transition-colors ${
       isOverdue 
         ? 'bg-red-500/5 border-red-500/20' 
         : isDueToday 
           ? 'bg-yellow-500/5 border-yellow-500/20'
           : 'bg-dark-800/50 border-dark-700/50'
     }`}>
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-2 sm:gap-4">
         <div className="flex-1 min-w-0">
-          <h4 className="font-medium text-dark-100 truncate">{task.title}</h4>
-          <p className="text-sm text-dark-400 mt-1">
+          <h4 className="font-medium text-dark-100 truncate text-sm sm:text-base">{task.title}</h4>
+          <p className="text-xs sm:text-sm text-dark-400 mt-1">
             {taskTypeLabels[task.task_type]}
           </p>
-          <p className="text-xs text-dark-500 mt-2">
-            Исполнитель: {task.executor_name}
+          <p className="text-xs text-dark-500 mt-1 sm:mt-2 truncate">
+            <span className="hidden sm:inline">Исполнитель: </span>{task.executor_name?.split(' ')[0]}
           </p>
         </div>
-        <div className="text-right">
-          <span className={`status-badge status-${task.status}`}>
+        <div className="text-right flex-shrink-0">
+          <span className={`status-badge status-${task.status} text-[10px] sm:text-xs`}>
             {taskStatusLabels[task.status]}
           </span>
-          <p className={`text-xs mt-2 ${isOverdue ? 'text-red-400' : 'text-dark-400'}`}>
+          <p className={`text-xs mt-1 sm:mt-2 ${isOverdue ? 'text-red-400' : 'text-dark-400'}`}>
             {isOverdue && <AlertCircle className="w-3 h-3 inline mr-1" />}
-            {format(new Date(task.deadline), 'd MMM, HH:mm', { locale: ru })}
+            {format(new Date(task.deadline), 'd MMM', { locale: ru })}
           </p>
         </div>
       </div>
@@ -93,19 +93,19 @@ function Dashboard() {
   const overdueTasks = pendingTasks.filter((t) => isPast(new Date(t.deadline)));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8">
       {/* Header */}
       <div className="animate-slide-down">
-        <h1 className="text-3xl font-bold text-dark-100">
+        <h1 className="text-xl sm:text-3xl font-bold text-dark-100">
           Привет, {user?.full_name?.split(' ')[0]}! 👋
         </h1>
-        <p className="text-dark-400 mt-2">
+        <p className="text-dark-400 mt-1 sm:mt-2 text-sm sm:text-base">
           Вот краткая сводка по вашей работе
         </p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
           icon={Building2}
           label="Партнёрок"
@@ -136,25 +136,26 @@ function Dashboard() {
       </div>
 
       {/* Tasks section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* My pending tasks */}
-        <div className="glass-card p-6">
-          <h3 className="text-lg font-semibold text-dark-100 mb-4 flex items-center gap-2">
-            <CheckSquare className="w-5 h-5 text-primary-400" />
-            Мои активные задачи
+        <div className="glass-card p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-dark-100 mb-3 sm:mb-4 flex items-center gap-2">
+            <CheckSquare className="w-4 h-4 sm:w-5 sm:h-5 text-primary-400" />
+            <span className="hidden sm:inline">Мои активные задачи</span>
+            <span className="sm:hidden">Активные</span>
           </h3>
           
           {pendingTasks.length === 0 ? (
-            <p className="text-dark-400 text-center py-8">
+            <p className="text-dark-400 text-center py-6 sm:py-8 text-sm sm:text-base">
               Нет активных задач 🎉
             </p>
           ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-2 sm:space-y-3 max-h-80 sm:max-h-96 overflow-y-auto">
               {pendingTasks.slice(0, 5).map((task) => (
                 <TaskCard key={task.id} task={task} />
               ))}
               {pendingTasks.length > 5 && (
-                <p className="text-center text-dark-400 text-sm pt-2">
+                <p className="text-center text-dark-400 text-xs sm:text-sm pt-2">
                   И ещё {pendingTasks.length - 5} задач...
                 </p>
               )}
@@ -163,18 +164,18 @@ function Dashboard() {
         </div>
 
         {/* Overdue tasks */}
-        <div className="glass-card p-6">
-          <h3 className="text-lg font-semibold text-dark-100 mb-4 flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-red-400" />
-            Просроченные задачи
+        <div className="glass-card p-4 sm:p-6">
+          <h3 className="text-base sm:text-lg font-semibold text-dark-100 mb-3 sm:mb-4 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" />
+            Просроченные
           </h3>
           
           {overdueTasks.length === 0 ? (
-            <p className="text-dark-400 text-center py-8">
+            <p className="text-dark-400 text-center py-6 sm:py-8 text-sm sm:text-base">
               Нет просроченных задач ✨
             </p>
           ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-2 sm:space-y-3 max-h-80 sm:max-h-96 overflow-y-auto">
               {overdueTasks.map((task) => (
                 <TaskCard key={task.id} task={task} />
               ))}

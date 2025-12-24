@@ -47,22 +47,22 @@ function OfferModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="glass-card w-full max-w-2xl p-6 animate-scale-in max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4">
+      <div className="glass-card w-full h-full sm:h-auto sm:max-w-2xl p-4 sm:p-6 animate-scale-in sm:max-h-[90vh] overflow-y-auto sm:rounded-2xl rounded-none">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-dark-100">
+          <h2 className="text-lg sm:text-xl font-bold text-dark-100">
             {offer ? 'Редактировать оффер' : 'Новый оффер'}
           </h2>
           <button
             onClick={onClose}
-            className="text-dark-400 hover:text-dark-200 transition-colors"
+            className="text-dark-400 hover:text-dark-200 transition-colors p-2 -mr-2"
           >
             <X className="w-6 h-6" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">
                 Партнёрка *
@@ -94,7 +94,7 @@ function OfferModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">
                 Тематика *
@@ -122,7 +122,7 @@ function OfferModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">
                 Цена на ленде
@@ -173,6 +173,89 @@ function OfferModal({
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+// Карточка оффера для мобильных
+function OfferCard({
+  offer,
+  onEdit,
+  onDelete,
+  canManage,
+  isAdmin,
+}: {
+  offer: Offer;
+  onEdit: () => void;
+  onDelete: () => void;
+  canManage: boolean;
+  isAdmin: boolean;
+}) {
+  return (
+    <div className="glass-card p-4 animate-fade-in">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-dark-100 truncate">{offer.name}</h3>
+          <p className="text-sm text-dark-400 truncate">{offer.partner_name}</p>
+        </div>
+        {canManage && (
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button
+              onClick={onEdit}
+              className="p-2 text-dark-400 hover:text-primary-400 hover:bg-dark-700/50 rounded-lg transition-colors"
+            >
+              <Edit2 className="w-4 h-4" />
+            </button>
+            {isAdmin && (
+              <button
+                onClick={onDelete}
+                className="p-2 text-dark-400 hover:text-red-400 hover:bg-dark-700/50 rounded-lg transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="px-2 py-1 bg-primary-500/10 text-primary-400 text-xs rounded-md border border-primary-500/20">
+          {offer.theme}
+        </span>
+        {offer.payout && (
+          <span className="text-green-400 font-mono text-sm">{offer.payout}</span>
+        )}
+        {offer.landing_price && (
+          <span className="text-dark-400 font-mono text-sm">{offer.landing_price}</span>
+        )}
+      </div>
+
+      {(offer.partner_link || offer.promo_link) && (
+        <div className="mt-3 pt-3 border-t border-dark-700/50 flex gap-3">
+          {offer.partner_link && (
+            <a
+              href={offer.partner_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+            >
+              <ExternalLink className="w-3 h-3" />
+              ПП
+            </a>
+          )}
+          {offer.promo_link && (
+            <a
+              href={offer.promo_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+            >
+              <ExternalLink className="w-3 h-3" />
+              Промо
+            </a>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -248,22 +331,22 @@ function Offers() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4 animate-slide-down">
+      <div className="flex items-start sm:items-center justify-between flex-wrap gap-3 sm:gap-4 animate-slide-down">
         <div>
-          <h1 className="text-2xl font-bold text-dark-100 flex items-center gap-3">
-            <Package className="w-8 h-8 text-primary-400" />
+          <h1 className="text-xl sm:text-2xl font-bold text-dark-100 flex items-center gap-2 sm:gap-3">
+            <Package className="w-6 h-6 sm:w-8 sm:h-8 text-primary-400" />
             Офферы
           </h1>
-          <p className="text-dark-400 mt-1">
+          <p className="text-dark-400 mt-1 text-sm hidden sm:block">
             Каталог офферов по партнёркам
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-2 sm:gap-3 flex-wrap">
           {/* Filter */}
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-dark-400" />
+            <Filter className="w-4 h-4 text-dark-400 hidden sm:block" />
             <select
               value={filterPartnerId}
               onChange={(e) => setFilterPartnerId(e.target.value)}
@@ -280,10 +363,10 @@ function Offers() {
           {canManageOffers() && partners.length > 0 && (
             <button
               onClick={() => setShowModal(true)}
-              className="btn-primary flex items-center gap-2"
+              className="btn-primary flex items-center gap-2 text-sm px-4 py-2"
             >
-              <Plus className="w-5 h-5" />
-              Добавить
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Добавить</span>
             </button>
           )}
         </div>
@@ -300,18 +383,18 @@ function Offers() {
           ))}
         </div>
       ) : partners.length === 0 ? (
-        <div className="glass-card p-12 text-center">
-          <Package className="w-16 h-16 text-dark-600 mx-auto mb-4" />
+        <div className="glass-card p-8 sm:p-12 text-center">
+          <Package className="w-12 h-12 sm:w-16 sm:h-16 text-dark-600 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-dark-300">Сначала добавьте партнёрку</h3>
-          <p className="text-dark-500 mt-1">
+          <p className="text-dark-500 mt-1 text-sm">
             Офферы привязываются к партнёркам
           </p>
         </div>
       ) : offers.length === 0 ? (
-        <div className="glass-card p-12 text-center">
-          <Package className="w-16 h-16 text-dark-600 mx-auto mb-4" />
+        <div className="glass-card p-8 sm:p-12 text-center">
+          <Package className="w-12 h-12 sm:w-16 sm:h-16 text-dark-600 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-dark-300">Нет офферов</h3>
-          <p className="text-dark-500 mt-1">
+          <p className="text-dark-500 mt-1 text-sm">
             {canManageOffers() 
               ? 'Добавьте первый оффер' 
               : 'Офферы пока не добавлены'
@@ -319,103 +402,121 @@ function Offers() {
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-dark-700">
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Название</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Партнёрка</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Тематика</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Ставка</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Цена</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Ссылки</th>
-                {canManageOffers() && (
-                  <th className="text-right py-3 px-4 text-sm font-medium text-dark-400">Действия</th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {offers.map((offer, index) => (
-                <tr 
-                  key={offer.id} 
-                  className="table-row animate-fade-in"
-                  style={{ animationDelay: `${index * 30}ms` }}
-                >
-                  <td className="py-4 px-4">
-                    <span className="font-medium text-dark-100">{offer.name}</span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className="text-dark-300">{offer.partner_name}</span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className="px-2 py-1 bg-primary-500/10 text-primary-400 text-xs rounded-md border border-primary-500/20">
-                      {offer.theme}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className="text-green-400 font-mono text-sm">
-                      {offer.payout || '—'}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className="text-dark-300 font-mono text-sm">
-                      {offer.landing_price || '—'}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="flex gap-2">
-                      {offer.partner_link && (
-                        <a
-                          href={offer.partner_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          ПП
-                        </a>
-                      )}
-                      {offer.promo_link && (
-                        <a
-                          href={offer.promo_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          Промо
-                        </a>
-                      )}
-                      {!offer.partner_link && !offer.promo_link && (
-                        <span className="text-dark-500 text-sm">—</span>
-                      )}
-                    </div>
-                  </td>
+        <>
+          {/* Mobile cards */}
+          <div className="sm:hidden space-y-3">
+            {offers.map((offer, index) => (
+              <div key={offer.id} style={{ animationDelay: `${index * 30}ms` }}>
+                <OfferCard
+                  offer={offer}
+                  onEdit={() => setEditingOffer(offer)}
+                  onDelete={() => handleDelete(offer)}
+                  canManage={canManageOffers()}
+                  isAdmin={hasRole('admin')}
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden sm:block overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-dark-700">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Название</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Партнёрка</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Тематика</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Ставка</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Цена</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Ссылки</th>
                   {canManageOffers() && (
-                    <td className="py-4 px-4 text-right">
-                      <div className="flex justify-end gap-1">
-                        <button
-                          onClick={() => setEditingOffer(offer)}
-                          className="p-2 text-dark-400 hover:text-primary-400 hover:bg-dark-700/50 rounded-lg transition-colors"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        {hasRole('admin') && (
-                          <button
-                            onClick={() => handleDelete(offer)}
-                            className="p-2 text-dark-400 hover:text-red-400 hover:bg-dark-700/50 rounded-lg transition-colors"
+                    <th className="text-right py-3 px-4 text-sm font-medium text-dark-400">Действия</th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {offers.map((offer, index) => (
+                  <tr 
+                    key={offer.id} 
+                    className="table-row animate-fade-in"
+                    style={{ animationDelay: `${index * 30}ms` }}
+                  >
+                    <td className="py-4 px-4">
+                      <span className="font-medium text-dark-100">{offer.name}</span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="text-dark-300">{offer.partner_name}</span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="px-2 py-1 bg-primary-500/10 text-primary-400 text-xs rounded-md border border-primary-500/20">
+                        {offer.theme}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="text-green-400 font-mono text-sm">
+                        {offer.payout || '—'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="text-dark-300 font-mono text-sm">
+                        {offer.landing_price || '—'}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex gap-2">
+                        {offer.partner_link && (
+                          <a
+                            href={offer.partner_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
                           >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                            <ExternalLink className="w-3 h-3" />
+                            ПП
+                          </a>
+                        )}
+                        {offer.promo_link && (
+                          <a
+                            href={offer.promo_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            Промо
+                          </a>
+                        )}
+                        {!offer.partner_link && !offer.promo_link && (
+                          <span className="text-dark-500 text-sm">—</span>
                         )}
                       </div>
                     </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    {canManageOffers() && (
+                      <td className="py-4 px-4 text-right">
+                        <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => setEditingOffer(offer)}
+                            className="p-2 text-dark-400 hover:text-primary-400 hover:bg-dark-700/50 rounded-lg transition-colors"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          {hasRole('admin') && (
+                            <button
+                              onClick={() => handleDelete(offer)}
+                              className="p-2 text-dark-400 hover:text-red-400 hover:bg-dark-700/50 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* Modal */}
@@ -435,4 +536,3 @@ function Offers() {
 }
 
 export default Offers;
-

@@ -192,7 +192,7 @@ export default function Notifications() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-96 glass-card p-0 shadow-2xl animate-scale-in z-50 max-h-[80vh] flex flex-col">
+        <div className="fixed sm:absolute inset-0 sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-full sm:w-96 glass-card p-0 shadow-2xl animate-scale-in z-50 sm:max-h-[80vh] flex flex-col sm:rounded-2xl rounded-none">
           {/* Header */}
           <div className="p-4 border-b border-dark-700 flex items-center justify-between">
             <h3 className="font-semibold text-dark-100 flex items-center gap-2">

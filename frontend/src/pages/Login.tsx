@@ -46,14 +46,14 @@ function Login() {
         <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-primary-600/10 to-transparent rounded-full blur-3xl" />
       </div>
 
-      <div className="glass-card w-full max-w-md p-8 animate-scale-in relative">
+      <div className="glass-card w-full max-w-md p-6 sm:p-8 animate-scale-in relative">
         {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-xl shadow-primary-500/30 mb-4">
-            <Zap className="w-9 h-9 text-white" />
+        <div className="flex flex-col items-center mb-6 sm:mb-8">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-xl shadow-primary-500/30 mb-3 sm:mb-4">
+            <Zap className="w-8 h-8 sm:w-9 sm:h-9 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-dark-100">Offer Tracker</h1>
-          <p className="text-dark-400 mt-1">Войдите в систему</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-dark-100">Offer Tracker</h1>
+          <p className="text-dark-400 mt-1 text-sm">Войдите в систему</p>
         </div>
 
         {/* Form */}
@@ -112,9 +112,9 @@ function Login() {
         </form>
 
         {/* Demo credentials */}
-        <div className="mt-6 p-4 bg-dark-900/50 rounded-xl border border-dark-700/50">
+        <div className="mt-5 sm:mt-6 p-3 sm:p-4 bg-dark-900/50 rounded-xl border border-dark-700/50">
           <p className="text-xs text-dark-400 text-center mb-2">Тестовые аккаунты:</p>
-          <div className="text-xs text-dark-300 space-y-1 font-mono">
+          <div className="text-[11px] sm:text-xs text-dark-300 space-y-1 font-mono">
             <p>Админ: <span className="text-primary-400">admin</span> / admin123</p>
             <p>Байер: <span className="text-primary-400">buyer1</span> / buyer123</p>
             <p>Разраб: <span className="text-primary-400">webdev1</span> / webdev123</p>
