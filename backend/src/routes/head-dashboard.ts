@@ -93,6 +93,10 @@ router.get('/tasks', authenticateToken, (req: Request, res: Response): void => {
     memberIds.push(userId!);
 
     const placeholders = memberIds.map(() => '?').join(',');
+    
+    // Показываем задачи:
+    // 1. Где исполнитель - сотрудник отдела или сам руководитель
+    // 2. ИЛИ задача назначена на отдел (department = код отдела)
     const tasks = db.prepare(`
       SELECT t.*, 
              c.full_name as customer_name, 
@@ -101,6 +105,7 @@ router.get('/tasks', authenticateToken, (req: Request, res: Response): void => {
       LEFT JOIN users c ON t.customer_id = c.id
       LEFT JOIN users e ON t.executor_id = e.id
       WHERE t.executor_id IN (${placeholders})
+         OR t.department = ?
       ORDER BY 
         CASE t.status 
           WHEN 'in_progress' THEN 1 
@@ -109,7 +114,7 @@ router.get('/tasks', authenticateToken, (req: Request, res: Response): void => {
           WHEN 'cancelled' THEN 4 
         END,
         t.deadline ASC
-    `).all(...memberIds) as TaskWithUsers[];
+    `).all(...memberIds, department.code) as TaskWithUsers[];
 
     res.json(tasks);
   } catch (error) {
