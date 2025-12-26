@@ -107,7 +107,7 @@ function PartnerModal({
 }
 
 function Partners() {
-  const { canManageOffers, hasRole } = useAuthStore();
+  const { canManagePartners, hasRole } = useAuthStore();
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editingPartner, setEditingPartner] = useState<Partner | undefined>();
@@ -183,7 +183,7 @@ function Partners() {
             Управление партнёрскими сетями
           </p>
         </div>
-        {canManageOffers() && (
+        {canManagePartners() && (
           <button
             onClick={() => setShowModal(true)}
             className="btn-primary flex items-center gap-2 text-sm px-4 py-2 sm:px-6 sm:py-3"
@@ -210,7 +210,7 @@ function Partners() {
           <Building2 className="w-12 h-12 sm:w-16 sm:h-16 text-dark-600 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-dark-300">Нет партнёрок</h3>
           <p className="text-dark-500 mt-1 text-sm">
-            {canManageOffers() 
+            {canManagePartners() 
               ? 'Добавьте первую партнёрку, чтобы начать' 
               : 'Партнёрки пока не добавлены'
             }
@@ -235,7 +235,7 @@ function Partners() {
                     </p>
                   )}
                 </div>
-                {canManageOffers() && (
+                {canManagePartners() && (
                   <div className="flex gap-1 flex-shrink-0">
                     <button
                       onClick={() => setEditingPartner(partner)}

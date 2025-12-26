@@ -24,11 +24,19 @@ interface Task {
   description?: string | null;
   deadline?: string;
   geo?: string | null;
+  department?: string | null;
   customer_id: string;
   executor_id: string;
   customer_name?: string;
   executor_name?: string;
 }
+
+// Названия отделов
+const departmentLabels: Record<string, string> = {
+  buying: 'Баинг',
+  creo: 'Крео',
+  development: 'Разработка',
+};
 
 // Форматирование даты для уведомлений
 function formatDeadline(deadline?: string): string {
@@ -57,6 +65,7 @@ function truncateDescription(desc?: string | null): string {
 // Типы уведомлений
 export const NotificationTypes = {
   TASK_ASSIGNED: 'task_assigned',
+  TASK_REASSIGNED: 'task_reassigned',
   TASK_STATUS_CHANGED: 'task_status_changed',
   TASK_DEADLINE_SOON: 'task_deadline_soon',
   TASK_OVERDUE: 'task_overdue',
@@ -187,7 +196,7 @@ export function createNotification(
   }
 }
 
-// Уведомление о новой задаче (исполнителю)
+// Уведомление о новой задаче (исполнителю/руководителю отдела)
 export function notifyTaskAssigned(task: Task, creatorName: string): void {
   if (task.customer_id === task.executor_id) return; // Не уведомляем себя
 
@@ -195,16 +204,48 @@ export function notifyTaskAssigned(task: Task, creatorName: string): void {
   const desc = truncateDescription(task.description);
   const deadline = formatDeadline(task.deadline);
   const geoInfo = task.geo ? ` [${task.geo.toUpperCase()}]` : '';
+  const deptInfo = task.department ? departmentLabels[task.department] || task.department : '';
   
   let message = `📋 Задача ${taskNum}${geoInfo}: ${task.title}\n`;
+  if (deptInfo) message += `\n🏢 Отдел: ${deptInfo}\n`;
   if (desc) message += `\n${desc}\n`;
   message += `\n👤 Заказчик: ${creatorName}`;
   if (deadline) message += `\n⏰ Дедлайн: ${deadline}`;
 
+  // Если задача назначена на отдел - это уведомление для руководителя
+  const title = task.department 
+    ? `Новая задача ${taskNum} для отдела ${deptInfo}`
+    : `Новая задача ${taskNum}`;
+
   createNotification(
     task.executor_id,
     NotificationTypes.TASK_ASSIGNED,
-    `Новая задача ${taskNum}`,
+    title,
+    message,
+    task.id
+  );
+}
+
+// Уведомление о переназначении задачи сотруднику (от руководителя)
+export function notifyTaskReassigned(task: Task, headName: string, newExecutorId: string): void {
+  if (task.executor_id === newExecutorId) return; // Уже назначен
+
+  const taskNum = task.task_number ? `#${task.task_number}` : '';
+  const desc = truncateDescription(task.description);
+  const deadline = formatDeadline(task.deadline);
+  const geoInfo = task.geo ? ` [${task.geo.toUpperCase()}]` : '';
+  const deptInfo = task.department ? departmentLabels[task.department] || task.department : '';
+  
+  let message = `📋 Задача ${taskNum}${geoInfo}: ${task.title}\n`;
+  if (deptInfo) message += `\n🏢 Отдел: ${deptInfo}\n`;
+  if (desc) message += `\n${desc}\n`;
+  message += `\n👤 Назначил: ${headName}`;
+  if (deadline) message += `\n⏰ Дедлайн: ${deadline}`;
+
+  createNotification(
+    newExecutorId,
+    NotificationTypes.TASK_REASSIGNED,
+    `Вам назначена задача ${taskNum}`,
     message,
     task.id
   );

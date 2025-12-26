@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Package, Plus, ExternalLink, Edit2, Trash2, X, Filter } from 'lucide-react';
+import { Package, Plus, ExternalLink, Edit2, Trash2, X, Filter, Globe } from 'lucide-react';
 import { offersApi, partnersApi } from '../api';
 import { useAuthStore } from '../store/authStore';
-import { Offer, Partner } from '../types';
+import { Offer, Partner, geoOptions } from '../types';
+import GeoSelect from '../components/GeoSelect';
 import toast from 'react-hot-toast';
 
 interface OfferFormData {
   partner_id: string;
   name: string;
   theme: string;
+  geo: string;
   partner_link: string;
   landing_price: string;
   promo_link: string;
@@ -31,6 +33,7 @@ function OfferModal({
     partner_id: offer?.partner_id || partners[0]?.id || '',
     name: offer?.name || '',
     theme: offer?.theme || '',
+    geo: offer?.geo || '',
     partner_link: offer?.partner_link || '',
     landing_price: offer?.landing_price || '',
     promo_link: offer?.promo_link || '',
@@ -39,7 +42,7 @@ function OfferModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.partner_id || !formData.name.trim() || !formData.theme.trim()) {
+    if (!formData.partner_id || !formData.name.trim() || !formData.theme.trim() || !formData.geo) {
       toast.error('Заполните обязательные поля');
       return;
     }
@@ -110,6 +113,19 @@ function OfferModal({
 
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">
+                GEO *
+              </label>
+              <GeoSelect
+                value={formData.geo}
+                onChange={(geo) => setFormData({ ...formData, geo })}
+                placeholder="Выберите GEO..."
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-2">
                 Ставка/Апп
               </label>
               <input
@@ -120,9 +136,7 @@ function OfferModal({
                 placeholder="50$/dep"
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">
                 Цена на ленде
@@ -135,19 +149,19 @@ function OfferModal({
                 placeholder="500 руб"
               />
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                Ссылка в ПП
-              </label>
-              <input
-                type="url"
-                value={formData.partner_link}
-                onChange={(e) => setFormData({ ...formData, partner_link: e.target.value })}
-                className="glass-input w-full"
-                placeholder="https://..."
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-dark-300 mb-2">
+              Ссылка в ПП
+            </label>
+            <input
+              type="url"
+              value={formData.partner_link}
+              onChange={(e) => setFormData({ ...formData, partner_link: e.target.value })}
+              className="glass-input w-full"
+              placeholder="https://..."
+            />
           </div>
 
           <div>
@@ -222,6 +236,12 @@ function OfferCard({
         <span className="px-2 py-1 bg-primary-500/10 text-primary-400 text-xs rounded-md border border-primary-500/20">
           {offer.theme}
         </span>
+        {offer.geo && (
+          <span className="px-2 py-1 bg-blue-500/10 text-blue-400 text-xs rounded-md border border-blue-500/20 flex items-center gap-1">
+            <Globe className="w-3 h-3" />
+            {geoOptions.find(g => g.code === offer.geo)?.label || offer.geo.toUpperCase()}
+          </span>
+        )}
         {offer.payout && (
           <span className="text-green-400 font-mono text-sm">{offer.payout}</span>
         )}
@@ -266,6 +286,8 @@ function Offers() {
   const [showModal, setShowModal] = useState(false);
   const [editingOffer, setEditingOffer] = useState<Offer | undefined>();
   const [filterPartnerId, setFilterPartnerId] = useState<string>('');
+  const [filterGeo, setFilterGeo] = useState<string>('');
+  const [filterTheme, setFilterTheme] = useState<string>('');
 
   const { data: partners = [] } = useQuery({
     queryKey: ['partners'],
@@ -330,6 +352,23 @@ function Offers() {
     }
   };
 
+  // Получаем уникальные тематики из офферов
+  const uniqueThemes = [...new Set(offers.map(o => o.theme).filter(Boolean))].sort();
+  
+  // Получаем уникальные GEO из офферов
+  const uniqueGeos = [...new Set(offers.map(o => o.geo).filter(Boolean) as string[])].sort();
+
+  // Применяем фильтры
+  let filteredOffers = offers;
+  
+  if (filterGeo) {
+    filteredOffers = filteredOffers.filter(o => o.geo === filterGeo);
+  }
+  
+  if (filterTheme) {
+    filteredOffers = filteredOffers.filter(o => o.theme === filterTheme);
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
@@ -343,23 +382,48 @@ function Offers() {
             Каталог офферов по партнёркам
           </p>
         </div>
-        <div className="flex gap-2 sm:gap-3 flex-wrap">
-          {/* Filter */}
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-dark-400 hidden sm:block" />
-            <select
-              value={filterPartnerId}
-              onChange={(e) => setFilterPartnerId(e.target.value)}
-              className="glass-input py-2 px-3 text-sm"
-            >
-              <option value="">Все партнёрки</option>
-              {partners.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="flex gap-2 sm:gap-3 flex-wrap items-center">
+          {/* Filters */}
+          <Filter className="w-4 h-4 text-dark-400 hidden sm:block" />
+          
+          <select
+            value={filterPartnerId}
+            onChange={(e) => setFilterPartnerId(e.target.value)}
+            className="glass-input py-2 px-3 text-sm"
+          >
+            <option value="">Все партнёрки</option>
+            {partners.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterGeo}
+            onChange={(e) => setFilterGeo(e.target.value)}
+            className="glass-input py-2 px-3 text-sm"
+          >
+            <option value="">Все GEO</option>
+            {uniqueGeos.map((geo) => (
+              <option key={geo} value={geo}>
+                {geoOptions.find(g => g.code === geo)?.label || geo.toUpperCase()}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={filterTheme}
+            onChange={(e) => setFilterTheme(e.target.value)}
+            className="glass-input py-2 px-3 text-sm"
+          >
+            <option value="">Все тематики</option>
+            {uniqueThemes.map((theme) => (
+              <option key={theme} value={theme}>
+                {theme}
+              </option>
+            ))}
+          </select>
           {canManageOffers() && partners.length > 0 && (
             <button
               onClick={() => setShowModal(true)}
@@ -390,14 +454,16 @@ function Offers() {
             Офферы привязываются к партнёркам
           </p>
         </div>
-      ) : offers.length === 0 ? (
+      ) : filteredOffers.length === 0 ? (
         <div className="glass-card p-8 sm:p-12 text-center">
           <Package className="w-12 h-12 sm:w-16 sm:h-16 text-dark-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-dark-300">Нет офферов</h3>
+          <h3 className="text-lg font-medium text-dark-300">
+            {offers.length === 0 ? 'Нет офферов' : 'Ничего не найдено'}
+          </h3>
           <p className="text-dark-500 mt-1 text-sm">
-            {canManageOffers() 
-              ? 'Добавьте первый оффер' 
-              : 'Офферы пока не добавлены'
+            {offers.length === 0 
+              ? (canManageOffers() ? 'Добавьте первый оффер' : 'Офферы пока не добавлены')
+              : 'Попробуйте изменить фильтры'
             }
           </p>
         </div>
@@ -405,7 +471,7 @@ function Offers() {
         <>
           {/* Mobile cards */}
           <div className="sm:hidden space-y-3">
-            {offers.map((offer, index) => (
+            {filteredOffers.map((offer, index) => (
               <div key={offer.id} style={{ animationDelay: `${index * 30}ms` }}>
                 <OfferCard
                   offer={offer}
@@ -426,6 +492,7 @@ function Offers() {
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Название</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Партнёрка</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Тематика</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">GEO</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Ставка</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Цена</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Ссылки</th>
@@ -435,7 +502,7 @@ function Offers() {
                 </tr>
               </thead>
               <tbody>
-                {offers.map((offer, index) => (
+                {filteredOffers.map((offer, index) => (
                   <tr 
                     key={offer.id} 
                     className="table-row animate-fade-in"
@@ -451,6 +518,15 @@ function Offers() {
                       <span className="px-2 py-1 bg-primary-500/10 text-primary-400 text-xs rounded-md border border-primary-500/20">
                         {offer.theme}
                       </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      {offer.geo ? (
+                        <span className="px-2 py-1 bg-blue-500/10 text-blue-400 text-xs rounded-md border border-blue-500/20">
+                          {geoOptions.find(g => g.code === offer.geo)?.label || offer.geo.toUpperCase()}
+                        </span>
+                      ) : (
+                        <span className="text-dark-500">—</span>
+                      )}
                     </td>
                     <td className="py-4 px-4">
                       <span className="text-green-400 font-mono text-sm">

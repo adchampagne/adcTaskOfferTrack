@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db, { getNextTaskNumber } from '../database';
 import { authenticateToken } from '../middleware/auth';
-import { Task, TaskWithUsers } from '../types';
+import { Task, TaskWithUsers, Department, departmentHeadRole, UserRole } from '../types';
 import { notifyTaskAssigned, notifyStatusChanged } from './notifications';
 
 const router = Router();
@@ -24,10 +24,12 @@ router.get('/', authenticateToken, (req: Request, res: Response): void => {
     let query = `
       SELECT t.*, 
              c.full_name as customer_name, 
-             e.full_name as executor_name
+             e.full_name as executor_name,
+             o.name as offer_name
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
       LEFT JOIN users e ON t.executor_id = e.id
+      LEFT JOIN offers o ON t.offer_id = o.id
       WHERE 1=1
     `;
 
@@ -67,10 +69,12 @@ router.get('/my', authenticateToken, (req: Request, res: Response): void => {
     const tasks = db.prepare(`
       SELECT t.*, 
              c.full_name as customer_name, 
-             e.full_name as executor_name
+             e.full_name as executor_name,
+             o.name as offer_name
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
       LEFT JOIN users e ON t.executor_id = e.id
+      LEFT JOIN offers o ON t.offer_id = o.id
       WHERE t.customer_id = ? OR t.executor_id = ?
       ORDER BY t.deadline ASC
     `).all(userId, userId) as TaskWithUsers[];
@@ -88,10 +92,12 @@ router.get('/:id', authenticateToken, (req: Request, res: Response): void => {
     const task = db.prepare(`
       SELECT t.*, 
              c.full_name as customer_name, 
-             e.full_name as executor_name
+             e.full_name as executor_name,
+             o.name as offer_name
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
       LEFT JOIN users e ON t.executor_id = e.id
+      LEFT JOIN offers o ON t.offer_id = o.id
       WHERE t.id = ?
     `).get(req.params.id) as TaskWithUsers | undefined;
 
@@ -110,20 +116,75 @@ router.get('/:id', authenticateToken, (req: Request, res: Response): void => {
 // Создать таск (все могут)
 router.post('/', authenticateToken, (req: Request, res: Response): void => {
   try {
-    const { title, description, task_type, executor_id, deadline, geo } = req.body;
+    const { title, description, task_type, executor_id, deadline, geo, priority, department, offer_id } = req.body;
+    const currentUserRole = req.user?.role as UserRole;
 
-    if (!title || !task_type || !executor_id || !deadline) {
-      res.status(400).json({ error: 'Заголовок, тип, исполнитель и дедлайн обязательны' });
+    if (!title || !task_type || !deadline || !geo || !priority) {
+      res.status(400).json({ error: 'Заголовок, тип, GEO, приоритет и дедлайн обязательны' });
       return;
     }
 
-    // Для задач типа "завести ленд" требуем GEO
-    if (task_type === 'create_landing' && !geo) {
-      res.status(400).json({ error: 'Для задачи "Завести ленд" необходимо указать GEO' });
+    // Обрабатываем offer_id: 'none' означает отсутствие оффера
+    const finalOfferId = offer_id === 'none' ? null : offer_id;
+
+    // Проверяем существование оффера (если указан)
+    if (finalOfferId) {
+      const offer = db.prepare('SELECT id FROM offers WHERE id = ?').get(finalOfferId);
+      if (!offer) {
+        res.status(400).json({ error: 'Оффер не найден' });
+        return;
+      }
+    }
+
+    if (!['high', 'normal', 'low'].includes(priority)) {
+      res.status(400).json({ error: 'Неверный приоритет' });
       return;
     }
 
-    const executor = db.prepare('SELECT id FROM users WHERE id = ?').get(executor_id);
+    // Определяем исполнителя
+    let finalExecutorId = executor_id;
+    
+    // Админ может указать исполнителя напрямую
+    if (currentUserRole === 'admin') {
+      if (!executor_id) {
+        res.status(400).json({ error: 'Исполнитель обязателен' });
+        return;
+      }
+      finalExecutorId = executor_id;
+    } else {
+      // Все остальные должны указать отдел
+      if (!department) {
+        res.status(400).json({ error: 'Необходимо указать отдел для задачи' });
+        return;
+      }
+      if (!['buying', 'creo', 'development'].includes(department)) {
+        res.status(400).json({ error: 'Неверный отдел' });
+        return;
+      }
+
+      // Если указан executor_id - это руководитель назначает задачу сотруднику своего отдела
+      if (executor_id) {
+        finalExecutorId = executor_id;
+      } else {
+        // Иначе находим руководителя отдела
+        const headRole = departmentHeadRole[department as Department];
+        const departmentHead = db.prepare('SELECT id FROM users WHERE role = ?').get(headRole) as { id: string } | undefined;
+        
+        if (!departmentHead) {
+          res.status(400).json({ error: `Руководитель отдела "${department}" не найден` });
+          return;
+        }
+        
+        finalExecutorId = departmentHead.id;
+      }
+    }
+
+    if (!finalExecutorId) {
+      res.status(400).json({ error: 'Исполнитель обязателен' });
+      return;
+    }
+
+    const executor = db.prepare('SELECT id FROM users WHERE id = ?').get(finalExecutorId);
     if (!executor) {
       res.status(400).json({ error: 'Исполнитель не найден' });
       return;
@@ -134,17 +195,19 @@ router.post('/', authenticateToken, (req: Request, res: Response): void => {
     const task_number = getNextTaskNumber();
 
     db.prepare(`
-      INSERT INTO tasks (id, task_number, title, description, task_type, geo, customer_id, executor_id, deadline)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, task_number, title, description || null, task_type, geo || null, customer_id, executor_id, deadline);
+      INSERT INTO tasks (id, task_number, title, description, task_type, geo, priority, department, offer_id, customer_id, executor_id, deadline)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, task_number, title, description || null, task_type, geo, priority, department || null, finalOfferId, customer_id, finalExecutorId, deadline);
 
     const task = db.prepare(`
       SELECT t.*, 
              c.full_name as customer_name, 
-             e.full_name as executor_name
+             e.full_name as executor_name,
+             o.name as offer_name
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
       LEFT JOIN users e ON t.executor_id = e.id
+      LEFT JOIN offers o ON t.offer_id = o.id
       WHERE t.id = ?
     `).get(id) as TaskWithUsers;
 
@@ -192,10 +255,12 @@ router.patch('/:id/status', authenticateToken, (req: Request, res: Response): vo
     const task = db.prepare(`
       SELECT t.*, 
              c.full_name as customer_name, 
-             e.full_name as executor_name
+             e.full_name as executor_name,
+             o.name as offer_name
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
       LEFT JOIN users e ON t.executor_id = e.id
+      LEFT JOIN offers o ON t.offer_id = o.id
       WHERE t.id = ?
     `).get(id) as TaskWithUsers;
 
@@ -215,7 +280,7 @@ router.patch('/:id/status', authenticateToken, (req: Request, res: Response): vo
 // Обновить таск
 router.put('/:id', authenticateToken, (req: Request, res: Response): void => {
   try {
-    const { title, description, task_type, executor_id, deadline, geo } = req.body;
+    const { title, description, task_type, executor_id, deadline, geo, priority, department, offer_id } = req.body;
     const { id } = req.params;
 
     const existing = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as Task | undefined;
@@ -245,24 +310,32 @@ router.put('/:id', authenticateToken, (req: Request, res: Response): void => {
       return;
     }
 
+    // Обрабатываем offer_id: 'none' означает отсутствие оффера
+    const updateOfferId = offer_id === 'none' ? null : offer_id;
+
     db.prepare(`
       UPDATE tasks 
       SET title = COALESCE(?, title),
           description = COALESCE(?, description),
           task_type = COALESCE(?, task_type),
           geo = COALESCE(?, geo),
+          priority = COALESCE(?, priority),
+          department = COALESCE(?, department),
+          offer_id = COALESCE(?, offer_id),
           executor_id = COALESCE(?, executor_id),
           deadline = COALESCE(?, deadline)
       WHERE id = ?
-    `).run(title, description, task_type, geo, executor_id, deadline, id);
+    `).run(title, description, task_type, geo, priority, department, updateOfferId, executor_id, deadline, id);
 
     const task = db.prepare(`
       SELECT t.*, 
              c.full_name as customer_name, 
-             e.full_name as executor_name
+             e.full_name as executor_name,
+             o.name as offer_name
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
       LEFT JOIN users e ON t.executor_id = e.id
+      LEFT JOIN offers o ON t.offer_id = o.id
       WHERE t.id = ?
     `).get(id) as TaskWithUsers;
 
@@ -295,6 +368,56 @@ router.delete('/:id', authenticateToken, (req: Request, res: Response): void => 
     res.json({ message: 'Задача удалена' });
   } catch (error) {
     console.error('Delete task error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Оценить выполненную задачу (только заказчик)
+router.patch('/:id/rate', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    const { rating } = req.body;
+    const { id } = req.params;
+
+    if (!['bad', 'ok', 'top'].includes(rating)) {
+      res.status(400).json({ error: 'Неверная оценка. Допустимые значения: bad, ok, top' });
+      return;
+    }
+
+    const existing = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as Task | undefined;
+    if (!existing) {
+      res.status(404).json({ error: 'Задача не найдена' });
+      return;
+    }
+
+    // Оценивать может только заказчик
+    if (existing.customer_id !== req.user?.userId) {
+      res.status(403).json({ error: 'Только заказчик может оценить задачу' });
+      return;
+    }
+
+    // Оценивать можно только выполненные задачи
+    if (existing.status !== 'completed') {
+      res.status(400).json({ error: 'Можно оценить только выполненную задачу' });
+      return;
+    }
+
+    db.prepare('UPDATE tasks SET rating = ? WHERE id = ?').run(rating, id);
+
+    const task = db.prepare(`
+      SELECT t.*, 
+             c.full_name as customer_name, 
+             e.full_name as executor_name,
+             o.name as offer_name
+      FROM tasks t
+      LEFT JOIN users c ON t.customer_id = c.id
+      LEFT JOIN users e ON t.executor_id = e.id
+      LEFT JOIN offers o ON t.offer_id = o.id
+      WHERE t.id = ?
+    `).get(id) as TaskWithUsers;
+
+    res.json(task);
+  } catch (error) {
+    console.error('Rate task error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

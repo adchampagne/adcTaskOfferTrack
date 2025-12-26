@@ -24,6 +24,9 @@ import tasksRoutes from './routes/tasks';
 import filesRoutes from './routes/files';
 import notificationsRoutes from './routes/notifications';
 import telegramRoutes from './routes/telegram';
+import departmentsRoutes from './routes/departments';
+import headDashboardRoutes from './routes/head-dashboard';
+import knowledgeRoutes from './routes/knowledge';
 import { startPolling } from './services/telegramPolling';
 
 const app = express();
@@ -44,6 +47,9 @@ app.use('/api/tasks', tasksRoutes);
 app.use('/api/files', filesRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/telegram', telegramRoutes);
+app.use('/api/departments', departmentsRoutes);
+app.use('/api/head-dashboard', headDashboardRoutes);
+app.use('/api/knowledge', knowledgeRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

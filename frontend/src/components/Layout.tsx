@@ -10,7 +10,10 @@ import {
   Zap,
   Send,
   Menu,
-  X
+  X,
+  Layers,
+  BarChart3,
+  BookOpen
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { roleLabels } from '../types';
@@ -53,6 +56,17 @@ function Layout() {
     { to: '/tasks', icon: CheckSquare, label: 'Задачи' },
   ];
 
+  // Отделы видны всем
+  navItems.push({ to: '/departments', icon: Layers, label: 'Отделы' });
+
+  // Дашборд руководителя для руководителей отделов
+  if (hasRole('buying_head') || hasRole('creo_head') || hasRole('dev_head')) {
+    navItems.push({ to: '/head-dashboard', icon: BarChart3, label: 'Мой отдел' });
+  }
+
+  // База знаний (доступна всем, но контент фильтруется по отделу)
+  navItems.push({ to: '/knowledge-base', icon: BookOpen, label: 'База знаний' });
+  
   if (hasRole('admin')) {
     navItems.push({ to: '/users', icon: Users, label: 'Пользователи' });
   }
@@ -66,7 +80,7 @@ function Layout() {
         </div>
         <div>
           <h1 className="text-xl font-bold text-dark-100">Offer Tracker</h1>
-          <p className="text-xs text-dark-400">Таск-трекер</p>
+          <p className="text-xs text-dark-400">Таск-трекер и всякое другое</p>
         </div>
       </div>
 
@@ -122,7 +136,7 @@ function Layout() {
   );
 
   return (
-    <div className="min-h-screen flex">
+    <div className="h-screen flex overflow-hidden">
       {/* Mobile header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 glass-card rounded-none border-x-0 border-t-0">
         <div className="flex items-center justify-between p-4">
@@ -169,7 +183,7 @@ function Layout() {
       )}
 
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-72 glass-card m-4 mr-0 p-6 flex-col">
+      <aside className="hidden lg:flex w-72 glass-card m-4 mr-0 p-6 flex-col flex-shrink-0 overflow-y-auto">
         <SidebarContent />
       </aside>
       
@@ -179,8 +193,8 @@ function Layout() {
       />
 
       {/* Main content */}
-      <main className="flex-1 p-4 pt-20 lg:pt-4 overflow-auto">
-        <div className="glass-card min-h-full p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 p-4 pt-20 lg:pt-4 min-h-0 flex flex-col">
+        <div className="glass-card flex-1 flex flex-col overflow-hidden p-4 sm:p-6 lg:p-8">
           <Outlet />
         </div>
       </main>

@@ -110,16 +110,6 @@ function Login() {
             )}
           </button>
         </form>
-
-        {/* Demo credentials */}
-        <div className="mt-5 sm:mt-6 p-3 sm:p-4 bg-dark-900/50 rounded-xl border border-dark-700/50">
-          <p className="text-xs text-dark-400 text-center mb-2">Тестовые аккаунты:</p>
-          <div className="text-[11px] sm:text-xs text-dark-300 space-y-1 font-mono">
-            <p>Админ: <span className="text-primary-400">admin</span> / admin123</p>
-            <p>Байер: <span className="text-primary-400">buyer1</span> / buyer123</p>
-            <p>Разраб: <span className="text-primary-400">webdev1</span> / webdev123</p>
-          </div>
-        </div>
       </div>
     </div>
   );

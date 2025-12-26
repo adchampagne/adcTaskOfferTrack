@@ -22,7 +22,7 @@ router.post('/register', authenticateToken, (req: Request, res: Response): void 
       return;
     }
 
-    if (!['admin', 'buyer', 'webdev'].includes(role)) {
+    if (!['admin', 'buyer', 'webdev', 'creo_manager', 'buying_head', 'bizdev', 'creo_head', 'dev_head'].includes(role)) {
       res.status(400).json({ error: 'Неверная роль' });
       return;
     }
@@ -115,6 +115,229 @@ router.get('/users', authenticateToken, (req: Request, res: Response): void => {
     res.json(users);
   } catch (error) {
     console.error('Get users error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Обновление роли пользователя (только админ)
+router.patch('/users/:id/role', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    if (req.user?.role !== 'admin') {
+      res.status(403).json({ error: 'Только админ может менять роли' });
+      return;
+    }
+
+    const { role } = req.body;
+    const { id } = req.params;
+
+    if (!['admin', 'buyer', 'webdev', 'creo_manager', 'buying_head', 'bizdev', 'creo_head', 'dev_head'].includes(role)) {
+      res.status(400).json({ error: 'Неверная роль' });
+      return;
+    }
+
+    const user = db.prepare('SELECT id FROM users WHERE id = ?').get(id);
+    if (!user) {
+      res.status(404).json({ error: 'Пользователь не найден' });
+      return;
+    }
+
+    db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, id);
+
+    const updated = db.prepare('SELECT id, username, full_name, role, created_at FROM users WHERE id = ?')
+      .get(id) as UserPublic;
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Update user role error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Полное обновление пользователя (только админ)
+router.put('/users/:id', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    if (req.user?.role !== 'admin') {
+      res.status(403).json({ error: 'Только админ может редактировать пользователей' });
+      return;
+    }
+
+    const { username, password, full_name, role } = req.body;
+    const { id } = req.params;
+
+    const existingUser = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as User | undefined;
+    if (!existingUser) {
+      res.status(404).json({ error: 'Пользователь не найден' });
+      return;
+    }
+
+    // Проверяем уникальность логина, если он изменился
+    if (username && username !== existingUser.username) {
+      const userWithSameUsername = db.prepare('SELECT id FROM users WHERE username = ? AND id != ?').get(username, id);
+      if (userWithSameUsername) {
+        res.status(400).json({ error: 'Пользователь с таким логином уже существует' });
+        return;
+      }
+    }
+
+    // Валидация роли
+    if (role && !['admin', 'buyer', 'webdev', 'creo_manager', 'buying_head', 'bizdev', 'creo_head'].includes(role)) {
+      res.status(400).json({ error: 'Неверная роль' });
+      return;
+    }
+
+    // Обновляем данные
+    const newUsername = username || existingUser.username;
+    const newFullName = full_name || existingUser.full_name;
+    const newRole = role || existingUser.role;
+    
+    // Если пароль передан - хэшируем и обновляем
+    if (password) {
+      const hashedPassword = bcrypt.hashSync(password, 10);
+      db.prepare('UPDATE users SET username = ?, password = ?, full_name = ?, role = ? WHERE id = ?')
+        .run(newUsername, hashedPassword, newFullName, newRole, id);
+    } else {
+      db.prepare('UPDATE users SET username = ?, full_name = ?, role = ? WHERE id = ?')
+        .run(newUsername, newFullName, newRole, id);
+    }
+
+    const updated = db.prepare('SELECT id, username, full_name, role, created_at FROM users WHERE id = ?')
+      .get(id) as UserPublic;
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Update user error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Удаление пользователя (только админ)
+router.delete('/users/:id', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    if (req.user?.role !== 'admin') {
+      res.status(403).json({ error: 'Только админ может удалять пользователей' });
+      return;
+    }
+
+    const { id } = req.params;
+
+    // Нельзя удалить самого себя
+    if (id === req.user.userId) {
+      res.status(400).json({ error: 'Нельзя удалить самого себя' });
+      return;
+    }
+
+    const user = db.prepare('SELECT id FROM users WHERE id = ?').get(id);
+    if (!user) {
+      res.status(404).json({ error: 'Пользователь не найден' });
+      return;
+    }
+
+    // Удаляем пользователя из отделов
+    db.prepare('DELETE FROM user_departments WHERE user_id = ?').run(id);
+    
+    // Убираем пользователя как руководителя отделов
+    db.prepare('UPDATE departments SET head_id = NULL WHERE head_id = ?').run(id);
+
+    // Удаляем пользователя
+    db.prepare('DELETE FROM users WHERE id = ?').run(id);
+
+    res.json({ message: 'Пользователь удалён' });
+  } catch (error) {
+    console.error('Delete user error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Список доступных дополнительных прав
+const AVAILABLE_PERMISSIONS = [
+  { code: 'manage_offers', label: 'Управление офферами', description: 'Создание и редактирование офферов' },
+  { code: 'manage_partners', label: 'Управление партнёрками', description: 'Создание и редактирование партнёрок' },
+  { code: 'manage_knowledge', label: 'Управление базой знаний', description: 'Создание и редактирование инструкций' },
+  { code: 'view_all_tasks', label: 'Просмотр всех задач', description: 'Видеть задачи всех пользователей' },
+];
+
+// Получить список доступных прав
+router.get('/permissions/list', authenticateToken, (req: Request, res: Response): void => {
+  res.json(AVAILABLE_PERMISSIONS);
+});
+
+// Получить права пользователя
+router.get('/users/:id/permissions', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    if (req.user?.role !== 'admin') {
+      res.status(403).json({ error: 'Только админ может просматривать права' });
+      return;
+    }
+
+    const { id } = req.params;
+    const permissions = db.prepare(`
+      SELECT permission FROM user_permissions WHERE user_id = ?
+    `).all(id) as { permission: string }[];
+
+    res.json(permissions.map(p => p.permission));
+  } catch (error) {
+    console.error('Get permissions error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Обновить права пользователя (только админ)
+router.put('/users/:id/permissions', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    if (req.user?.role !== 'admin') {
+      res.status(403).json({ error: 'Только админ может менять права' });
+      return;
+    }
+
+    const { id } = req.params;
+    const { permissions } = req.body as { permissions: string[] };
+
+    const user = db.prepare('SELECT id FROM users WHERE id = ?').get(id);
+    if (!user) {
+      res.status(404).json({ error: 'Пользователь не найден' });
+      return;
+    }
+
+    // Валидация прав
+    const validPermissions = AVAILABLE_PERMISSIONS.map(p => p.code);
+    const invalidPerms = permissions.filter(p => !validPermissions.includes(p));
+    if (invalidPerms.length > 0) {
+      res.status(400).json({ error: `Неизвестные права: ${invalidPerms.join(', ')}` });
+      return;
+    }
+
+    // Удаляем старые права
+    db.prepare('DELETE FROM user_permissions WHERE user_id = ?').run(id);
+
+    // Добавляем новые
+    const insertStmt = db.prepare(`
+      INSERT INTO user_permissions (id, user_id, permission, granted_by)
+      VALUES (?, ?, ?, ?)
+    `);
+
+    const { v4: uuidv4 } = require('uuid');
+    for (const perm of permissions) {
+      insertStmt.run(uuidv4(), id, perm, req.user.userId);
+    }
+
+    res.json({ message: 'Права обновлены', permissions });
+  } catch (error) {
+    console.error('Update permissions error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Проверить есть ли у текущего пользователя определённое право
+router.get('/me/permissions', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    const userId = req.user?.userId;
+    const permissions = db.prepare(`
+      SELECT permission FROM user_permissions WHERE user_id = ?
+    `).all(userId) as { permission: string }[];
+
+    res.json(permissions.map(p => p.permission));
+  } catch (error) {
+    console.error('Get my permissions error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

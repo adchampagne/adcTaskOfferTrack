@@ -4,11 +4,12 @@ import {
   CheckSquare, Plus, X, Calendar, User, Clock, 
   AlertCircle, PlayCircle, CheckCircle, XCircle, Edit2, Trash2,
   Eye, FileText, ArrowRight, Upload, Download, Image, Video, 
-  FileArchive, File, Paperclip, Loader2
+  FileArchive, File, Paperclip, Loader2, HelpCircle, Filter
 } from 'lucide-react';
-import { tasksApi, authApi, filesApi } from '../api';
+import { tasksApi, authApi, filesApi, headDashboardApi, offersApi } from '../api';
 import { useAuthStore } from '../store/authStore';
-import { Task, TaskStatus, TaskType, taskTypeLabels, taskStatusLabels, User as UserType, TaskFile, geoOptions } from '../types';
+import { Task, TaskStatus, TaskType, TaskPriority, TaskRating, Department, taskTypeLabels, taskStatusLabels, taskPriorityLabels, taskRatingLabels, departmentLabels, User as UserType, TaskFile, roleLabels } from '../types';
+import GeoSelect from '../components/GeoSelect';
 import { format, isPast, isToday, isTomorrow } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import toast from 'react-hot-toast';
@@ -149,15 +150,18 @@ interface TaskFormData {
   description: string;
   task_type: TaskType;
   geo?: string;
+  priority: TaskPriority;
+  department?: Department;
   executor_id: string;
   deadline: string;
+  offer_id: string;
   files?: File[];
 }
 
 function TaskModal({
   task,
   users,
-  currentUserId,
+  currentUserRole,
   onClose,
   onSave,
   pendingFiles,
@@ -165,7 +169,7 @@ function TaskModal({
 }: {
   task?: Task;
   users: UserType[];
-  currentUserId: string;
+  currentUserRole: string;
   onClose: () => void;
   onSave: (data: TaskFormData) => void;
   pendingFiles: File[];
@@ -174,19 +178,48 @@ function TaskModal({
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showLandingHelp, setShowLandingHelp] = useState(false);
+  const [showCreoHelp, setShowCreoHelp] = useState(false);
+  
+  // Проверяем, является ли текущий пользователь руководителем отдела
+  const { data: headCheck } = useQuery({
+    queryKey: ['head-check'],
+    queryFn: headDashboardApi.check,
+  });
+
+  // Получаем сотрудников своего отдела (если руководитель)
+  const { data: myDepartmentMembers = [] } = useQuery({
+    queryKey: ['head-members'],
+    queryFn: headDashboardApi.getMembers,
+    enabled: headCheck?.isHead,
+  });
+
+  // Загружаем офферы
+  const { data: offers = [] } = useQuery({
+    queryKey: ['offers'],
+    queryFn: () => offersApi.getAll(),
+  });
+
+  const isHead = headCheck?.isHead;
+  const myDepartmentCode = headCheck?.department?.code as Department | undefined;
+  const isAdmin = currentUserRole === 'admin';
 
   const [formData, setFormData] = useState<TaskFormData>({
     title: task?.title || '',
     description: task?.description || '',
     task_type: task?.task_type || 'create_landing',
     geo: task?.geo || '',
+    priority: task?.priority || 'normal',
+    department: task?.department || undefined,
     executor_id: task?.executor_id || '',
+    offer_id: task?.offer_id || 'none',
     deadline: task?.deadline 
       ? format(new Date(task.deadline), "yyyy-MM-dd'T'HH:mm")
       : format(new Date(Date.now() + 24 * 60 * 60 * 1000), "yyyy-MM-dd'T'HH:mm"),
   });
 
-  const needsGeo = formData.task_type === 'create_landing';
+  // Показывать выбор сотрудника только если выбран свой отдел
+  const showEmployeeSelect = isHead && formData.department === myDepartmentCode;
 
   // Загрузка существующих файлов для редактирования
   const { data: existingFiles = [], isLoading: filesLoading } = useQuery({
@@ -197,14 +230,32 @@ function TaskModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title.trim() || !formData.executor_id || !formData.deadline) {
+    
+    // Базовая валидация
+    if (!formData.title.trim() || !formData.deadline || !formData.geo || !formData.priority) {
       toast.error('Заполните обязательные поля');
       return;
     }
-    if (needsGeo && !formData.geo) {
-      toast.error('Для задачи "Завести ленд" укажите GEO');
-      return;
+
+    // Админ может выбрать любого исполнителя напрямую
+    if (isAdmin) {
+      if (!formData.executor_id) {
+        toast.error('Выберите исполнителя');
+        return;
+      }
+    } else {
+      // Все остальные должны выбрать отдел
+      if (!formData.department) {
+        toast.error('Выберите отдел');
+        return;
+      }
+      // Если это свой отдел - нужен исполнитель
+      if (showEmployeeSelect && !formData.executor_id) {
+        toast.error('Выберите исполнителя из своего отдела');
+        return;
+      }
     }
+    
     onSave({ ...formData, files: pendingFiles });
   };
 
@@ -237,8 +288,6 @@ function TaskModal({
     }
   };
 
-  const otherUsers = users.filter(u => u.id !== currentUserId);
-
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-0 sm:p-4">
       <div className="glass-card w-full h-full sm:h-auto sm:max-w-2xl p-4 sm:p-6 animate-scale-in sm:max-h-[90vh] overflow-y-auto sm:rounded-2xl rounded-none">
@@ -268,18 +317,6 @@ function TaskModal({
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-dark-300 mb-2">
-              Описание
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="glass-input w-full h-24 resize-none"
-              placeholder="Подробное описание задачи..."
-            />
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">
@@ -298,46 +335,350 @@ function TaskModal({
               </select>
             </div>
 
+            {isAdmin ? (
+              /* Админ выбирает исполнителя напрямую */
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  Исполнитель *
+                </label>
+                <select
+                  value={formData.executor_id}
+                  onChange={(e) => setFormData({ ...formData, executor_id: e.target.value })}
+                  className="glass-input w-full"
+                >
+                  <option value="">Выберите...</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.full_name} ({roleLabels[u.role]})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              /* Все остальные выбирают отдел */
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  Отдел *
+                </label>
+                <select
+                  value={formData.department || ''}
+                  onChange={(e) => {
+                    const dept = e.target.value as Department;
+                    setFormData({ 
+                      ...formData, 
+                      department: dept,
+                      // Сбрасываем исполнителя при смене отдела
+                      executor_id: ''
+                    });
+                  }}
+                  className="glass-input w-full"
+                >
+                  <option value="">Выберите отдел...</option>
+                  {Object.entries(departmentLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                      {isHead && value === myDepartmentCode && ' (мой отдел)'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Выбор сотрудника - только если руководитель выбрал свой отдел */}
+          {showEmployeeSelect && (
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">
-                Исполнитель *
+                Назначить сотруднику *
               </label>
               <select
                 value={formData.executor_id}
                 onChange={(e) => setFormData({ ...formData, executor_id: e.target.value })}
                 className="glass-input w-full"
               >
-                <option value="">Выберите...</option>
-                <option value={currentUserId}>Я (себе)</option>
-                {otherUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.full_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* GEO field for create_landing */}
-          {needsGeo && (
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                GEO (страна) *
-              </label>
-              <select
-                value={formData.geo}
-                onChange={(e) => setFormData({ ...formData, geo: e.target.value })}
-                className="glass-input w-full"
-              >
-                <option value="">Выберите страну...</option>
-                {geoOptions.map((g) => (
-                  <option key={g.code} value={g.code}>
-                    {g.label}
+                <option value="">Выберите сотрудника...</option>
+                {myDepartmentMembers.map((m) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.user_name}
                   </option>
                 ))}
               </select>
             </div>
           )}
+
+          <div>
+            <label className="block text-sm font-medium text-dark-300 mb-2 flex items-center gap-2">
+              Описание
+              {formData.task_type === 'create_landing' && (
+                <button
+                  type="button"
+                  onClick={() => setShowLandingHelp(true)}
+                  className="text-primary-400 hover:text-primary-300 transition-colors"
+                  title="Показать пример описания"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                </button>
+              )}
+              {formData.task_type === 'prepare_creatives' && (
+                <button
+                  type="button"
+                  onClick={() => setShowCreoHelp(true)}
+                  className="text-primary-400 hover:text-primary-300 transition-colors"
+                  title="Показать пример описания"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                </button>
+              )}
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="glass-input w-full h-24 resize-none"
+              placeholder={
+                formData.task_type === 'create_landing' 
+                  ? "Укажите название оффера, ссылку на промо, требования к лендингу..."
+                  : formData.task_type === 'prepare_creatives'
+                    ? "Укажите оффер, формат видео, тип воронки, язык озвучки..."
+                    : "Подробное описание задачи..."
+              }
+            />
+          </div>
+
+          {/* Оффер */}
+          <div>
+            <label className="block text-sm font-medium text-dark-300 mb-2">
+              Оффер *
+            </label>
+            <select
+              value={formData.offer_id}
+              onChange={(e) => setFormData({ ...formData, offer_id: e.target.value })}
+              className="glass-input w-full"
+            >
+              <option value="none">Не про оффер</option>
+              {offers.map((offer) => (
+                <option key={offer.id} value={offer.id}>
+                  {offer.name} {offer.geo ? `[${offer.geo.toUpperCase()}]` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Landing Help Modal */}
+          {showLandingHelp && (
+            <div 
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4"
+              onClick={() => setShowLandingHelp(false)}
+            >
+              <div 
+                className="glass-card w-full max-w-lg p-6 animate-scale-in max-h-[80vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-dark-100 flex items-center gap-2">
+                    <HelpCircle className="w-5 h-5 text-primary-400" />
+                    Как заполнить задачу "Завести ленд"
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowLandingHelp(false)}
+                    className="text-dark-400 hover:text-dark-200 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4 text-sm">
+                  <div>
+                    <h4 className="font-semibold text-dark-100 mb-2">📝 Пример описания:</h4>
+                    <div className="bg-dark-700/50 rounded-lg p-3 text-dark-300 border border-dark-600">
+                      <p><strong>Оффер:</strong> Casino Vulkan</p>
+                      <p><strong>ПП:</strong> LemonAd</p>
+                      <p><strong>Ссылка на промо:</strong> https://promo.example.com/vulkan</p>
+                      <p><strong>Требования:</strong></p>
+                      <ul className="list-disc list-inside ml-2 mt-1">
+                        <li>Адаптив под мобильные</li>
+                        <li>Прелендинг в стиле новостного сайта</li>
+                        <li>Кнопка регистрации с якорем</li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold text-dark-100 mb-2">📁 Требования к файлам:</h4>
+                    <div className="space-y-2 text-dark-300">
+                      <div className="flex items-start gap-2">
+                        <span className="text-green-400">✓</span>
+                        <span><strong>Изображения:</strong>только форматы PNG, WebP, SVG (до 2 МБ каждый файл)</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-green-400">✓</span>
+                        <span><strong>Видео:</strong>только формат mp4 (до 80 МБ каждый файл)</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-green-400">✓</span>
+                        <span><strong>Архивы:</strong> ZIP, RAR, 7z (исходники, макеты)</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-green-400">✓</span>
+                        <span><strong>Документы:</strong> PDF, DOC, TXT (ТЗ, описания)</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-blue-400">💡</span>
+                        <span>Если есть готовые макеты в Figma/PSD — предоставьте ссылку</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold text-dark-100 mb-2">⚠️ Важно указать:</h4>
+                    <ul className="list-disc list-inside text-dark-300 space-y-1">
+                      <li>Название оффера и партнёрку</li>
+                      <li>Ссылку на промо-материалы</li>
+                      <li>GEO (страну) для локализации</li>
+                      <li>Цену товара</li>
+                      <li>Особые требования к дизайну</li>
+                      <li>Сроки и приоритет</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowLandingHelp(false)}
+                  className="btn-primary w-full mt-6"
+                >
+                  Понятно
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Creo Help Modal */}
+          {showCreoHelp && (
+            <div 
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4"
+              onClick={() => setShowCreoHelp(false)}
+            >
+              <div 
+                className="glass-card w-full max-w-lg p-6 animate-scale-in max-h-[80vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-dark-100 flex items-center gap-2">
+                    <HelpCircle className="w-5 h-5 text-primary-400" />
+                    Как заполнить задачу "Подготовить крео"
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreoHelp(false)}
+                    className="text-dark-400 hover:text-dark-200 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4 text-sm">
+                  <div>
+                    <h4 className="font-semibold text-dark-100 mb-2">📝 Что указать в описании:</h4>
+                    <div className="bg-dark-700/50 rounded-lg p-3 text-dark-300 border border-dark-600 space-y-2">
+                      <p><strong>1. Оффер и тематика:</strong> название оффера + тематика продукта</p>
+                      <p><strong>2. Формат видео:</strong> вертикаль/горизонталь/квадрат (9:16, 1:1, 16:9)</p>
+                      <p><strong>3. Хронометраж:</strong> длительность видеоряда (15 сек, 30 сек, 60 сек)</p>
+                      <p><strong>4. Тип воронки:</strong> нарезка кадров / дипфейк / история героя / новости / тизеры</p>
+                      <p><strong>5. Язык и GEO:</strong> язык озвучки и особенности локализации</p>
+                      <p><strong>6. Важные детали:</strong> специальные вставки, акценты, CTA</p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold text-dark-100 mb-2">🎤 Дополнительно приложить:</h4>
+                    <div className="space-y-2 text-dark-300">
+                      <div className="flex items-start gap-2">
+                        <span className="text-green-400">✓</span>
+                        <span><strong>Текст для озвучки</strong> — готовый скрипт</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-green-400">✓</span>
+                        <span><strong>Селеб/спикер</strong> — с прикреплённым исходником</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold text-dark-100 mb-2">📁 Обязательные файлы:</h4>
+                    <div className="space-y-2 text-dark-300">
+                      <div className="flex items-start gap-2">
+                        <span className="text-yellow-400">⚠️</span>
+                        <span><strong>Исходники</strong> — видео, фото материалы для монтажа</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-yellow-400">⚠️</span>
+                        <span><strong>Примеры</strong> — референсы готовых крео для понимания стиля</span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <span className="text-blue-400">💡</span>
+                        <span>Чем больше материалов — тем лучше результат!</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-primary-500/10 border border-primary-500/30 rounded-lg p-3">
+                    <p className="text-primary-400 text-xs">
+                      💡 <strong>Совет:</strong> Обязательно прикрепите исходники или примеры для лучшего выполнения ТЗ
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowCreoHelp(false)}
+                  className="btn-primary w-full mt-6"
+                >
+                  Понятно
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* GEO and Priority */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-2">
+                GEO (страна) *
+              </label>
+              <GeoSelect
+                value={formData.geo || ''}
+                onChange={(geo) => setFormData({ ...formData, geo })}
+                placeholder="Выберите страну..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-2">
+                Приоритет *
+              </label>
+              <div className="flex gap-2">
+                {(['high', 'normal', 'low'] as TaskPriority[]).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, priority: p })}
+                    className={`flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all border ${
+                      formData.priority === p
+                        ? p === 'high'
+                          ? 'bg-red-500 text-white border-red-500'
+                          : p === 'normal'
+                            ? 'bg-blue-500 text-white border-blue-500'
+                            : 'bg-gray-500 text-white border-gray-500'
+                        : 'bg-dark-700/50 text-dark-400 border-dark-600 hover:border-dark-500'
+                    }`}
+                  >
+                    {taskPriorityLabels[p]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-dark-300 mb-2">
@@ -473,6 +814,36 @@ function TaskViewModal({
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [showAssignSelect, setShowAssignSelect] = useState(false);
+  const [selectedExecutor, setSelectedExecutor] = useState('');
+
+  // Проверяем, является ли пользователь руководителем
+  const { data: headCheck } = useQuery({
+    queryKey: ['head-check'],
+    queryFn: headDashboardApi.check,
+  });
+
+  // Загружаем сотрудников отдела (если руководитель)
+  const { data: departmentMembers = [] } = useQuery({
+    queryKey: ['head-members'],
+    queryFn: headDashboardApi.getMembers,
+    enabled: headCheck?.isHead,
+  });
+
+  // Мутация для переназначения задачи
+  const reassignMutation = useMutation({
+    mutationFn: (executorId: string) => headDashboardApi.updateTask(task.id, { executor_id: executorId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      setShowAssignSelect(false);
+      setSelectedExecutor('');
+      toast.success('Задача назначена сотруднику');
+    },
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || 'Ошибка назначения');
+    },
+  });
 
   const isOverdue = isPast(new Date(task.deadline)) && task.status !== 'completed' && task.status !== 'cancelled';
   const isDueToday = isToday(new Date(task.deadline));
@@ -481,6 +852,25 @@ function TaskViewModal({
   const canUpload = task.customer_id === currentUserId || task.executor_id === currentUserId;
   const isMyTask = task.executor_id === currentUserId;
   const isMyCreatedTask = task.customer_id === currentUserId;
+
+  // Руководитель может переназначить задачу, если она назначена на него и не завершена
+  const canReassign = headCheck?.isHead && isMyTask && task.status !== 'completed' && task.status !== 'cancelled';
+
+  // Заказчик может оценить выполненную задачу
+  const canRate = isMyCreatedTask && task.status === 'completed' && !task.rating;
+
+  // Мутация для оценки задачи
+  const rateMutation = useMutation({
+    mutationFn: (rating: TaskRating) => tasksApi.rate(task.id, rating),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      toast.success('Оценка сохранена');
+    },
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || 'Ошибка оценки');
+    },
+  });
 
   // Загрузка файлов задачи
   const { data: files = [], isLoading: filesLoading } = useQuery({
@@ -548,8 +938,15 @@ function TaskViewModal({
               </div>
               <h2 className={`text-lg sm:text-2xl font-bold ${task.status === 'completed' ? 'text-dark-400 line-through' : 'text-dark-100'}`}>
                 {task.task_number && <span className="text-primary-400">#{task.task_number}</span>} {task.title}
-                {task.geo && <span className="ml-2 text-xs sm:text-sm font-normal text-dark-400 bg-dark-700/50 px-2 py-0.5 rounded">{task.geo.toUpperCase()}</span>}
+                {task.geo && task.geo !== 'any' && <span className="ml-2 text-xs sm:text-sm font-normal text-dark-400 bg-dark-700/50 px-2 py-0.5 rounded">{task.geo.toUpperCase()}</span>}
               </h2>
+              {task.offer_name && (
+                <div className="mt-2">
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-500/10 text-purple-400 text-xs sm:text-sm rounded border border-purple-500/30">
+                    📦 Оффер: {task.offer_name}
+                  </span>
+                </div>
+              )}
             </div>
             <button
               onClick={onClose}
@@ -715,6 +1112,109 @@ function TaskViewModal({
               </div>
             )}
           </div>
+
+          {/* Reassign task (для руководителей) */}
+          {canReassign && (
+            <div className="bg-orange-500/10 rounded-xl p-3 sm:p-4 border border-orange-500/30 mb-4 sm:mb-6">
+              <h3 className="text-sm font-medium text-orange-400 mb-3 flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Назначить задачу сотруднику
+              </h3>
+              {!showAssignSelect ? (
+                <button
+                  onClick={() => setShowAssignSelect(true)}
+                  className="btn-primary w-full flex items-center justify-center gap-2"
+                >
+                  <ArrowRight className="w-4 h-4" />
+                  Назначить сотруднику отдела
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <select
+                    value={selectedExecutor}
+                    onChange={(e) => setSelectedExecutor(e.target.value)}
+                    className="glass-input w-full"
+                  >
+                    <option value="">Выберите сотрудника...</option>
+                    {departmentMembers.map((m) => (
+                      <option key={m.user_id} value={m.user_id}>
+                        {m.user_name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => {
+                        setShowAssignSelect(false);
+                        setSelectedExecutor('');
+                      }}
+                      className="btn-secondary flex-1"
+                    >
+                      Отмена
+                    </button>
+                    <button
+                      onClick={() => selectedExecutor && reassignMutation.mutate(selectedExecutor)}
+                      disabled={!selectedExecutor || reassignMutation.isPending}
+                      className="btn-primary flex-1 disabled:opacity-50"
+                    >
+                      {reassignMutation.isPending ? 'Назначаем...' : 'Назначить'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Rating (для выполненных задач) */}
+          {task.status === 'completed' && (
+            <div className={`rounded-xl p-3 sm:p-4 border mb-4 sm:mb-6 ${
+              task.rating 
+                ? 'bg-dark-800/50 border-dark-700/50' 
+                : 'bg-yellow-500/10 border-yellow-500/30'
+            }`}>
+              <h3 className="text-sm font-medium text-dark-400 mb-3">
+                {task.rating ? 'Оценка результата' : 'Оцените результат'}
+              </h3>
+              {task.rating ? (
+                <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-lg font-medium ${
+                  task.rating === 'bad' ? 'bg-red-500/20 text-red-400' :
+                  task.rating === 'ok' ? 'bg-blue-500/20 text-blue-400' :
+                  'bg-green-500/20 text-green-400'
+                }`}>
+                  {taskRatingLabels[task.rating]}
+                </div>
+              ) : canRate ? (
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => rateMutation.mutate('bad')}
+                    disabled={rateMutation.isPending}
+                    className="flex flex-col items-center gap-1 p-3 rounded-lg bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                  >
+                    <span className="text-2xl">👎</span>
+                    <span className="text-xs font-medium">Дно</span>
+                  </button>
+                  <button
+                    onClick={() => rateMutation.mutate('ok')}
+                    disabled={rateMutation.isPending}
+                    className="flex flex-col items-center gap-1 p-3 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition-colors disabled:opacity-50"
+                  >
+                    <span className="text-2xl">👍</span>
+                    <span className="text-xs font-medium">Норм</span>
+                  </button>
+                  <button
+                    onClick={() => rateMutation.mutate('top')}
+                    disabled={rateMutation.isPending}
+                    className="flex flex-col items-center gap-1 p-3 rounded-lg bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20 transition-colors disabled:opacity-50"
+                  >
+                    <span className="text-2xl">🔥</span>
+                    <span className="text-xs font-medium">Топ</span>
+                  </button>
+                </div>
+              ) : (
+                <p className="text-dark-500 text-sm italic">Ожидает оценки от заказчика</p>
+              )}
+            </div>
+          )}
 
           {/* Status change */}
           {canChangeStatus && task.status !== 'completed' && task.status !== 'cancelled' && (
@@ -912,9 +1412,32 @@ function TaskCard({
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-dark-700/50 text-dark-300 text-xs rounded">
                   {taskTypeLabels[task.task_type]}
                 </span>
-                {task.geo && (
+                {task.offer_name && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-500/10 text-purple-400 text-xs rounded border border-purple-500/30">
+                    📦 {task.offer_name}
+                  </span>
+                )}
+                {task.geo && task.geo !== 'any' && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 text-blue-400 text-xs rounded border border-blue-500/30">
                     {task.geo.toUpperCase()}
+                  </span>
+                )}
+                {task.priority && task.priority !== 'normal' && (
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded border ${
+                    task.priority === 'high' 
+                      ? 'bg-red-500/20 text-red-400 border-red-500/30' 
+                      : 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+                  }`}>
+                    {taskPriorityLabels[task.priority]}
+                  </span>
+                )}
+                {task.rating && (
+                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded border ${
+                    task.rating === 'bad' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                    task.rating === 'ok' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                    'bg-green-500/20 text-green-400 border-green-500/30'
+                  }`}>
+                    {taskRatingLabels[task.rating]}
                   </span>
                 )}
               </div>
@@ -994,6 +1517,15 @@ function Tasks() {
   const [filter, setFilter] = useState<'all' | 'my' | 'created'>('my');
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'active' | 'all'>('active');
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  
+  // Дополнительные фильтры
+  const [showFilters, setShowFilters] = useState(false);
+  const [geoFilter, setGeoFilter] = useState<string>('');
+  const [departmentFilter, setDepartmentFilter] = useState<string>('');
+  const [priorityFilter, setPriorityFilter] = useState<string>('');
+  const [taskTypeFilter, setTaskTypeFilter] = useState<string>('');
+  const [offerFilter, setOfferFilter] = useState<string>('');
+  const [deadlineFilter, setDeadlineFilter] = useState<'today' | 'tomorrow' | 'overdue' | ''>('');
 
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
@@ -1003,6 +1535,12 @@ function Tasks() {
   const { data: tasks = [], isLoading } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => tasksApi.getAll(),
+  });
+
+  // Загружаем офферы для фильтра
+  const { data: offers = [] } = useQuery({
+    queryKey: ['offers'],
+    queryFn: () => offersApi.getAll(),
   });
 
   const createMutation = useMutation({
@@ -1111,6 +1649,48 @@ function Tasks() {
     filteredTasks = filteredTasks.filter(t => t.status === statusFilter);
   }
 
+  // Дополнительные фильтры
+  if (geoFilter) {
+    filteredTasks = filteredTasks.filter(t => t.geo === geoFilter);
+  }
+  if (departmentFilter) {
+    filteredTasks = filteredTasks.filter(t => t.department === departmentFilter);
+  }
+  if (priorityFilter) {
+    filteredTasks = filteredTasks.filter(t => t.priority === priorityFilter);
+  }
+  if (taskTypeFilter) {
+    filteredTasks = filteredTasks.filter(t => t.task_type === taskTypeFilter);
+  }
+  if (offerFilter) {
+    filteredTasks = filteredTasks.filter(t => t.offer_id === offerFilter);
+  }
+  if (deadlineFilter) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+    const dayAfterTomorrow = new Date(today.getTime() + 2 * 24 * 60 * 60 * 1000);
+
+    if (deadlineFilter === 'today') {
+      filteredTasks = filteredTasks.filter(t => {
+        const deadline = new Date(t.deadline);
+        return deadline >= today && deadline < tomorrow;
+      });
+    } else if (deadlineFilter === 'tomorrow') {
+      filteredTasks = filteredTasks.filter(t => {
+        const deadline = new Date(t.deadline);
+        return deadline >= tomorrow && deadline < dayAfterTomorrow;
+      });
+    } else if (deadlineFilter === 'overdue') {
+      filteredTasks = filteredTasks.filter(t => 
+        isPast(new Date(t.deadline)) && t.status !== 'completed' && t.status !== 'cancelled'
+      );
+    }
+  }
+
+  // Количество активных фильтров
+  const activeFiltersCount = [geoFilter, departmentFilter, priorityFilter, taskTypeFilter, offerFilter, deadlineFilter].filter(Boolean).length;
+
   // Sort: overdue first, then by deadline
   filteredTasks = [...filteredTasks].sort((a, b) => {
     const aOverdue = isPast(new Date(a.deadline)) && a.status !== 'completed';
@@ -1121,103 +1701,241 @@ function Tasks() {
   });
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex items-start sm:items-center justify-between flex-wrap gap-3 sm:gap-4 animate-slide-down">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-dark-100 flex items-center gap-2 sm:gap-3">
-            <CheckSquare className="w-6 h-6 sm:w-8 sm:h-8 text-primary-400" />
-            Задачи
-          </h1>
-          <p className="text-dark-400 mt-1 text-sm sm:text-base hidden sm:block">
-            Управление задачами команды
-          </p>
-        </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="btn-primary flex items-center gap-2 text-sm sm:text-base px-4 sm:px-6 py-2.5 sm:py-3"
-        >
-          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-          <span className="hidden sm:inline">Новая задача</span>
-          <span className="sm:hidden">Создать</span>
-        </button>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 overflow-x-auto pb-1">
-        <div className="flex bg-dark-800 rounded-xl p-1 min-w-max">
-          <button
-            onClick={() => setFilter('my')}
-            className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
-              filter === 'my' 
-                ? 'bg-primary-500 text-white' 
-                : 'text-dark-400 hover:text-dark-200'
-            }`}
-          >
-            <span className="hidden sm:inline">Мне назначены</span>
-            <span className="sm:hidden">Мне</span>
-          </button>
-          <button
-            onClick={() => setFilter('created')}
-            className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
-              filter === 'created' 
-                ? 'bg-primary-500 text-white' 
-                : 'text-dark-400 hover:text-dark-200'
-            }`}
-          >
-            <span className="hidden sm:inline">Я создал</span>
-            <span className="sm:hidden">Создал</span>
-          </button>
-          {hasRole('admin') && (
+    <div className="flex flex-col h-full overflow-hidden -m-4 sm:-m-6 lg:-m-8">
+      {/* Sticky Header */}
+      <div className="flex-shrink-0 p-4 sm:p-6 lg:p-8 pb-4 space-y-4 border-b border-dark-700/50">
+        {/* Header */}
+        <div className="flex items-start sm:items-center justify-between flex-wrap gap-3 sm:gap-4 animate-slide-down">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-dark-100 flex items-center gap-2 sm:gap-3">
+              <CheckSquare className="w-6 h-6 sm:w-8 sm:h-8 text-primary-400" />
+              Задачи
+            </h1>
+            <p className="text-dark-400 mt-1 text-sm sm:text-base hidden sm:block">
+              Управление задачами команды
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setFilter('all')}
-              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-                filter === 'all' 
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border transition-all text-sm ${
+                showFilters || activeFiltersCount > 0
+                  ? 'bg-primary-500/20 border-primary-500/50 text-primary-400'
+                  : 'bg-dark-700/50 border-dark-600 text-dark-300 hover:text-dark-100'
+              }`}
+            >
+              <Filter className="w-4 h-4" />
+              <span className="hidden sm:inline">Фильтры</span>
+              {activeFiltersCount > 0 && (
+                <span className="bg-primary-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setShowModal(true)}
+              className="btn-primary flex items-center gap-2 text-sm sm:text-base px-4 sm:px-6 py-2.5 sm:py-3"
+            >
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Новая задача</span>
+              <span className="sm:hidden">Создать</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Панель дополнительных фильтров */}
+        {showFilters && (
+          <div className="bg-dark-800/50 rounded-xl p-4 border border-dark-700 animate-slide-down">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-dark-300">Фильтры</h3>
+              {activeFiltersCount > 0 && (
+                <button
+                  onClick={() => {
+                    setGeoFilter('');
+                    setDepartmentFilter('');
+                    setPriorityFilter('');
+                    setTaskTypeFilter('');
+                    setOfferFilter('');
+                    setDeadlineFilter('');
+                  }}
+                  className="text-xs text-primary-400 hover:text-primary-300"
+                >
+                  Сбросить все
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {/* GEO */}
+              <div>
+                <label className="block text-xs text-dark-500 mb-1">GEO</label>
+                <select
+                  value={geoFilter}
+                  onChange={(e) => setGeoFilter(e.target.value)}
+                  className="glass-input w-full text-sm py-2"
+                >
+                  <option value="">Все</option>
+                  <option value="any">Не важно</option>
+                  {Array.from(new Set(tasks.map(t => t.geo).filter(Boolean))).map(geo => (
+                    <option key={geo} value={geo!}>{geo!.toUpperCase()}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Отдел */}
+              <div>
+                <label className="block text-xs text-dark-500 mb-1">Отдел</label>
+                <select
+                  value={departmentFilter}
+                  onChange={(e) => setDepartmentFilter(e.target.value)}
+                  className="glass-input w-full text-sm py-2"
+                >
+                  <option value="">Все</option>
+                  {Object.entries(departmentLabels).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Приоритет */}
+              <div>
+                <label className="block text-xs text-dark-500 mb-1">Приоритет</label>
+                <select
+                  value={priorityFilter}
+                  onChange={(e) => setPriorityFilter(e.target.value)}
+                  className="glass-input w-full text-sm py-2"
+                >
+                  <option value="">Все</option>
+                  {Object.entries(taskPriorityLabels).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Тип задачи */}
+              <div>
+                <label className="block text-xs text-dark-500 mb-1">Тип</label>
+                <select
+                  value={taskTypeFilter}
+                  onChange={(e) => setTaskTypeFilter(e.target.value)}
+                  className="glass-input w-full text-sm py-2"
+                >
+                  <option value="">Все</option>
+                  {Object.entries(taskTypeLabels).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Оффер */}
+              <div>
+                <label className="block text-xs text-dark-500 mb-1">Оффер</label>
+                <select
+                  value={offerFilter}
+                  onChange={(e) => setOfferFilter(e.target.value)}
+                  className="glass-input w-full text-sm py-2"
+                >
+                  <option value="">Все</option>
+                  {offers.map(offer => (
+                    <option key={offer.id} value={offer.id}>{offer.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Дедлайн */}
+              <div>
+                <label className="block text-xs text-dark-500 mb-1">Дедлайн</label>
+                <select
+                  value={deadlineFilter}
+                  onChange={(e) => setDeadlineFilter(e.target.value as typeof deadlineFilter)}
+                  className="glass-input w-full text-sm py-2"
+                >
+                  <option value="">Все</option>
+                  <option value="overdue">🔴 Просрочен</option>
+                  <option value="today">🟡 Сегодня</option>
+                  <option value="tomorrow">🟢 Завтра</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Filters */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 overflow-x-auto pb-1">
+          <div className="flex bg-dark-700 rounded-xl p-1 min-w-max">
+            <button
+              onClick={() => setFilter('my')}
+              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                filter === 'my' 
                   ? 'bg-primary-500 text-white' 
+                  : 'text-dark-400 hover:text-dark-200'
+              }`}
+            >
+              <span className="hidden sm:inline">Мне назначены</span>
+              <span className="sm:hidden">Мне</span>
+            </button>
+            <button
+              onClick={() => setFilter('created')}
+              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                filter === 'created' 
+                  ? 'bg-primary-500 text-white' 
+                  : 'text-dark-400 hover:text-dark-200'
+              }`}
+            >
+              <span className="hidden sm:inline">Я создал</span>
+              <span className="sm:hidden">Создал</span>
+            </button>
+            {hasRole('admin') && (
+              <button
+                onClick={() => setFilter('all')}
+                className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                  filter === 'all' 
+                    ? 'bg-primary-500 text-white' 
+                    : 'text-dark-400 hover:text-dark-200'
+                }`}
+              >
+                Все
+              </button>
+            )}
+          </div>
+
+          <div className="flex bg-dark-700 rounded-xl p-1 min-w-max">
+            <button
+              onClick={() => setStatusFilter('active')}
+              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                statusFilter === 'active' 
+                  ? 'bg-dark-600 text-white' 
+                  : 'text-dark-400 hover:text-dark-200'
+              }`}
+            >
+              Активные
+            </button>
+            <button
+              onClick={() => setStatusFilter('completed')}
+              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
+                statusFilter === 'completed' 
+                  ? 'bg-dark-600 text-white' 
+                  : 'text-dark-400 hover:text-dark-200'
+              }`}
+            >
+              <span className="hidden sm:inline">Завершённые</span>
+              <span className="sm:hidden">Готово</span>
+            </button>
+            <button
+              onClick={() => setStatusFilter('all')}
+              className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                statusFilter === 'all' 
+                  ? 'bg-dark-600 text-white' 
                   : 'text-dark-400 hover:text-dark-200'
               }`}
             >
               Все
             </button>
-          )}
-        </div>
-
-        <div className="flex bg-dark-800 rounded-xl p-1 min-w-max">
-          <button
-            onClick={() => setStatusFilter('active')}
-            className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-              statusFilter === 'active' 
-                ? 'bg-dark-600 text-white' 
-                : 'text-dark-400 hover:text-dark-200'
-            }`}
-          >
-            Активные
-          </button>
-          <button
-            onClick={() => setStatusFilter('completed')}
-            className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
-              statusFilter === 'completed' 
-                ? 'bg-dark-600 text-white' 
-                : 'text-dark-400 hover:text-dark-200'
-            }`}
-          >
-            <span className="hidden sm:inline">Завершённые</span>
-            <span className="sm:hidden">Готово</span>
-          </button>
-          <button
-            onClick={() => setStatusFilter('all')}
-            className={`px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-              statusFilter === 'all' 
-                ? 'bg-dark-600 text-white' 
-                : 'text-dark-400 hover:text-dark-200'
-            }`}
-          >
-            Все
-          </button>
+          </div>
         </div>
       </div>
 
-      {/* Tasks list */}
+      {/* Scrollable Tasks list */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pt-4">
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
@@ -1254,13 +1972,14 @@ function Tasks() {
           ))}
         </div>
       )}
+      </div>
 
       {/* Edit Modal */}
       {(showModal || editingTask) && (
         <TaskModal
           task={editingTask}
           users={users}
-          currentUserId={user?.id || ''}
+          currentUserRole={user?.role || ''}
           onClose={() => {
             setShowModal(false);
             setEditingTask(undefined);

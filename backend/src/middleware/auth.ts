@@ -1,8 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { JwtPayload, UserRole } from '../types';
+import db from '../database';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-production';
+
+// Проверка, есть ли у пользователя дополнительное право
+export function hasPermission(userId: string, permission: string): boolean {
+  const result = db.prepare(`
+    SELECT 1 FROM user_permissions WHERE user_id = ? AND permission = ?
+  `).get(userId, permission);
+  return !!result;
+}
 
 export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
   const authHeader = req.headers['authorization'];
@@ -22,6 +31,36 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
   }
 };
 
+// Проверка ролей ИЛИ дополнительного права
+export const requireRolesOrPermission = (roles: UserRole[], permission: string) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      res.status(401).json({ error: 'Требуется авторизация' });
+      return;
+    }
+
+    // Админ всегда может всё
+    if (req.user.role === 'admin') {
+      next();
+      return;
+    }
+
+    // Проверяем роль
+    if (roles.includes(req.user.role)) {
+      next();
+      return;
+    }
+
+    // Проверяем дополнительное право
+    if (hasPermission(req.user.userId, permission)) {
+      next();
+      return;
+    }
+
+    res.status(403).json({ error: 'Недостаточно прав для выполнения этого действия' });
+  };
+};
+
 export const requireRoles = (...roles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
@@ -36,6 +75,20 @@ export const requireRoles = (...roles: UserRole[]) => {
 
     next();
   };
+};
+
+export const requireAdmin = (req: Request, res: Response, next: NextFunction): void => {
+  if (!req.user) {
+    res.status(401).json({ error: 'Требуется авторизация' });
+    return;
+  }
+
+  if (req.user.role !== 'admin') {
+    res.status(403).json({ error: 'Только администратор может выполнить это действие' });
+    return;
+  }
+
+  next();
 };
 
 export const generateToken = (payload: JwtPayload): string => {

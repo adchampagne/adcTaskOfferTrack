@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Bell, X, Check, CheckCheck, Trash2, 
@@ -102,6 +103,7 @@ function NotificationItem({
 export default function Notifications() {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -149,14 +151,20 @@ export default function Notifications() {
   // Закрытие при клике вне
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const isOutsideDropdown = dropdownRef.current && !dropdownRef.current.contains(target);
+      const isOutsideButton = buttonRef.current && !buttonRef.current.contains(target);
+      
+      if (isOutsideDropdown && isOutsideButton) {
         setIsOpen(false);
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
 
   const handleNotificationClick = (notification: Notification) => {
     // Отмечаем как прочитанное
@@ -172,9 +180,10 @@ export default function Notifications() {
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative">
       {/* Кнопка */}
       <button
+        ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
         className={`relative p-2 rounded-xl transition-all ${
           isOpen 
@@ -190,9 +199,12 @@ export default function Notifications() {
         )}
       </button>
 
-      {/* Dropdown */}
-      {isOpen && (
-        <div className="fixed sm:absolute inset-0 sm:inset-auto sm:right-0 sm:top-full sm:mt-2 w-full sm:w-96 glass-card p-0 shadow-2xl animate-scale-in z-50 sm:max-h-[80vh] flex flex-col sm:rounded-2xl rounded-none">
+      {/* Dropdown через Portal - рендерится прямо в body */}
+      {isOpen && createPortal(
+        <div 
+          className="fixed left-5 lg:left-[324px] bottom-5 w-[calc(100%-40px)] sm:w-96 glass-card p-0 shadow-2xl animate-scale-in z-[9999] max-h-[70vh] flex flex-col rounded-2xl"
+          ref={dropdownRef}
+        >
           {/* Header */}
           <div className="p-4 border-b border-dark-700 flex items-center justify-between">
             <h3 className="font-semibold text-dark-100 flex items-center gap-2">
@@ -248,7 +260,8 @@ export default function Notifications() {
               ))
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

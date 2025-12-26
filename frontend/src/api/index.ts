@@ -1,5 +1,24 @@
 import axios from 'axios';
-import { User, Partner, Offer, Task, TaskStatus, TaskFile, Notification } from '../types';
+import { User, Partner, Offer, Task, TaskStatus, TaskFile, Notification, UserRole } from '../types';
+
+export interface Department {
+  id: string;
+  name: string;
+  code: string;
+  head_id: string | null;
+  head_name: string | null;
+  members_count: number;
+  created_at: string;
+}
+
+export interface DepartmentMember {
+  id: string;
+  user_id: string;
+  department_id: string;
+  user_name: string;
+  user_role: string;
+  created_at: string;
+}
 
 const api = axios.create({
   baseURL: '/api',
@@ -21,7 +40,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    // Разлогиниваем только при 401 (неавторизован), но НЕ при 403 (запрещено)
+    // 403 может означать просто недостаток прав, а не проблему с токеном
+    if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       if (window.location.pathname !== '/login') {
@@ -54,6 +75,42 @@ export const authApi = {
 
   register: async (userData: { username: string; password: string; full_name: string; role: string }) => {
     const { data } = await api.post('/auth/register', userData);
+    return data;
+  },
+
+  updateUserRole: async (userId: string, role: UserRole) => {
+    const { data } = await api.patch<User>(`/auth/users/${userId}/role`, { role });
+    return data;
+  },
+
+  updateUser: async (userId: string, userData: { username?: string; password?: string; full_name?: string; role?: string }) => {
+    const { data } = await api.put<User>(`/auth/users/${userId}`, userData);
+    return data;
+  },
+
+  deleteUser: async (userId: string) => {
+    const { data } = await api.delete(`/auth/users/${userId}`);
+    return data;
+  },
+
+  // Права пользователей
+  getPermissionsList: async () => {
+    const { data } = await api.get<{ code: string; label: string; description: string }[]>('/auth/permissions/list');
+    return data;
+  },
+
+  getUserPermissions: async (userId: string) => {
+    const { data } = await api.get<string[]>(`/auth/users/${userId}/permissions`);
+    return data;
+  },
+
+  updateUserPermissions: async (userId: string, permissions: string[]) => {
+    const { data } = await api.put(`/auth/users/${userId}/permissions`, { permissions });
+    return data;
+  },
+
+  getMyPermissions: async () => {
+    const { data } = await api.get<string[]>('/auth/me/permissions');
     return data;
   },
 };
@@ -161,6 +218,11 @@ export const tasksApi = {
     return data;
   },
 
+  rate: async (id: string, rating: 'bad' | 'ok' | 'top') => {
+    const { data } = await api.patch<Task>(`/tasks/${id}/rate`, { rating });
+    return data;
+  },
+
   delete: async (id: string) => {
     const { data } = await api.delete(`/tasks/${id}`);
     return data;
@@ -253,6 +315,134 @@ export const filesApi = {
   delete: async (fileId: string) => {
     const { data } = await api.delete(`/files/${fileId}`);
     return data;
+  },
+};
+
+// Departments API
+export const departmentsApi = {
+  getAll: async () => {
+    const { data } = await api.get<Department[]>('/departments');
+    return data;
+  },
+
+  getById: async (id: string) => {
+    const { data } = await api.get<Department>(`/departments/${id}`);
+    return data;
+  },
+
+  getMembers: async (departmentId: string) => {
+    const { data } = await api.get<DepartmentMember[]>(`/departments/${departmentId}/members`);
+    return data;
+  },
+
+  setHead: async (departmentId: string, headId: string | null) => {
+    const { data } = await api.patch<Department>(`/departments/${departmentId}/head`, { head_id: headId });
+    return data;
+  },
+
+  addMember: async (departmentId: string, userId: string) => {
+    const { data } = await api.post(`/departments/${departmentId}/members`, { user_id: userId });
+    return data;
+  },
+
+  removeMember: async (departmentId: string, userId: string) => {
+    const { data } = await api.delete(`/departments/${departmentId}/members/${userId}`);
+    return data;
+  },
+};
+
+// Head Dashboard API (для руководителей отделов)
+export const headDashboardApi = {
+  check: async () => {
+    const { data } = await api.get<{ isHead: boolean; department?: { id: string; name: string; code: string } }>('/head-dashboard/check');
+    return data;
+  },
+
+  getTasks: async () => {
+    const { data } = await api.get<Task[]>('/head-dashboard/tasks');
+    return data;
+  },
+
+  getStats: async () => {
+    const { data } = await api.get<{
+      department: { id: string; name: string; code: string };
+      members: Array<{ user_id: string; user_name: string; tasks_week: number; tasks_month: number }>;
+    }>('/head-dashboard/stats');
+    return data;
+  },
+
+  getMembers: async () => {
+    const { data } = await api.get<Array<{ user_id: string; user_name: string; user_role: string }>>('/head-dashboard/members');
+    return data;
+  },
+
+  updateTask: async (taskId: string, updates: { deadline?: string; priority?: string; executor_id?: string }) => {
+    const { data } = await api.patch<Task>(`/head-dashboard/tasks/${taskId}`, updates);
+    return data;
+  },
+};
+
+// Knowledge Base API (База знаний)
+export interface KnowledgeCategory {
+  id: string;
+  department_code: string;
+  title: string;
+  icon: string;
+  sort_order: number;
+  created_at: string;
+  instructions: KnowledgeInstruction[];
+}
+
+export interface KnowledgeInstruction {
+  id: string;
+  category_id: string;
+  title: string;
+  content: string;
+  tags: string[];
+  sort_order: number;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export const knowledgeApi = {
+  getByDepartment: async (departmentCode: string) => {
+    const { data } = await api.get<KnowledgeCategory[]>(`/knowledge/${departmentCode}`);
+    return data;
+  },
+
+  canEdit: async (departmentCode: string) => {
+    const { data } = await api.get<{ canEdit: boolean }>(`/knowledge/${departmentCode}/can-edit`);
+    return data;
+  },
+
+  createCategory: async (category: { department_code: string; title: string; icon?: string }) => {
+    const { data } = await api.post<KnowledgeCategory>('/knowledge/categories', category);
+    return data;
+  },
+
+  updateCategory: async (id: string, updates: { title?: string; icon?: string; sort_order?: number }) => {
+    const { data } = await api.patch<KnowledgeCategory>(`/knowledge/categories/${id}`, updates);
+    return data;
+  },
+
+  deleteCategory: async (id: string) => {
+    await api.delete(`/knowledge/categories/${id}`);
+  },
+
+  createInstruction: async (instruction: { category_id: string; title: string; content: string; tags?: string[] }) => {
+    const { data } = await api.post<KnowledgeInstruction>('/knowledge/instructions', instruction);
+    return data;
+  },
+
+  updateInstruction: async (id: string, updates: { title?: string; content?: string; tags?: string[]; sort_order?: number; category_id?: string }) => {
+    const { data } = await api.patch<KnowledgeInstruction>(`/knowledge/instructions/${id}`, updates);
+    return data;
+  },
+
+  deleteInstruction: async (id: string) => {
+    await api.delete(`/knowledge/instructions/${id}`);
   },
 };
 

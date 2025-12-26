@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database';
-import { authenticateToken, requireRoles } from '../middleware/auth';
+import { authenticateToken, requireRoles, requireRolesOrPermission } from '../middleware/auth';
 import { Partner } from '../types';
 
 const router = Router();
@@ -45,8 +45,8 @@ router.get('/:id', authenticateToken, (req: Request, res: Response): void => {
   }
 });
 
-// Создать партнёрку (только админ и байер)
-router.post('/', authenticateToken, requireRoles('admin', 'buyer'), (req: Request, res: Response): void => {
+// Создать партнёрку (админ, байер ИЛИ с правом manage_partners)
+router.post('/', authenticateToken, requireRolesOrPermission(['admin', 'buyer'], 'manage_partners'), (req: Request, res: Response): void => {
   try {
     const { name, description, website } = req.body;
 
@@ -77,8 +77,8 @@ router.post('/', authenticateToken, requireRoles('admin', 'buyer'), (req: Reques
   }
 });
 
-// Обновить партнёрку (только админ и байер)
-router.put('/:id', authenticateToken, requireRoles('admin', 'buyer'), (req: Request, res: Response): void => {
+// Обновить партнёрку (админ, байер ИЛИ с правом manage_partners)
+router.put('/:id', authenticateToken, requireRolesOrPermission(['admin', 'buyer'], 'manage_partners'), (req: Request, res: Response): void => {
   try {
     const { name, description, website } = req.body;
     const { id } = req.params;

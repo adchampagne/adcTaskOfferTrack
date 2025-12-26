@@ -8,6 +8,9 @@ import Partners from './pages/Partners';
 import Offers from './pages/Offers';
 import Tasks from './pages/Tasks';
 import Users from './pages/Users';
+import Departments from './pages/Departments';
+import HeadDashboard from './pages/HeadDashboard';
+import KnowledgeBase from './pages/KnowledgeBase';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -54,6 +57,9 @@ function App() {
         <Route path="offers" element={<Offers />} />
         <Route path="tasks" element={<Tasks />} />
         <Route path="users" element={<Users />} />
+        <Route path="departments" element={<Departments />} />
+        <Route path="head-dashboard" element={<HeadDashboard />} />
+        <Route path="knowledge-base" element={<KnowledgeBase />} />
       </Route>
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
