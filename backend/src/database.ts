@@ -1,5 +1,6 @@
 import Database, { Database as DatabaseType } from 'better-sqlite3';
 import path from 'path';
+import { v4 as uuidv4 } from 'uuid';
 
 const dbPath = path.join(__dirname, '..', 'data', 'tracker.db');
 const db: DatabaseType = new Database(dbPath);
