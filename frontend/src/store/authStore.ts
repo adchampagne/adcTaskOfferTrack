@@ -71,7 +71,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   canManagePartners: () => {
     const { user, permissions } = get();
-    if (user?.role === 'admin' || user?.role === 'buyer') {
+    if (user?.role === 'admin' || user?.role === 'buyer' || user?.role === 'bizdev') {
       return true;
     }
     return permissions.includes('manage_partners');

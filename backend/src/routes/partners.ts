@@ -45,8 +45,8 @@ router.get('/:id', authenticateToken, (req: Request, res: Response): void => {
   }
 });
 
-// Создать партнёрку (админ, байер ИЛИ с правом manage_partners)
-router.post('/', authenticateToken, requireRolesOrPermission(['admin', 'buyer'], 'manage_partners'), (req: Request, res: Response): void => {
+// Создать партнёрку (админ, байер, бизДев ИЛИ с правом manage_partners)
+router.post('/', authenticateToken, requireRolesOrPermission(['admin', 'buyer', 'bizdev'], 'manage_partners'), (req: Request, res: Response): void => {
   try {
     const { name, description, website } = req.body;
 
@@ -77,8 +77,8 @@ router.post('/', authenticateToken, requireRolesOrPermission(['admin', 'buyer'],
   }
 });
 
-// Обновить партнёрку (админ, байер ИЛИ с правом manage_partners)
-router.put('/:id', authenticateToken, requireRolesOrPermission(['admin', 'buyer'], 'manage_partners'), (req: Request, res: Response): void => {
+// Обновить партнёрку (админ, байер, бизДев ИЛИ с правом manage_partners)
+router.put('/:id', authenticateToken, requireRolesOrPermission(['admin', 'buyer', 'bizdev'], 'manage_partners'), (req: Request, res: Response): void => {
   try {
     const { name, description, website } = req.body;
     const { id } = req.params;
