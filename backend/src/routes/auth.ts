@@ -236,6 +236,7 @@ router.delete('/users/:id', authenticateToken, (req: Request, res: Response): vo
     db.prepare('DELETE FROM user_departments WHERE user_id = ?').run(id);
     
     // Убираем пользователя как руководителя отделов
+    db.prepare('DELETE FROM department_heads WHERE user_id = ?').run(id);
     db.prepare('UPDATE departments SET head_id = NULL WHERE head_id = ?').run(id);
 
     // Удаляем пользователя

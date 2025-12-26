@@ -19,13 +19,21 @@ interface MemberStats {
   tasks_month: number;
 }
 
-// Получить отдел, которым руководит текущий пользователь
+// Получить отделы, которыми руководит текущий пользователь
+function getHeadDepartments(userId: string): { id: string; name: string; code: string }[] {
+  return db.prepare(`
+    SELECT d.id, d.name, d.code 
+    FROM departments d
+    JOIN department_heads dh ON d.id = dh.department_id
+    WHERE dh.user_id = ?
+    ORDER BY d.name ASC
+  `).all(userId) as { id: string; name: string; code: string }[];
+}
+
+// Получить первый отдел, которым руководит пользователь (для обратной совместимости)
 function getHeadDepartment(userId: string): { id: string; name: string; code: string } | null {
-  const department = db.prepare(`
-    SELECT id, name, code FROM departments WHERE head_id = ?
-  `).get(userId) as { id: string; name: string; code: string } | undefined;
-  
-  return department || null;
+  const departments = getHeadDepartments(userId);
+  return departments.length > 0 ? departments[0] : null;
 }
 
 // Получить сотрудников отдела

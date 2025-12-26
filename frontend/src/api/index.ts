@@ -1,12 +1,19 @@
 import axios from 'axios';
 import { User, Partner, Offer, Task, TaskStatus, TaskFile, Notification, UserRole } from '../types';
 
+export interface DepartmentHead {
+  user_id: string;
+  user_name: string;
+  user_role: string;
+}
+
 export interface Department {
   id: string;
   name: string;
   code: string;
-  head_id: string | null;
-  head_name: string | null;
+  head_id: string | null; // Deprecated
+  head_name: string | null; // Deprecated
+  heads: DepartmentHead[];
   members_count: number;
   created_at: string;
 }
@@ -335,8 +342,18 @@ export const departmentsApi = {
     return data;
   },
 
-  setHead: async (departmentId: string, headId: string | null) => {
-    const { data } = await api.patch<Department>(`/departments/${departmentId}/head`, { head_id: headId });
+  getHeads: async (departmentId: string) => {
+    const { data } = await api.get<DepartmentHead[]>(`/departments/${departmentId}/heads`);
+    return data;
+  },
+
+  addHead: async (departmentId: string, userId: string) => {
+    const { data } = await api.post<{ message: string; heads: DepartmentHead[] }>(`/departments/${departmentId}/heads`, { user_id: userId });
+    return data;
+  },
+
+  removeHead: async (departmentId: string, userId: string) => {
+    const { data } = await api.delete<{ message: string; heads: DepartmentHead[] }>(`/departments/${departmentId}/heads/${userId}`);
     return data;
   },
 

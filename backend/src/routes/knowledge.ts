@@ -36,12 +36,14 @@ const departmentHeadRoles: Record<string, string> = {
 
 // Проверка, является ли пользователь руководителем отдела
 function isDepartmentHead(userId: string, departmentCode: string): boolean {
-  // Проверяем по head_id в таблице departments
-  const department = db.prepare(`
-    SELECT head_id FROM departments WHERE code = ?
-  `).get(departmentCode) as { head_id: string | null } | undefined;
+  // Проверяем по department_heads
+  const result = db.prepare(`
+    SELECT 1 FROM department_heads dh
+    JOIN departments d ON dh.department_id = d.id
+    WHERE dh.user_id = ? AND d.code = ?
+  `).get(userId, departmentCode);
   
-  if (department?.head_id === userId) {
+  if (result) {
     return true;
   }
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Building2, Users, Crown, X, UserPlus, UserMinus, Edit2 } from 'lucide-react';
-import { departmentsApi, authApi, Department } from '../api';
+import { Building2, Users, Crown, X, UserPlus, UserMinus, Edit2, Plus, Trash2 } from 'lucide-react';
+import { departmentsApi, authApi, Department, DepartmentHead } from '../api';
 import { useAuthStore } from '../store/authStore';
 import { User, roleLabels, UserRole } from '../types';
 import toast from 'react-hot-toast';
@@ -11,7 +11,8 @@ function DepartmentCard({
   users,
   canEditHead,
   canManageMembers,
-  onSetHead,
+  onAddHead,
+  onRemoveHead,
   onAddMember,
   onViewMembers,
 }: {
@@ -19,16 +20,24 @@ function DepartmentCard({
   users: User[];
   canEditHead: boolean;
   canManageMembers: boolean;
-  onSetHead: (departmentId: string, headId: string | null) => void;
+  onAddHead: (departmentId: string, userId: string) => void;
+  onRemoveHead: (departmentId: string, userId: string) => void;
   onAddMember: (departmentId: string) => void;
   onViewMembers: (departmentId: string) => void;
 }) {
-  const [isEditingHead, setIsEditingHead] = useState(false);
-  const [selectedHead, setSelectedHead] = useState(department.head_id || '');
+  const [isAddingHead, setIsAddingHead] = useState(false);
+  const [selectedHead, setSelectedHead] = useState('');
 
-  const handleSaveHead = () => {
-    onSetHead(department.id, selectedHead || null);
-    setIsEditingHead(false);
+  const heads = department.heads || [];
+  const headUserIds = heads.map(h => h.user_id);
+  const availableHeads = users.filter(u => !headUserIds.includes(u.id));
+
+  const handleAddHead = () => {
+    if (selectedHead) {
+      onAddHead(department.id, selectedHead);
+      setSelectedHead('');
+      setIsAddingHead(false);
+    }
   };
 
   const getDepartmentColor = (code: string) => {
@@ -61,48 +70,69 @@ function DepartmentCard({
         </div>
       </div>
 
-      {/* Руководитель */}
+      {/* Руководители */}
       <div className="mb-4 p-4 bg-dark-800/50 rounded-xl border border-dark-700/50">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-dark-300 flex items-center gap-2">
             <Crown className="w-4 h-4 text-amber-400" />
-            Руководитель
+            Руководители
           </span>
           {canEditHead && (
             <button
-              onClick={() => setIsEditingHead(!isEditingHead)}
+              onClick={() => setIsAddingHead(!isAddingHead)}
               className="text-primary-400 hover:text-primary-300 transition-colors"
+              title="Добавить руководителя"
             >
-              <Edit2 className="w-4 h-4" />
+              <Plus className="w-4 h-4" />
             </button>
           )}
         </div>
 
-        {isEditingHead && canEditHead ? (
-          <div className="flex gap-2">
+        {/* Список руководителей */}
+        {heads.length === 0 ? (
+          <p className="text-dark-500 italic text-sm">Не назначены</p>
+        ) : (
+          <div className="space-y-2">
+            {heads.map((head) => (
+              <div key={head.user_id} className="flex items-center justify-between py-1">
+                <span className="text-dark-100 text-sm">{head.user_name}</span>
+                {canEditHead && (
+                  <button
+                    onClick={() => onRemoveHead(department.id, head.user_id)}
+                    className="text-red-400 hover:text-red-300 transition-colors p-1"
+                    title="Убрать из руководителей"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Добавление руководителя */}
+        {isAddingHead && canEditHead && (
+          <div className="flex gap-2 mt-3 pt-3 border-t border-dark-700/50">
             <select
               value={selectedHead}
               onChange={(e) => setSelectedHead(e.target.value)}
               className="glass-input flex-1 text-sm"
             >
-              <option value="">Не назначен</option>
-              {users.map((u) => (
+              <option value="">Выберите...</option>
+              {availableHeads.map((u) => (
                 <option key={u.id} value={u.id}>
                   {u.full_name} ({roleLabels[u.role]})
                 </option>
               ))}
             </select>
             <button
-              onClick={handleSaveHead}
-              className="btn-primary text-sm px-3"
+              onClick={handleAddHead}
+              disabled={!selectedHead}
+              className="btn-primary text-sm px-3 disabled:opacity-50"
             >
-              Сохранить
+              Добавить
             </button>
           </div>
-        ) : (
-          <p className={`font-medium ${department.head_name ? 'text-dark-100' : 'text-dark-500 italic'}`}>
-            {department.head_name || 'Не назначен'}
-          </p>
         )}
       </div>
 
@@ -372,15 +402,27 @@ function Departments() {
     enabled: !!addingMemberDeptId,
   });
 
-  const setHeadMutation = useMutation({
-    mutationFn: ({ departmentId, headId }: { departmentId: string; headId: string | null }) =>
-      departmentsApi.setHead(departmentId, headId),
+  const addHeadMutation = useMutation({
+    mutationFn: ({ departmentId, userId }: { departmentId: string; userId: string }) =>
+      departmentsApi.addHead(departmentId, userId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['departments'] });
-      toast.success('Руководитель назначен');
+      toast.success('Руководитель добавлен');
     },
     onError: () => {
-      toast.error('Ошибка назначения руководителя');
+      toast.error('Ошибка добавления руководителя');
+    },
+  });
+
+  const removeHeadMutation = useMutation({
+    mutationFn: ({ departmentId, userId }: { departmentId: string; userId: string }) =>
+      departmentsApi.removeHead(departmentId, userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
+      toast.success('Руководитель удалён');
+    },
+    onError: () => {
+      toast.error('Ошибка удаления руководителя');
     },
   });
 
@@ -424,8 +466,14 @@ function Departments() {
     },
   });
 
-  const handleSetHead = (departmentId: string, headId: string | null) => {
-    setHeadMutation.mutate({ departmentId, headId });
+  const handleAddHead = (departmentId: string, userId: string) => {
+    addHeadMutation.mutate({ departmentId, userId });
+  };
+
+  const handleRemoveHead = (departmentId: string, userId: string) => {
+    if (confirm('Убрать пользователя из руководителей отдела?')) {
+      removeHeadMutation.mutate({ departmentId, userId });
+    }
   };
 
   const handleAddMember = (userId: string) => {
@@ -476,7 +524,8 @@ function Departments() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {departments.map((dept) => {
             const canEditHead = isAdmin;
-            const canManageMembers = isAdmin || dept.head_id === user?.id;
+            const isUserHead = dept.heads?.some(h => h.user_id === user?.id) || false;
+            const canManageMembers = isAdmin || isUserHead;
             return (
               <DepartmentCard
                 key={dept.id}
@@ -484,7 +533,8 @@ function Departments() {
                 users={users}
                 canEditHead={canEditHead}
                 canManageMembers={canManageMembers}
-                onSetHead={handleSetHead}
+                onAddHead={handleAddHead}
+                onRemoveHead={handleRemoveHead}
                 onAddMember={setAddingMemberDeptId}
                 onViewMembers={setViewingMembersDeptId}
               />
@@ -545,7 +595,7 @@ function Departments() {
         <MembersModal
           departmentId={viewingMembersDeptId}
           departmentName={viewingDepartment.name}
-          canRemove={isAdmin || viewingDepartment.head_id === user?.id}
+          canRemove={isAdmin || viewingDepartment.heads?.some(h => h.user_id === user?.id) || false}
           onClose={() => setViewingMembersDeptId(null)}
           onRemoveMember={(userId) => handleRemoveMember(viewingMembersDeptId, userId)}
         />

@@ -104,6 +104,15 @@ db.exec(`
     UNIQUE(user_id, department_id)
   );
 
+  -- Таблица руководителей отделов (многие-ко-многим)
+  CREATE TABLE IF NOT EXISTS department_heads (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    department_id TEXT NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, department_id)
+  );
+
   -- Таблица категорий базы знаний
   CREATE TABLE IF NOT EXISTS knowledge_categories (
     id TEXT PRIMARY KEY,
@@ -391,6 +400,25 @@ try {
     );
 
     console.log('✅ Начальные инструкции базы знаний созданы');
+  }
+
+  // Миграция: перенос head_id из departments в department_heads
+  const existingHeads = db.prepare(`
+    SELECT id as department_id, head_id FROM departments WHERE head_id IS NOT NULL
+  `).all() as { department_id: string; head_id: string }[];
+
+  for (const { department_id, head_id } of existingHeads) {
+    const exists = db.prepare(`
+      SELECT 1 FROM department_heads WHERE user_id = ? AND department_id = ?
+    `).get(head_id, department_id);
+
+    if (!exists) {
+      console.log(`🔄 Миграция: перенос руководителя ${head_id} в department_heads...`);
+      db.prepare(`
+        INSERT INTO department_heads (id, user_id, department_id)
+        VALUES (?, ?, ?)
+      `).run(uuidv4(), head_id, department_id);
+    }
   }
 } catch (e) {
   console.error('Migration error:', e);
