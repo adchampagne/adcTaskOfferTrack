@@ -370,9 +370,9 @@ function Offers() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden gap-4 sm:gap-6">
       {/* Header */}
-      <div className="flex items-start sm:items-center justify-between flex-wrap gap-3 sm:gap-4 animate-slide-down">
+      <div className="flex items-start sm:items-center justify-between flex-wrap gap-3 sm:gap-4 animate-slide-down flex-shrink-0">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-dark-100 flex items-center gap-2 sm:gap-3">
             <Package className="w-6 h-6 sm:w-8 sm:h-8 text-primary-400" />
@@ -468,9 +468,9 @@ function Offers() {
           </p>
         </div>
       ) : (
-        <>
+        <div className="flex-1 min-h-0 overflow-auto flex flex-col">
           {/* Mobile cards */}
-          <div className="sm:hidden space-y-3">
+          <div className="sm:hidden space-y-3 flex-1">
             {filteredOffers.map((offer, index) => (
               <div key={offer.id} style={{ animationDelay: `${index * 30}ms` }}>
                 <OfferCard
@@ -485,7 +485,7 @@ function Offers() {
           </div>
 
           {/* Desktop table */}
-          <div className="hidden sm:block overflow-x-auto">
+          <div className="hidden sm:block flex-1 min-h-0 overflow-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-dark-700">
@@ -592,7 +592,7 @@ function Offers() {
               </tbody>
             </table>
           </div>
-        </>
+        </div>
       )}
 
       {/* Modal */}
