@@ -20,33 +20,33 @@ function ToolCard({ to, icon: Icon, title, description, gradient, tags }: ToolCa
   return (
     <Link 
       to={to}
-      className="glass-card p-6 hover:border-primary-500/30 transition-all group animate-fade-in"
+      className="glass-card p-6 hover:border-primary-500/30 transition-all group animate-fade-in h-full flex flex-col"
     >
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-4 flex-1">
         <div 
           className={`w-14 h-14 rounded-xl ${gradient} flex items-center justify-center shadow-lg flex-shrink-0 group-hover:scale-110 transition-transform`}
         >
           <Icon className="w-7 h-7 text-white" />
         </div>
         
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex flex-col">
           <h3 className="text-lg font-semibold text-dark-100 group-hover:text-primary-400 transition-colors flex items-center gap-2">
             {title}
             <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
           </h3>
-          <p className="text-sm text-dark-400 mt-1">{description}</p>
-          
-          <div className="flex flex-wrap gap-2 mt-3">
-            {tags.map(tag => (
-              <span 
-                key={tag}
-                className="px-2 py-0.5 text-xs bg-dark-700 text-dark-300 rounded-md"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
+          <p className="text-sm text-dark-400 mt-1 flex-1">{description}</p>
         </div>
+      </div>
+      
+      <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-dark-700/50">
+        {tags.map(tag => (
+          <span 
+            key={tag}
+            className="px-2 py-0.5 text-xs bg-dark-700 text-dark-300 rounded-md"
+          >
+            {tag}
+          </span>
+        ))}
       </div>
     </Link>
   );
@@ -93,9 +93,9 @@ function Tools() {
       </div>
 
       {/* Tools Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
         {tools.map((tool, index) => (
-          <div key={tool.to} style={{ animationDelay: `${index * 100}ms` }}>
+          <div key={tool.to} style={{ animationDelay: `${index * 100}ms` }} className="flex">
             <ToolCard {...tool} />
           </div>
         ))}
@@ -105,7 +105,6 @@ function Tools() {
       <div className="glass-card p-6 border-dashed opacity-60">
         <div className="text-center">
           <p className="text-dark-400">Скоро появятся новые инструменты...</p>
-          <p className="text-sm text-dark-500 mt-1">UTM-генератор, QR-коды, генератор тестовых данных</p>
         </div>
       </div>
     </div>

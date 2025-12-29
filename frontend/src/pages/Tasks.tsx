@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   CheckSquare, Plus, X, Calendar, User, Clock, 
@@ -568,7 +569,12 @@ function TaskModal({
                     <div className="space-y-2 text-dark-300">
                       <div className="flex items-start gap-2">
                         <span className="text-green-400">✓</span>
-                        <span><strong>Изображения:</strong>только форматы PNG, WebP, SVG (до 2 МБ каждый файл)</span>
+                        <span>
+                          <strong>Изображения:</strong>только форматы PNG, WebP, SVG (до 2 МБ каждый файл).{' '}
+                          <Link to="/tools/image-converter" className="text-primary-400 hover:text-primary-300 underline">
+                            Конвертировать в WebP →
+                          </Link>
+                        </span>
                       </div>
                       <div className="flex items-start gap-2">
                         <span className="text-green-400">✓</span>
