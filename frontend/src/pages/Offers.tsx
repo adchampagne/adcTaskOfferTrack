@@ -107,7 +107,7 @@ function OfferModal({
                 value={formData.theme}
                 onChange={(e) => setFormData({ ...formData, theme: e.target.value })}
                 className="glass-input w-full"
-                placeholder="Гемблинг, Нутра, Финансы..."
+                placeholder="Суставы/гипер/паразиты/похудение"
               />
             </div>
 
