@@ -1,9 +1,46 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import db from '../database';
 import { generateToken, authenticateToken } from '../middleware/auth';
 import { User, UserPublic } from '../types';
+
+// Папка для хранения фонов пользователей
+const backgroundsDir = path.join(__dirname, '..', '..', 'uploads', 'backgrounds');
+if (!fs.existsSync(backgroundsDir)) {
+  fs.mkdirSync(backgroundsDir, { recursive: true });
+}
+
+// Настройка multer для фонов
+const backgroundStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, backgroundsDir);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    // Используем ID пользователя для имени файла (один фон на пользователя)
+    const userId = (req as any).user?.userId || 'unknown';
+    cb(null, `${userId}${ext}`);
+  },
+});
+
+const backgroundUpload = multer({
+  storage: backgroundStorage,
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Только изображения (JPEG, PNG, GIF, WebP)'));
+    }
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB максимум
+  },
+});
 
 const router = Router();
 
@@ -416,9 +453,9 @@ router.put('/me/settings', authenticateToken, (req: Request, res: Response): voi
     const userId = req.user?.userId;
     const settings = req.body;
 
-    // Проверяем что настройки не слишком большие (макс 50KB)
+    // Проверяем что настройки не слишком большие (макс 10KB без картинки)
     const settingsJson = JSON.stringify(settings);
-    if (settingsJson.length > 50000) {
+    if (settingsJson.length > 10000) {
       res.status(400).json({ error: 'Настройки слишком большие' });
       return;
     }
@@ -429,6 +466,110 @@ router.put('/me/settings', authenticateToken, (req: Request, res: Response): voi
   } catch (error) {
     console.error('Save settings error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Загрузка фоновой картинки
+router.post(
+  '/me/background',
+  authenticateToken,
+  backgroundUpload.single('background'),
+  (req: Request, res: Response): void => {
+    try {
+      const file = req.file;
+      const userId = req.user?.userId;
+
+      if (!file) {
+        res.status(400).json({ error: 'Файл не выбран' });
+        return;
+      }
+
+      // Удаляем старые файлы фона этого пользователя (с другими расширениями)
+      const extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+      extensions.forEach(ext => {
+        const oldPath = path.join(backgroundsDir, `${userId}${ext}`);
+        if (fs.existsSync(oldPath) && oldPath !== file.path) {
+          fs.unlinkSync(oldPath);
+        }
+      });
+
+      // Возвращаем URL фона
+      const backgroundUrl = `/api/auth/background/${userId}/${Date.now()}`;
+      
+      res.json({ 
+        message: 'Фон загружен', 
+        backgroundUrl,
+        filename: file.filename
+      });
+    } catch (error) {
+      console.error('Upload background error:', error);
+      res.status(500).json({ error: 'Ошибка загрузки фона' });
+    }
+  }
+);
+
+// Просмотр фоновой картинки (публичный доступ по ID пользователя)
+router.get('/background/:userId/:timestamp?', (req: Request, res: Response): void => {
+  try {
+    const { userId } = req.params;
+    
+    // Ищем файл с любым расширением
+    const extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    let foundFile: string | null = null;
+    
+    for (const ext of extensions) {
+      const filePath = path.join(backgroundsDir, `${userId}${ext}`);
+      if (fs.existsSync(filePath)) {
+        foundFile = filePath;
+        break;
+      }
+    }
+
+    if (!foundFile) {
+      res.status(404).json({ error: 'Фон не найден' });
+      return;
+    }
+
+    // Определяем MIME тип
+    const ext = path.extname(foundFile).toLowerCase();
+    const mimeTypes: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.gif': 'image/gif',
+      '.webp': 'image/webp',
+    };
+
+    res.setHeader('Content-Type', mimeTypes[ext] || 'image/jpeg');
+    res.setHeader('Cache-Control', 'private, max-age=86400'); // Кэш на 24 часа
+    res.sendFile(foundFile);
+  } catch (error) {
+    console.error('Get background error:', error);
+    res.status(500).json({ error: 'Ошибка получения фона' });
+  }
+});
+
+// Удаление фоновой картинки
+router.delete('/me/background', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    const userId = req.user?.userId;
+    
+    // Удаляем все возможные файлы фона
+    const extensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    let deleted = false;
+    
+    extensions.forEach(ext => {
+      const filePath = path.join(backgroundsDir, `${userId}${ext}`);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        deleted = true;
+      }
+    });
+
+    res.json({ message: deleted ? 'Фон удалён' : 'Фон не найден' });
+  } catch (error) {
+    console.error('Delete background error:', error);
+    res.status(500).json({ error: 'Ошибка удаления фона' });
   }
 });
 

@@ -141,6 +141,23 @@ export const authApi = {
     const { data } = await api.put<{ message: string; settings: Record<string, unknown> }>('/auth/me/settings', settings);
     return data;
   },
+
+  // Загрузка фона
+  uploadBackground: async (file: File) => {
+    const formData = new FormData();
+    formData.append('background', file);
+    const { data } = await api.post<{ message: string; backgroundUrl: string; filename: string }>('/auth/me/background', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return data;
+  },
+
+  deleteBackground: async () => {
+    const { data } = await api.delete<{ message: string }>('/auth/me/background');
+    return data;
+  },
 };
 
 // Partners API

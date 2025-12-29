@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
-import { X, Palette, Image, Upload, Trash2, Check, SlidersHorizontal, RotateCcw } from 'lucide-react';
+import { X, Palette, Image, Upload, Trash2, Check, SlidersHorizontal, RotateCcw, Loader2 } from 'lucide-react';
 import { useSettingsStore, themes, backgroundOptions } from '../store/settingsStore';
+import { authApi } from '../api';
 
 interface Props {
   isOpen: boolean;
@@ -24,9 +25,10 @@ function PersonalizationSettings({ isOpen, onClose }: Props) {
   } = useSettingsStore();
 
   const [activeTab, setActiveTab] = useState<'theme' | 'background'>('theme');
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -36,24 +38,48 @@ function PersonalizationSettings({ isOpen, onClose }: Props) {
       return;
     }
 
-    // Проверка размера (макс 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Размер файла не должен превышать 5MB');
+    // Проверка размера (макс 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Размер файла не должен превышать 10MB');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      setCustomBackground(result);
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsUploading(true);
+      
+      // Загружаем файл на сервер
+      const result = await authApi.uploadBackground(file);
+      
+      // Устанавливаем URL фона
+      setCustomBackground(result.backgroundUrl);
+    } catch (error) {
+      console.error('Failed to upload background:', error);
+      alert('Ошибка загрузки изображения');
+    } finally {
+      setIsUploading(false);
+      // Очищаем input для возможности повторной загрузки того же файла
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleUrlInput = () => {
     const url = prompt('Введите URL изображения:');
     if (url && url.trim()) {
       setCustomBackground(url.trim());
+    }
+  };
+
+  const handleDeleteBackground = async () => {
+    try {
+      // Если это наш загруженный фон, удаляем с сервера
+      if (customBackground?.startsWith('/api/auth/background/')) {
+        await authApi.deleteBackground();
+      }
+      setCustomBackground(null);
+    } catch (error) {
+      console.error('Failed to delete background:', error);
     }
   };
 
@@ -198,15 +224,25 @@ function PersonalizationSettings({ isOpen, onClose }: Props) {
                     accept="image/*"
                     onChange={handleFileUpload}
                     className="hidden"
+                    disabled={isUploading}
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="btn-secondary text-sm py-2 px-4"
+                    disabled={isUploading}
+                    className="btn-secondary text-sm py-2 px-4 flex items-center gap-2"
                   >
-                    Загрузить файл
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Загрузка...
+                      </>
+                    ) : (
+                      'Загрузить файл'
+                    )}
                   </button>
                   <button
                     onClick={handleUrlInput}
+                    disabled={isUploading}
                     className="btn-secondary text-sm py-2 px-4"
                   >
                     Вставить URL
@@ -221,7 +257,7 @@ function PersonalizationSettings({ isOpen, onClose }: Props) {
                       className="w-full h-32 object-cover"
                     />
                     <button
-                      onClick={() => setCustomBackground(null)}
+                      onClick={handleDeleteBackground}
                       className="absolute top-2 right-2 p-2 bg-red-500/80 hover:bg-red-500 text-white rounded-lg transition-colors"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -281,8 +317,16 @@ function PersonalizationSettings({ isOpen, onClose }: Props) {
         {/* Footer */}
         <div className="p-6 border-t border-dark-700 flex items-center justify-between">
           <button
-            onClick={() => {
+            onClick={async () => {
               if (confirm('Сбросить все настройки на стандартные?')) {
+                // Удаляем фон с сервера если есть
+                if (customBackground?.startsWith('/api/auth/background/')) {
+                  try {
+                    await authApi.deleteBackground();
+                  } catch (e) {
+                    console.error('Failed to delete background:', e);
+                  }
+                }
                 resetToDefaults(true);
               }
             }}
@@ -292,8 +336,11 @@ function PersonalizationSettings({ isOpen, onClose }: Props) {
             Сбросить
           </button>
           <div className="flex items-center gap-3">
-            {isSaving && (
-              <span className="text-sm text-dark-400">Сохранение...</span>
+            {(isSaving || isUploading) && (
+              <span className="text-sm text-dark-400 flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Сохранение...
+              </span>
             )}
             <button onClick={onClose} className="btn-primary">
               Готово
@@ -306,4 +353,3 @@ function PersonalizationSettings({ isOpen, onClose }: Props) {
 }
 
 export default PersonalizationSettings;
-
