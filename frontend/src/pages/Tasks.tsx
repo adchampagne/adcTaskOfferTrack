@@ -865,10 +865,11 @@ function CompleteTaskModal({
 }: {
   task: Task;
   onClose: () => void;
-  onComplete: (files: File[]) => void;
+  onComplete: (files: File[], comment: string) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [completionComment, setCompletionComment] = useState('');
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
@@ -884,7 +885,7 @@ function CompleteTaskModal({
   };
 
   const handleSubmit = () => {
-    onComplete(pendingFiles);
+    onComplete(pendingFiles, completionComment);
   };
 
   return (
@@ -955,6 +956,24 @@ function CompleteTaskModal({
               })}
             </div>
           )}
+        </div>
+
+        {/* Комментарий к завершению */}
+        <div className="bg-dark-800/50 rounded-xl p-4 border border-dark-700 mb-4">
+          <h3 className="text-sm font-medium text-dark-300 mb-3 flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            Комментарий
+          </h3>
+          <p className="text-xs text-dark-500 mb-3">
+            Добавьте комментарий, ссылку или описание результата (необязательно)
+          </p>
+          <textarea
+            value={completionComment}
+            onChange={(e) => setCompletionComment(e.target.value)}
+            placeholder="Ссылка на результат, описание выполненной работы..."
+            className="glass-input w-full resize-none"
+            rows={3}
+          />
         </div>
 
         <div className="flex gap-3">
@@ -1181,7 +1200,7 @@ function TaskViewModal({
   onClose: () => void;
   onEdit: () => void;
   onStatusChange: (status: TaskStatus) => void;
-  onCompleteWithFiles: (files: File[]) => void;
+  onCompleteWithFiles: (files: File[], comment: string) => void;
 }) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1961,9 +1980,9 @@ function TaskViewModal({
           <CompleteTaskModal
             task={task}
             onClose={() => setShowCompleteModal(false)}
-            onComplete={(files) => {
+            onComplete={(files, comment) => {
               setShowCompleteModal(false);
-              onCompleteWithFiles(files);
+              onCompleteWithFiles(files, comment);
             }}
           />
         )}
@@ -2788,7 +2807,7 @@ function Tasks() {
             statusMutation.mutate({ id: viewingTask.id, status });
             setViewingTask(undefined);
           }}
-          onCompleteWithFiles={async (files) => {
+          onCompleteWithFiles={async (files, comment) => {
             // Сначала загружаем файлы результатов (если есть)
             if (files.length > 0) {
               try {
@@ -2797,6 +2816,16 @@ function Tasks() {
               } catch (err) {
                 console.error('File upload error:', err);
                 toast.error('Ошибка загрузки файлов результата');
+              }
+            }
+            // Добавляем комментарий к завершению (если есть)
+            if (comment.trim()) {
+              try {
+                await commentsApi.add(viewingTask.id, `✅ Завершение задачи:\n\n${comment.trim()}`);
+                queryClient.invalidateQueries({ queryKey: ['task-comments', viewingTask.id] });
+              } catch (err) {
+                console.error('Comment add error:', err);
+                toast.error('Ошибка добавления комментария');
               }
             }
             // Потом меняем статус на completed
