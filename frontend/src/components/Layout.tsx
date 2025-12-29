@@ -13,7 +13,8 @@ import {
   Layers,
   BarChart3,
   BookOpen,
-  Settings
+  Settings,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
@@ -80,6 +81,11 @@ function Layout() {
 
   // База знаний (доступна всем, но контент фильтруется по отделу)
   navItems.push({ to: '/knowledge-base', icon: BookOpen, label: 'База знаний' });
+
+  // Очистка метаданных - для крео и байеров
+  if (hasRole('admin', 'buyer', 'buying_head', 'creo_manager', 'creo_head')) {
+    navItems.push({ to: '/metadata-cleaner', icon: ShieldCheck, label: 'Очистка метаданных' });
+  }
   
   if (hasRole('admin')) {
     navItems.push({ to: '/users', icon: Users, label: 'Пользователи' });

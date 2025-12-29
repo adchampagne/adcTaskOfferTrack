@@ -12,6 +12,7 @@ import Departments from './pages/Departments';
 import HeadDashboard from './pages/HeadDashboard';
 import KnowledgeBase from './pages/KnowledgeBase';
 import Settings from './pages/Settings';
+import MetadataCleaner from './pages/MetadataCleaner';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -62,6 +63,7 @@ function App() {
         <Route path="head-dashboard" element={<HeadDashboard />} />
         <Route path="knowledge-base" element={<KnowledgeBase />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="metadata-cleaner" element={<MetadataCleaner />} />
       </Route>
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>

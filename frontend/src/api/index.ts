@@ -540,5 +540,75 @@ export const knowledgeApi = {
   },
 };
 
+// Metadata Cleaner API (Очистка метаданных)
+export const metadataApi = {
+  checkAccess: async () => {
+    const { data } = await api.get<{ hasAccess: boolean; allowedRoles: string[] }>('/metadata/check-access');
+    return data;
+  },
+
+  cleanFile: async (file: File, onProgress?: (progress: number) => void): Promise<Blob> => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await api.post('/metadata/clean', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      responseType: 'blob',
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(progress);
+        }
+      },
+    });
+
+    return response.data;
+  },
+
+  cleanBatch: async (files: File[], onProgress?: (progress: number) => void) => {
+    const formData = new FormData();
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
+
+    const response = await api.post('/metadata/clean-batch', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(progress);
+        }
+      },
+    });
+
+    // Если один файл, возвращается blob
+    if (response.headers['content-type']?.includes('application/json')) {
+      return response.data as {
+        batchId: string;
+        filesCount: number;
+        files: { id: string; originalName: string }[];
+      };
+    }
+    
+    return response.data;
+  },
+
+  downloadBatchFile: async (batchId: string, fileIndex: number): Promise<Blob> => {
+    const response = await api.get(`/metadata/batch/${batchId}/${fileIndex}`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
+
+  deleteBatch: async (batchId: string) => {
+    const { data } = await api.delete(`/metadata/batch/${batchId}`);
+    return data;
+  },
+};
+
 export default api;
 

@@ -21,8 +21,8 @@ RUN npm run build
 # Production stage
 FROM node:22-alpine
 
-# Устанавливаем зависимости для нативных модулей
-RUN apk add --no-cache python3 make g++
+# Устанавливаем FFmpeg для очистки метаданных + зависимости для нативных модулей
+RUN apk add --no-cache python3 make g++ ffmpeg
 
 WORKDIR /app
 
@@ -33,6 +33,9 @@ COPY package*.json ./
 RUN npm ci --only=production && \
     apk del python3 make g++ && \
     rm -rf /root/.npm /root/.cache
+
+# Создаём директорию для временных файлов очистки метаданных
+RUN mkdir -p /app/temp
 
 # Копируем собранный код из builder
 COPY --from=builder /app/dist ./dist
