@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { User, Partner, Offer, Task, TaskStatus, TaskFile, Notification, UserRole } from '../types';
+import { User, Partner, Offer, Task, TaskStatus, TaskFile, Notification, UserRole, TaskComment } from '../types';
 
 export interface DepartmentHead {
   user_id: string;
@@ -305,6 +305,24 @@ export const telegramApi = {
 
   sendTest: async () => {
     const { data } = await api.post('/telegram/test');
+    return data;
+  },
+};
+
+// Comments API
+export const commentsApi = {
+  getTaskComments: async (taskId: string) => {
+    const { data } = await api.get<TaskComment[]>(`/comments/task/${taskId}`);
+    return data;
+  },
+
+  add: async (taskId: string, message: string) => {
+    const { data } = await api.post<TaskComment>(`/comments/task/${taskId}`, { message });
+    return data;
+  },
+
+  delete: async (commentId: string) => {
+    const { data } = await api.delete(`/comments/${commentId}`);
     return data;
   },
 };

@@ -1,15 +1,34 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   BarChart3, Users, CheckCircle, Clock, AlertCircle, 
-  Calendar, TrendingUp, X, ArrowUpRight, Send
+  Calendar, TrendingUp, X, ArrowUpRight, Send, Paperclip,
+  Download, MessageSquare, Trash2, Image, Video, FileArchive, File
 } from 'lucide-react';
-import { headDashboardApi } from '../api';
-import { Task, TaskStatus, TaskPriority, taskStatusLabels, taskPriorityLabels, taskTypeLabels } from '../types';
+import { headDashboardApi, filesApi, commentsApi } from '../api';
+import { Task, TaskStatus, TaskPriority, taskStatusLabels, taskPriorityLabels, taskTypeLabels, TaskFile } from '../types';
 import { format, isPast, isToday } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { Navigate } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
+
+// Функция для форматирования размера файла
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Б';
+  const k = 1024;
+  const sizes = ['Б', 'КБ', 'МБ', 'ГБ'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+}
+
+// Функция для получения иконки по типу файла
+function getFileIcon(mimeType: string) {
+  if (mimeType.startsWith('image/')) return Image;
+  if (mimeType.startsWith('video/')) return Video;
+  if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('7z') || mimeType.includes('gzip')) return FileArchive;
+  return File;
+}
 
 interface DepartmentMember {
   user_id: string;
@@ -144,8 +163,76 @@ function TaskViewModal({
   onClose: () => void;
   onEdit: () => void;
 }) {
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+  const [newComment, setNewComment] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
+
   const isOverdue = isPast(new Date(task.deadline)) && task.status !== 'completed' && task.status !== 'cancelled';
   const isDueToday = isToday(new Date(task.deadline));
+
+  // Загрузка файлов
+  const { data: files = [], isLoading: filesLoading } = useQuery({
+    queryKey: ['task-files', task.id],
+    queryFn: () => filesApi.getTaskFiles(task.id),
+  });
+
+  // Загрузка комментариев
+  const { data: comments = [], isLoading: commentsLoading } = useQuery({
+    queryKey: ['task-comments', task.id],
+    queryFn: () => commentsApi.getTaskComments(task.id),
+  });
+
+  // Скачивание файла
+  const handleDownload = async (file: TaskFile) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/files/download/${file.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.original_name;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch {
+      toast.error('Ошибка скачивания файла');
+    }
+  };
+
+  // Добавление комментария
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return;
+    
+    setIsSubmitting(true);
+    try {
+      await commentsApi.add(task.id, newComment.trim());
+      queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
+      setNewComment('');
+      toast.success('Комментарий добавлен');
+    } catch {
+      toast.error('Ошибка добавления комментария');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Удаление комментария
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('Удалить комментарий?')) return;
+    try {
+      await commentsApi.delete(commentId);
+      queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
+      toast.success('Комментарий удалён');
+    } catch {
+      toast.error('Ошибка удаления комментария');
+    }
+  };
 
   const getStatusColor = (status: TaskStatus) => {
     switch (status) {
@@ -163,6 +250,10 @@ function TaskViewModal({
       case 'low': return 'text-green-400 bg-green-500/10 border-green-500/20';
     }
   };
+
+  // Разделение файлов
+  const attachments = files.filter(f => !f.is_result);
+  const results = files.filter(f => f.is_result);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -254,6 +345,151 @@ function TaskViewModal({
               <p className="text-dark-200 whitespace-pre-wrap">{task.description}</p>
             </div>
           )}
+
+          {/* Файлы */}
+          <div className="p-4 bg-dark-800/50 rounded-xl">
+            <p className="text-xs text-dark-400 mb-3 flex items-center gap-1">
+              <Paperclip className="w-3 h-3" />
+              Файлы ({files.length})
+            </p>
+            
+            {filesLoading ? (
+              <div className="skeleton h-12 rounded-lg" />
+            ) : files.length === 0 ? (
+              <p className="text-dark-500 text-sm text-center py-2">Нет прикреплённых файлов</p>
+            ) : (
+              <div className="space-y-3">
+                {/* Вложения к задаче */}
+                {attachments.length > 0 && (
+                  <div>
+                    <p className="text-xs text-dark-500 mb-2">Вложения к задаче:</p>
+                    <div className="space-y-2">
+                      {attachments.map((file) => {
+                        const Icon = getFileIcon(file.mime_type);
+                        return (
+                          <div key={file.id} className="flex items-center gap-3 p-2 bg-dark-700/50 rounded-lg group">
+                            <Icon className="w-5 h-5 text-primary-400" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-dark-200 truncate">{file.original_name}</p>
+                              <p className="text-xs text-dark-500">{formatFileSize(file.size)}</p>
+                            </div>
+                            <button
+                              onClick={() => handleDownload(file)}
+                              className="p-2 text-dark-400 hover:text-primary-400 transition-colors"
+                              title="Скачать"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Результаты работы */}
+                {results.length > 0 && (
+                  <div>
+                    <p className="text-xs text-green-400 mb-2 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      Результаты работы:
+                    </p>
+                    <div className="space-y-2">
+                      {results.map((file) => {
+                        const Icon = getFileIcon(file.mime_type);
+                        return (
+                          <div key={file.id} className="flex items-center gap-3 p-2 bg-green-500/10 border border-green-500/20 rounded-lg group">
+                            <Icon className="w-5 h-5 text-green-400" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-dark-200 truncate">{file.original_name}</p>
+                              <p className="text-xs text-dark-500">{formatFileSize(file.size)}</p>
+                            </div>
+                            <button
+                              onClick={() => handleDownload(file)}
+                              className="p-2 text-dark-400 hover:text-green-400 transition-colors"
+                              title="Скачать"
+                            >
+                              <Download className="w-4 h-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Комментарии */}
+          <div className="p-4 bg-dark-800/50 rounded-xl">
+            <p className="text-xs text-dark-400 mb-3 flex items-center gap-1">
+              <MessageSquare className="w-3 h-3" />
+              Комментарии ({comments.length})
+            </p>
+
+            {commentsLoading ? (
+              <div className="skeleton h-12 rounded-lg" />
+            ) : (
+              <div className="space-y-3">
+                {/* Список комментариев */}
+                {comments.length > 0 && (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {comments.map((comment) => (
+                      <div key={comment.id} className="p-3 bg-dark-700/50 rounded-lg group">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xs font-bold">
+                              {comment.user_name?.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="text-sm font-medium text-dark-200">{comment.user_name}</span>
+                            <span className="text-xs text-dark-500">
+                              {format(new Date(comment.created_at), 'd MMM, HH:mm', { locale: ru })}
+                            </span>
+                          </div>
+                          {(comment.user_id === user?.id || user?.role === 'admin') && (
+                            <button
+                              onClick={() => handleDeleteComment(comment.id)}
+                              className="p-1 text-dark-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                              title="Удалить"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-sm text-dark-300 whitespace-pre-wrap pl-8">{comment.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Форма добавления комментария */}
+                <div className="flex gap-2">
+                  <textarea
+                    ref={commentInputRef}
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Написать комментарий..."
+                    className="glass-input flex-1 resize-none text-sm"
+                    rows={2}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && e.ctrlKey) {
+                        handleAddComment();
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={handleAddComment}
+                    disabled={!newComment.trim() || isSubmitting}
+                    className="self-end px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-xs text-dark-600">Ctrl+Enter для отправки</p>
+              </div>
+            )}
+          </div>
 
           <div className="flex gap-3 pt-4">
             <button onClick={onClose} className="btn-secondary flex-1">

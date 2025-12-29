@@ -27,6 +27,7 @@ import telegramRoutes from './routes/telegram';
 import departmentsRoutes from './routes/departments';
 import headDashboardRoutes from './routes/head-dashboard';
 import knowledgeRoutes from './routes/knowledge';
+import commentsRoutes from './routes/comments';
 import { startPolling } from './services/telegramPolling';
 
 const app = express();
@@ -50,6 +51,7 @@ app.use('/api/telegram', telegramRoutes);
 app.use('/api/departments', departmentsRoutes);
 app.use('/api/head-dashboard', headDashboardRoutes);
 app.use('/api/knowledge', knowledgeRoutes);
+app.use('/api/comments', commentsRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

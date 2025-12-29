@@ -301,6 +301,16 @@ export interface TaskFile {
   uploader_name?: string;
 }
 
+export interface TaskComment {
+  id: string;
+  task_id: string;
+  user_id: string;
+  message: string;
+  created_at: string;
+  user_name?: string;
+  user_username?: string;
+}
+
 export type NotificationType = 
   | 'task_assigned'
   | 'task_status_changed'

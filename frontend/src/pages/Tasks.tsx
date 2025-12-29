@@ -4,10 +4,10 @@ import {
   CheckSquare, Plus, X, Calendar, User, Clock, 
   AlertCircle, PlayCircle, CheckCircle, XCircle, Edit2, Trash2,
   Eye, FileText, ArrowRight, Upload, Download, Image, Video, 
-  FileArchive, File, Paperclip, Loader2, HelpCircle, Filter, Send
+  FileArchive, File, Paperclip, Loader2, HelpCircle, Filter, Send, MessageSquare
 } from 'lucide-react';
 import UserLink from '../components/UserLink';
-import { tasksApi, authApi, filesApi, headDashboardApi, offersApi } from '../api';
+import { tasksApi, authApi, filesApi, headDashboardApi, offersApi, commentsApi } from '../api';
 import { useAuthStore } from '../store/authStore';
 import { Task, TaskStatus, TaskType, TaskPriority, TaskRating, Department, taskTypeLabels, taskStatusLabels, taskPriorityLabels, taskRatingLabels, departmentLabels, User as UserType, TaskFile, roleLabels } from '../types';
 import GeoSelect from '../components/GeoSelect';
@@ -1069,6 +1069,49 @@ function TaskViewModal({
     queryFn: () => filesApi.getTaskFiles(task.id),
   });
 
+  // Загрузка комментариев
+  const { data: comments = [], isLoading: commentsLoading } = useQuery({
+    queryKey: ['task-comments', task.id],
+    queryFn: () => commentsApi.getTaskComments(task.id),
+  });
+
+  // Состояние для нового комментария
+  const [newComment, setNewComment] = useState('');
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const commentInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Добавление комментария
+  const handleAddComment = async () => {
+    if (!newComment.trim()) return;
+    
+    setIsSubmittingComment(true);
+    try {
+      await commentsApi.add(task.id, newComment.trim());
+      queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
+      setNewComment('');
+      toast.success('Комментарий добавлен');
+    } catch {
+      toast.error('Ошибка добавления комментария');
+    } finally {
+      setIsSubmittingComment(false);
+    }
+  };
+
+  // Удаление комментария
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm('Удалить комментарий?')) return;
+    try {
+      await commentsApi.delete(commentId);
+      queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
+      toast.success('Комментарий удалён');
+    } catch {
+      toast.error('Ошибка удаления комментария');
+    }
+  };
+
+  // Для проверки авторства комментариев
+  const { user: currentUserData } = useAuthStore();
+
   // Загрузка файлов
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
@@ -1410,6 +1453,82 @@ function TaskViewModal({
               )}
             </div>
           )}
+
+          {/* Комментарии */}
+          <div className="mb-4 sm:mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium text-dark-400 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                Комментарии ({comments.length})
+              </h3>
+            </div>
+
+            {commentsLoading ? (
+              <div className="skeleton h-16 rounded-xl" />
+            ) : (
+              <div className="bg-dark-800/50 rounded-xl p-4 border border-dark-700/50 space-y-3">
+                {/* Список комментариев */}
+                {comments.length > 0 && (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {comments.map((comment) => (
+                      <div key={comment.id} className="p-3 bg-dark-700/50 rounded-lg group">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xs font-bold">
+                              {comment.user_name?.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="text-sm font-medium text-dark-200">{comment.user_name}</span>
+                            <span className="text-xs text-dark-500">
+                              {format(new Date(comment.created_at), 'd MMM, HH:mm', { locale: ru })}
+                            </span>
+                          </div>
+                          {(comment.user_id === currentUserData?.id || currentUserData?.role === 'admin') && (
+                            <button
+                              onClick={() => handleDeleteComment(comment.id)}
+                              className="p-1 text-dark-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                              title="Удалить"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-sm text-dark-300 whitespace-pre-wrap pl-8">{comment.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {comments.length === 0 && (
+                  <p className="text-dark-500 text-sm text-center py-2">Нет комментариев</p>
+                )}
+
+                {/* Форма добавления комментария */}
+                <div className="flex gap-2 pt-2 border-t border-dark-700/50">
+                  <textarea
+                    ref={commentInputRef}
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Написать комментарий..."
+                    className="glass-input flex-1 resize-none text-sm"
+                    rows={2}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && e.ctrlKey) {
+                        handleAddComment();
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={handleAddComment}
+                    disabled={!newComment.trim() || isSubmittingComment}
+                    className="self-end px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-xs text-dark-600">Ctrl+Enter для отправки</p>
+              </div>
+            )}
+          </div>
 
           {/* Rating (для выполненных задач) */}
           {task.status === 'completed' && (
