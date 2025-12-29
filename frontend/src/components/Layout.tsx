@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -8,31 +8,23 @@ import {
   Users, 
   LogOut,
   Zap,
-  Send,
   Menu,
   X,
   Layers,
   BarChart3,
   BookOpen,
-  Key,
-  Palette
+  Settings
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { roleLabels } from '../types';
 import Notifications from './Notifications';
-import TelegramSettings from './TelegramSettings';
-import ChangePasswordModal from './ChangePasswordModal';
-import PersonalizationSettings from './PersonalizationSettings';
 
 function Layout() {
   const { user, logout, hasRole } = useAuthStore();
   const { loadSettings, getTheme, isLoaded } = useSettingsStore();
   const navigate = useNavigate();
   const location = useLocation();
-  const [showTelegramSettings, setShowTelegramSettings] = useState(false);
-  const [showChangePassword, setShowChangePassword] = useState(false);
-  const [showPersonalization, setShowPersonalization] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Загружаем настройки с сервера при монтировании
@@ -93,10 +85,13 @@ function Layout() {
     navItems.push({ to: '/users', icon: Users, label: 'Пользователи' });
   }
 
+  // Настройки доступны всем
+  navItems.push({ to: '/settings', icon: Settings, label: 'Настройки' });
+
   const SidebarContent = () => (
     <>
       {/* Logo */}
-      <div className="flex items-center gap-3 mb-10">
+      <div className="flex items-center gap-3 mb-10 flex-shrink-0">
         <div 
           className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg"
           style={{ 
@@ -113,7 +108,7 @@ function Layout() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-2">
+      <nav className="flex-1 space-y-2 overflow-y-auto min-h-0">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
@@ -130,7 +125,7 @@ function Layout() {
       </nav>
 
       {/* User info */}
-      <div className="pt-6 border-t border-dark-700">
+      <div className="pt-6 border-t border-dark-700 flex-shrink-0">
         <div className="flex items-center gap-3 mb-4">
           <div 
             className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold"
@@ -148,27 +143,6 @@ function Layout() {
           </div>
           <Notifications />
         </div>
-        <button
-          onClick={() => setShowTelegramSettings(true)}
-          className="w-full nav-link text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 mb-2"
-        >
-          <Send className="w-5 h-5" />
-          <span>Telegram</span>
-        </button>
-        <button
-          onClick={() => setShowChangePassword(true)}
-          className="w-full nav-link text-primary-400 hover:text-primary-300 hover:bg-primary-500/10 mb-2"
-        >
-          <Key className="w-5 h-5" />
-          <span>Сменить пароль</span>
-        </button>
-        <button
-          onClick={() => setShowPersonalization(true)}
-          className="w-full nav-link text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 mb-2"
-        >
-          <Palette className="w-5 h-5" />
-          <span>Персонализация</span>
-        </button>
         <button
           onClick={handleLogout}
           className="w-full nav-link text-red-400 hover:text-red-300 hover:bg-red-500/10"
@@ -216,10 +190,10 @@ function Layout() {
           onClick={() => setIsMobileMenuOpen(false)}
         >
           <div 
-            className="absolute right-0 top-0 bottom-0 w-80 max-w-[85vw] glass-card rounded-l-2xl rounded-r-none p-6 flex flex-col animate-slide-left"
+            className="absolute right-0 top-0 bottom-0 w-80 max-w-[85vw] h-full max-h-screen glass-card rounded-l-2xl rounded-r-none p-6 flex flex-col overflow-y-auto animate-slide-left"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center justify-between mb-6 flex-shrink-0">
               <span className="text-lg font-bold text-dark-100">Меню</span>
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
@@ -237,21 +211,6 @@ function Layout() {
       <aside className="hidden lg:flex w-72 glass-card m-4 mr-0 p-6 flex-col flex-shrink-0 overflow-y-auto">
         <SidebarContent />
       </aside>
-      
-      <TelegramSettings 
-        isOpen={showTelegramSettings} 
-        onClose={() => setShowTelegramSettings(false)} 
-      />
-      
-      <ChangePasswordModal
-        isOpen={showChangePassword}
-        onClose={() => setShowChangePassword(false)}
-      />
-      
-      <PersonalizationSettings
-        isOpen={showPersonalization}
-        onClose={() => setShowPersonalization(false)}
-      />
 
       {/* Main content */}
       <main className="flex-1 p-4 pt-20 lg:pt-4 min-h-0 flex flex-col">

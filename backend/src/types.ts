@@ -79,6 +79,7 @@ export interface Task {
   rating: TaskRating | null;
   created_at: string;
   completed_at: string | null;
+  parent_task_id: string | null;
 }
 
 export interface TaskWithUsers extends Task {
@@ -87,6 +88,10 @@ export interface TaskWithUsers extends Task {
   executor_name: string;
   executor_username: string;
   offer_name?: string;
+  parent_task_title?: string;
+  parent_task_number?: number;
+  subtasks_count?: number;
+  subtasks_completed?: number;
 }
 
 export interface JwtPayload {

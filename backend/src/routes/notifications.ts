@@ -70,6 +70,7 @@ export const NotificationTypes = {
   TASK_DEADLINE_SOON: 'task_deadline_soon',
   TASK_OVERDUE: 'task_overdue',
   TASK_COMPLETED: 'task_completed',
+  SUBTASK_COMPLETED: 'subtask_completed',
 } as const;
 
 // Получить уведомления текущего пользователя
@@ -328,6 +329,33 @@ export function notifyTaskOverdue(task: Task): void {
       task.id
     );
   });
+}
+
+// Уведомление о завершении подзадачи (исполнителю родительской задачи)
+export function notifySubtaskCompleted(
+  subtask: Task & { parent_task_title?: string; parent_task_number?: number },
+  parentTask: Task & { customer_name?: string; executor_name?: string },
+  completedByName: string
+): void {
+  const subtaskNum = subtask.task_number ? `#${subtask.task_number}` : '';
+  const parentTaskNum = parentTask.task_number ? `#${parentTask.task_number}` : '';
+  const geoInfo = subtask.geo ? ` [${subtask.geo.toUpperCase()}]` : '';
+  const deptInfo = subtask.department ? departmentLabels[subtask.department] || subtask.department : '';
+
+  // Уведомляем исполнителя родительской задачи (того, кто создал подзадачу)
+  let message = `✅ Подзадача ${subtaskNum}${geoInfo}: ${subtask.title}\n`;
+  message += `\n📋 Родительская задача: ${parentTaskNum} ${parentTask.title}\n`;
+  if (deptInfo) message += `\n🏢 Отдел: ${deptInfo}\n`;
+  message += `\n👤 Выполнил: ${completedByName}`;
+  message += `\n\n📎 Файлы результатов скопированы в родительскую задачу`;
+
+  createNotification(
+    parentTask.executor_id,
+    NotificationTypes.SUBTASK_COMPLETED,
+    `Подзадача ${subtaskNum} выполнена!`,
+    message,
+    parentTask.id // Ссылаемся на родительскую задачу для удобства
+  );
 }
 
 export default router;

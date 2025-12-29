@@ -430,6 +430,13 @@ try {
     console.log('✅ Миграция is_result для файлов задач завершена');
   }
 
+  // Миграция: parent_task_id колонка для подзадач
+  if (!taskColumnNames.includes('parent_task_id')) {
+    console.log('🔄 Миграция: добавление parent_task_id для подзадач...');
+    db.exec("ALTER TABLE tasks ADD COLUMN parent_task_id TEXT REFERENCES tasks(id) ON DELETE CASCADE");
+    console.log('✅ Миграция parent_task_id для подзадач завершена');
+  }
+
   // Миграция: перенос head_id из departments в department_heads
   const existingHeads = db.prepare(`
     SELECT id as department_id, head_id FROM departments WHERE head_id IS NOT NULL

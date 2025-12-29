@@ -11,6 +11,7 @@ import Users from './pages/Users';
 import Departments from './pages/Departments';
 import HeadDashboard from './pages/HeadDashboard';
 import KnowledgeBase from './pages/KnowledgeBase';
+import Settings from './pages/Settings';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -60,6 +61,7 @@ function App() {
         <Route path="departments" element={<Departments />} />
         <Route path="head-dashboard" element={<HeadDashboard />} />
         <Route path="knowledge-base" element={<KnowledgeBase />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>

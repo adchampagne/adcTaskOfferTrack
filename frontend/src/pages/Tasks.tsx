@@ -4,7 +4,8 @@ import {
   CheckSquare, Plus, X, Calendar, User, Clock, 
   AlertCircle, PlayCircle, CheckCircle, XCircle, Edit2, Trash2,
   Eye, FileText, ArrowRight, Upload, Download, Image, Video, 
-  FileArchive, File, Paperclip, Loader2, HelpCircle, Filter, Send, MessageSquare
+  FileArchive, File, Paperclip, Loader2, HelpCircle, Filter, Send, MessageSquare,
+  GitBranch, ChevronRight
 } from 'lucide-react';
 import UserLink from '../components/UserLink';
 import { tasksApi, authApi, filesApi, headDashboardApi, offersApi, commentsApi } from '../api';
@@ -985,6 +986,187 @@ function CompleteTaskModal({
   );
 }
 
+// Модальное окно создания подзадачи
+function SubtaskModal({
+  parentTask,
+  onClose,
+  onSave,
+}: {
+  parentTask: Task;
+  onClose: () => void;
+  onSave: (data: {
+    title: string;
+    description: string;
+    task_type: TaskType;
+    geo?: string;
+    priority: TaskPriority;
+    department: Department;
+    deadline: string;
+  }) => void;
+}) {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    task_type: 'other' as TaskType,
+    geo: parentTask.geo || '',
+    priority: 'normal' as TaskPriority,
+    department: '' as Department | '',
+    deadline: format(new Date(Date.now() + 24 * 60 * 60 * 1000), "yyyy-MM-dd'T'HH:mm"),
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.title.trim() || !formData.deadline || !formData.department) {
+      toast.error('Заполните обязательные поля');
+      return;
+    }
+
+    onSave({
+      ...formData,
+      department: formData.department as Department,
+    });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+      <div className="glass-card w-full max-w-lg p-6 animate-scale-in max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-dark-100 flex items-center gap-2">
+            <GitBranch className="w-5 h-5 text-primary-400" />
+            Создать подзадачу
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-dark-400 hover:text-dark-200 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="bg-dark-800/50 rounded-lg p-3 border border-dark-700/50 mb-4">
+          <p className="text-xs text-dark-500 mb-1">Родительская задача:</p>
+          <p className="text-dark-200 font-medium">
+            {parentTask.task_number && <span className="text-primary-400">#{parentTask.task_number}</span>}{' '}
+            {parentTask.title}
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-dark-300 mb-1">
+              Заголовок <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="glass-input w-full"
+              placeholder="Например: Подготовить GIF для ленда"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-dark-300 mb-1">
+              Описание
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="glass-input w-full resize-none"
+              rows={3}
+              placeholder="Подробности подзадачи..."
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-1">
+                Тип задачи
+              </label>
+              <select
+                value={formData.task_type}
+                onChange={(e) => setFormData({ ...formData, task_type: e.target.value as TaskType })}
+                className="glass-input w-full"
+              >
+                {Object.entries(taskTypeLabels).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-1">
+                Приоритет
+              </label>
+              <select
+                value={formData.priority}
+                onChange={(e) => setFormData({ ...formData, priority: e.target.value as TaskPriority })}
+                className="glass-input w-full"
+              >
+                {Object.entries(taskPriorityLabels).map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-dark-300 mb-1">
+              Отдел <span className="text-red-400">*</span>
+            </label>
+            <select
+              value={formData.department}
+              onChange={(e) => setFormData({ ...formData, department: e.target.value as Department })}
+              className="glass-input w-full"
+            >
+              <option value="">Выберите отдел...</option>
+              {Object.entries(departmentLabels).map(([code, name]) => (
+                <option key={code} value={code}>{name}</option>
+              ))}
+            </select>
+            <p className="text-xs text-dark-500 mt-1">
+              Подзадача будет назначена руководителю выбранного отдела
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-dark-300 mb-1">
+              GEO
+            </label>
+            <GeoSelect
+              value={formData.geo}
+              onChange={(value) => setFormData({ ...formData, geo: value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-dark-300 mb-1">
+              Дедлайн <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="datetime-local"
+              value={formData.deadline}
+              onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+              className="glass-input w-full"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button type="button" onClick={onClose} className="btn-secondary flex-1">
+              Отмена
+            </button>
+            <button type="submit" className="btn-primary flex-1 flex items-center justify-center gap-2">
+              <GitBranch className="w-4 h-4" />
+              Создать подзадачу
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // Модальное окно просмотра задачи
 function TaskViewModal({
   task,
@@ -1007,6 +1189,7 @@ function TaskViewModal({
   const [showAssignSelect, setShowAssignSelect] = useState(false);
   const [selectedExecutor, setSelectedExecutor] = useState('');
   const [showCompleteModal, setShowCompleteModal] = useState(false);
+  const [showSubtaskModal, setShowSubtaskModal] = useState(false);
 
   // Проверяем, является ли пользователь руководителем
   const { data: headCheck } = useQuery({
@@ -1043,6 +1226,10 @@ function TaskViewModal({
   const canUpload = task.customer_id === currentUserId || task.executor_id === currentUserId;
   const isMyTask = task.executor_id === currentUserId;
   const isMyCreatedTask = task.customer_id === currentUserId;
+  
+  // Исполнитель может создавать подзадачи, если задача не является подзадачей и не завершена/отменена
+  const canCreateSubtask = isMyTask && !task.parent_task_id && task.status !== 'completed' && task.status !== 'cancelled';
+  const isSubtask = !!task.parent_task_id;
 
   // Руководитель может переназначить задачу, если она назначена на него и не завершена
   const canReassign = headCheck?.isHead && isMyTask && task.status !== 'completed' && task.status !== 'cancelled';
@@ -1067,6 +1254,36 @@ function TaskViewModal({
   const { data: files = [], isLoading: filesLoading } = useQuery({
     queryKey: ['task-files', task.id],
     queryFn: () => filesApi.getTaskFiles(task.id),
+  });
+
+  // Загрузка подзадач (только для родительских задач)
+  const { data: subtasks = [], isLoading: subtasksLoading } = useQuery({
+    queryKey: ['subtasks', task.id],
+    queryFn: () => tasksApi.getSubtasks(task.id),
+    enabled: !task.parent_task_id, // Не загружаем подзадачи для подзадач
+  });
+
+  // Мутация для создания подзадачи
+  const createSubtaskMutation = useMutation({
+    mutationFn: (data: {
+      title: string;
+      description: string;
+      task_type: TaskType;
+      geo?: string;
+      priority: TaskPriority;
+      department: Department;
+      deadline: string;
+    }) => tasksApi.createSubtask(task.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['subtasks', task.id] });
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      setShowSubtaskModal(false);
+      toast.success('Подзадача создана');
+    },
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || 'Ошибка создания подзадачи');
+    },
   });
 
   // Загрузка комментариев
@@ -1178,6 +1395,24 @@ function TaskViewModal({
                 <div className="mt-2">
                   <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-500/10 text-purple-400 text-xs sm:text-sm rounded border border-purple-500/30">
                     📦 Оффер: {task.offer_name}
+                  </span>
+                </div>
+              )}
+              {/* Индикатор подзадачи */}
+              {isSubtask && task.parent_task_title && (
+                <div className="mt-2">
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-500/10 text-orange-400 text-xs sm:text-sm rounded border border-orange-500/30">
+                    <GitBranch className="w-3 h-3" />
+                    Подзадача к #{task.parent_task_number}: {task.parent_task_title}
+                  </span>
+                </div>
+              )}
+              {/* Счётчик подзадач */}
+              {!isSubtask && (task.subtasks_count ?? 0) > 0 && (
+                <div className="mt-2">
+                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/10 text-blue-400 text-xs sm:text-sm rounded border border-blue-500/30">
+                    <GitBranch className="w-3 h-3" />
+                    Подзадач: {task.subtasks_completed ?? 0}/{task.subtasks_count}
                   </span>
                 </div>
               )}
@@ -1401,6 +1636,93 @@ function TaskViewModal({
               </div>
             )}
           </div>
+
+          {/* Подзадачи (только для родительских задач) */}
+          {!isSubtask && (
+            <div className="mb-4 sm:mb-6">
+              <div className="flex items-center justify-between mb-3 gap-2">
+                <h3 className="text-sm font-medium text-dark-400 flex items-center gap-2">
+                  <GitBranch className="w-4 h-4" />
+                  Подзадачи ({subtasks.length})
+                </h3>
+                {canCreateSubtask && (
+                  <button
+                    onClick={() => setShowSubtaskModal(true)}
+                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 text-xs sm:text-sm bg-blue-500/10 text-blue-400 border border-blue-500/30 rounded-lg hover:bg-blue-500/20 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden sm:inline">Создать подзадачу</span>
+                    <span className="sm:hidden">Добавить</span>
+                  </button>
+                )}
+              </div>
+              
+              {subtasksLoading ? (
+                <div className="skeleton h-16 rounded-xl" />
+              ) : subtasks.length === 0 ? (
+                <div className="bg-dark-800/50 rounded-xl p-6 border border-dark-700/50 text-center">
+                  <GitBranch className="w-8 h-8 text-dark-600 mx-auto mb-2" />
+                  <p className="text-dark-500 text-sm">Нет подзадач</p>
+                  {canCreateSubtask && (
+                    <p className="text-dark-600 text-xs mt-1">
+                      Создайте подзадачу, если вам нужна помощь другого отдела
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {subtasks.map((subtask) => {
+                    const subtaskIsOverdue = isPast(new Date(subtask.deadline)) && subtask.status !== 'completed' && subtask.status !== 'cancelled';
+                    return (
+                      <div 
+                        key={subtask.id}
+                        className={`p-3 bg-dark-800/50 rounded-xl border transition-colors cursor-pointer hover:border-primary-500/30 ${
+                          subtaskIsOverdue ? 'border-red-500/30 bg-red-500/5' : 'border-dark-700/50'
+                        }`}
+                        onClick={() => {
+                          onClose();
+                          // Открыть подзадачу через небольшую задержку
+                          setTimeout(() => {
+                            const event = new CustomEvent('openTask', { detail: { taskId: subtask.id } });
+                            window.dispatchEvent(event);
+                          }, 100);
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              subtask.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                              subtask.status === 'in_progress' ? 'bg-blue-500/20 text-blue-400' :
+                              subtask.status === 'cancelled' ? 'bg-red-500/20 text-red-400' :
+                              'bg-yellow-500/20 text-yellow-400'
+                            }`}>
+                              {taskStatusLabels[subtask.status]}
+                            </span>
+                            <span className="text-dark-200 truncate text-sm">
+                              {subtask.task_number && <span className="text-primary-400">#{subtask.task_number}</span>} {subtask.title}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {subtask.department && (
+                              <span className="text-xs text-dark-500 hidden sm:inline">
+                                {departmentLabels[subtask.department]}
+                              </span>
+                            )}
+                            <ChevronRight className="w-4 h-4 text-dark-500" />
+                          </div>
+                        </div>
+                        {subtask.executor_name && (
+                          <p className="text-xs text-dark-500 mt-1 pl-[60px]">
+                            Исполнитель: {subtask.executor_name}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Reassign task (для руководителей) */}
           {canReassign && (
@@ -1646,6 +1968,15 @@ function TaskViewModal({
           />
         )}
 
+        {/* Модальное окно создания подзадачи */}
+        {showSubtaskModal && (
+          <SubtaskModal
+            parentTask={task}
+            onClose={() => setShowSubtaskModal(false)}
+            onSave={(data) => createSubtaskMutation.mutate(data)}
+          />
+        )}
+
         {/* Footer */}
         <div className="p-4 border-t border-dark-700 flex gap-3">
           <button onClick={onClose} className="btn-secondary flex-1 text-sm sm:text-base">
@@ -1828,6 +2159,20 @@ function TaskCard({
                     {taskRatingLabels[task.rating]}
                   </span>
                 )}
+                {/* Индикатор подзадачи */}
+                {task.parent_task_id && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-500/10 text-orange-400 text-xs rounded border border-orange-500/30">
+                    <GitBranch className="w-3 h-3" />
+                    Подзадача
+                  </span>
+                )}
+                {/* Счётчик подзадач */}
+                {!task.parent_task_id && (task.subtasks_count ?? 0) > 0 && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 text-blue-400 text-xs rounded border border-blue-500/30">
+                    <GitBranch className="w-3 h-3" />
+                    {task.subtasks_completed ?? 0}/{task.subtasks_count}
+                  </span>
+                )}
               </div>
             </div>
             
@@ -1937,6 +2282,24 @@ function Tasks() {
   const [filter, setFilter] = useState<'all' | 'my' | 'created'>('my');
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'active' | 'all'>('active');
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  
+  // Обработчик события openTask (для открытия подзадач)
+  React.useEffect(() => {
+    const handleOpenTask = async (event: Event) => {
+      const customEvent = event as CustomEvent<{ taskId: string }>;
+      try {
+        const task = await tasksApi.getById(customEvent.detail.taskId);
+        setViewingTask(task);
+      } catch {
+        toast.error('Ошибка загрузки задачи');
+      }
+    };
+
+    window.addEventListener('openTask', handleOpenTask);
+    return () => {
+      window.removeEventListener('openTask', handleOpenTask);
+    };
+  }, []);
   
   // Дополнительные фильтры
   const [showFilters, setShowFilters] = useState(false);

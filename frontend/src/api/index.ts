@@ -272,6 +272,26 @@ export const tasksApi = {
     const { data } = await api.delete(`/tasks/${id}`);
     return data;
   },
+
+  // Подзадачи
+  getSubtasks: async (taskId: string) => {
+    const { data } = await api.get<Task[]>(`/tasks/${taskId}/subtasks`);
+    return data;
+  },
+
+  createSubtask: async (parentTaskId: string, subtask: {
+    title: string;
+    description?: string;
+    task_type: string;
+    geo?: string;
+    priority: string;
+    department: string;
+    deadline: string;
+    offer_id?: string;
+  }) => {
+    const { data } = await api.post<Task>(`/tasks/${parentTaskId}/subtasks`, subtask);
+    return data;
+  },
 };
 
 // Notifications API
