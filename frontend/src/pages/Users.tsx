@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users as UsersIcon, Plus, X, Shield, ShoppingCart, Code, Palette, Crown, Briefcase, Star, Edit2, Trash2, Key, Check } from 'lucide-react';
+import { Users as UsersIcon, Plus, X, Shield, ShoppingCart, Code, Palette, Crown, Briefcase, Star, Edit2, Trash2, Key, Check, Send } from 'lucide-react';
 import { authApi } from '../api';
 import { useAuthStore } from '../store/authStore';
 import { User, UserRole, roleLabels } from '../types';
@@ -409,7 +409,20 @@ function Users() {
                   <h3 className="font-semibold text-dark-100 truncate">
                     {u.full_name}
                   </h3>
-                  <p className="text-sm text-dark-400 font-mono">@{u.username}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-dark-400 font-mono">@{u.username}</p>
+                    {u.role !== 'admin' && (
+                      <a
+                        href={`https://t.me/${u.username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 transition-colors"
+                        title="Написать в Telegram"
+                      >
+                        <Send className="w-4 h-4" />
+                      </a>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button

@@ -4,8 +4,9 @@ import {
   CheckSquare, Plus, X, Calendar, User, Clock, 
   AlertCircle, PlayCircle, CheckCircle, XCircle, Edit2, Trash2,
   Eye, FileText, ArrowRight, Upload, Download, Image, Video, 
-  FileArchive, File, Paperclip, Loader2, HelpCircle, Filter
+  FileArchive, File, Paperclip, Loader2, HelpCircle, Filter, Send
 } from 'lucide-react';
+import UserLink from '../components/UserLink';
 import { tasksApi, authApi, filesApi, headDashboardApi, offersApi } from '../api';
 import { useAuthStore } from '../store/authStore';
 import { Task, TaskStatus, TaskType, TaskPriority, TaskRating, Department, taskTypeLabels, taskStatusLabels, taskPriorityLabels, taskRatingLabels, departmentLabels, User as UserType, TaskFile, roleLabels } from '../types';
@@ -984,7 +985,12 @@ function TaskViewModal({
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-dark-100 truncate text-sm sm:text-base">
-                    {isMyCreatedTask ? 'Вы' : task.customer_name}
+                    {isMyCreatedTask ? 'Вы' : (
+                      <UserLink 
+                        name={task.customer_name || ''} 
+                        username={task.customer_username}
+                      />
+                    )}
                   </p>
                   <p className="text-xs text-dark-500">создал задачу</p>
                 </div>
@@ -999,7 +1005,12 @@ function TaskViewModal({
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-dark-100 truncate text-sm sm:text-base">
-                    {isMyTask ? 'Вы' : task.executor_name}
+                    {isMyTask ? 'Вы' : (
+                      <UserLink 
+                        name={task.executor_name || ''} 
+                        username={task.executor_username}
+                      />
+                    )}
                   </p>
                   <p className="text-xs text-dark-500">выполняет задачу</p>
                 </div>
@@ -1479,10 +1490,42 @@ function TaskCard({
           <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-3 sm:mt-4 text-xs sm:text-sm">
             <div className="flex items-center gap-1 sm:gap-2">
               <User className="w-3 h-3 sm:w-4 sm:h-4 text-dark-500" />
-              <span className="text-dark-400">
-                {isMyCreatedTask ? 'Вы' : task.customer_name?.split(' ')[0]}
-                <ArrowRight className="w-3 h-3 inline mx-0.5 sm:mx-1 text-dark-600" />
-                {isMyTask ? 'Вам' : task.executor_name?.split(' ')[0]}
+              <span className="text-dark-400 flex items-center gap-0.5">
+                {isMyCreatedTask ? 'Вы' : (
+                  <>
+                    {task.customer_name?.split(' ')[0]}
+                    {task.customer_username && task.customer_username !== 'admin' && (
+                      <a
+                        href={`https://t.me/${task.customer_username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 transition-colors ml-0.5"
+                        onClick={(e) => e.stopPropagation()}
+                        title={`@${task.customer_username}`}
+                      >
+                        <Send className="w-3 h-3" />
+                      </a>
+                    )}
+                  </>
+                )}
+                <ArrowRight className="w-3 h-3 mx-0.5 sm:mx-1 text-dark-600" />
+                {isMyTask ? 'Вам' : (
+                  <>
+                    {task.executor_name?.split(' ')[0]}
+                    {task.executor_username && task.executor_username !== 'admin' && (
+                      <a
+                        href={`https://t.me/${task.executor_username}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 transition-colors ml-0.5"
+                        onClick={(e) => e.stopPropagation()}
+                        title={`@${task.executor_username}`}
+                      >
+                        <Send className="w-3 h-3" />
+                      </a>
+                    )}
+                  </>
+                )}
               </span>
             </div>
             

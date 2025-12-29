@@ -99,8 +99,10 @@ router.get('/tasks', authenticateToken, (req: Request, res: Response): void => {
     // 2. ИЛИ задача назначена на отдел (department = код отдела)
     const tasks = db.prepare(`
       SELECT t.*, 
-             c.full_name as customer_name, 
-             e.full_name as executor_name
+             c.full_name as customer_name,
+             c.username as customer_username,
+             e.full_name as executor_name,
+             e.username as executor_username
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
       LEFT JOIN users e ON t.executor_id = e.id
@@ -255,8 +257,10 @@ router.patch('/tasks/:id', authenticateToken, (req: Request, res: Response): voi
 
     const updated = db.prepare(`
       SELECT t.*, 
-             c.full_name as customer_name, 
-             e.full_name as executor_name
+             c.full_name as customer_name,
+             c.username as customer_username,
+             e.full_name as executor_name,
+             e.username as executor_username
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
       LEFT JOIN users e ON t.executor_id = e.id

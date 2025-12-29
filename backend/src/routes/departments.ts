@@ -16,6 +16,7 @@ interface Department {
 interface DepartmentHead {
   user_id: string;
   user_name: string;
+  user_username: string;
   user_role: string;
 }
 
@@ -36,7 +37,7 @@ function isDepartmentHead(userId: string, departmentId: string): boolean {
 // Получить руководителей отдела
 function getDepartmentHeads(departmentId: string): DepartmentHead[] {
   return db.prepare(`
-    SELECT dh.user_id, u.full_name as user_name, u.role as user_role
+    SELECT dh.user_id, u.full_name as user_name, u.username as user_username, u.role as user_role
     FROM department_heads dh
     JOIN users u ON dh.user_id = u.id
     WHERE dh.department_id = ?
@@ -50,6 +51,7 @@ interface UserDepartment {
   department_id: string;
   created_at: string;
   user_name?: string;
+  user_username?: string;
   user_role?: string;
 }
 
@@ -108,6 +110,7 @@ router.get('/:id/members', authenticateToken, (req: Request, res: Response): voi
       SELECT 
         ud.*,
         u.full_name as user_name,
+        u.username as user_username,
         u.role as user_role
       FROM user_departments ud
       JOIN users u ON ud.user_id = u.id

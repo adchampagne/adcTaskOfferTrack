@@ -4,6 +4,7 @@ import { User, Partner, Offer, Task, TaskStatus, TaskFile, Notification, UserRol
 export interface DepartmentHead {
   user_id: string;
   user_name: string;
+  user_username: string;
   user_role: string;
 }
 
@@ -23,6 +24,7 @@ export interface DepartmentMember {
   user_id: string;
   department_id: string;
   user_name: string;
+  user_username: string;
   user_role: string;
   created_at: string;
 }

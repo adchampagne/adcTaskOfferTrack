@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Building2, Users, Crown, X, UserPlus, UserMinus, Edit2, Plus, Trash2 } from 'lucide-react';
+import { Building2, Users, Crown, X, UserPlus, UserMinus, Edit2, Plus, Trash2, Send } from 'lucide-react';
 import { departmentsApi, authApi, Department } from '../api';
 import { useAuthStore } from '../store/authStore';
 import { User, roleLabels, UserRole } from '../types';
@@ -95,7 +95,20 @@ function DepartmentCard({
           <div className="space-y-2">
             {heads.map((head) => (
               <div key={head.user_id} className="flex items-center justify-between py-1">
-                <span className="text-dark-100 text-sm">{head.user_name}</span>
+                <span className="text-dark-100 text-sm flex items-center gap-1">
+                  {head.user_name}
+                  {head.user_username && head.user_username !== 'admin' && (
+                    <a
+                      href={`https://t.me/${head.user_username}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 transition-colors"
+                      title={`@${head.user_username}`}
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </span>
                 {canEditHead && (
                   <button
                     onClick={() => onRemoveHead(department.id, head.user_id)}
@@ -213,7 +226,20 @@ function MembersModal({
                   className="flex items-center justify-between p-4 bg-dark-800/50 rounded-xl border border-dark-700/50"
                 >
                   <div>
-                    <p className="font-medium text-dark-100">{member.user_name}</p>
+                    <p className="font-medium text-dark-100 flex items-center gap-2">
+                      {member.user_name}
+                      {member.user_username && member.user_username !== 'admin' && (
+                        <a
+                          href={`https://t.me/${member.user_username}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 transition-colors"
+                          title={`@${member.user_username}`}
+                        >
+                          <Send className="w-4 h-4" />
+                        </a>
+                      )}
+                    </p>
                     <p className="text-sm text-dark-400">{roleLabels[member.user_role as UserRole]}</p>
                   </div>
                   {canRemove && (
@@ -565,7 +591,20 @@ function Departments() {
                   {users.map((u) => (
                     <tr key={u.id} className="hover:bg-dark-800/30 transition-colors">
                       <td className="p-4 text-dark-100 font-medium">{u.full_name}</td>
-                      <td className="p-4 text-dark-400 font-mono">@{u.username}</td>
+                      <td className="p-4 text-dark-400 font-mono flex items-center gap-2">
+                        @{u.username}
+                        {u.role !== 'admin' && (
+                          <a
+                            href={`https://t.me/${u.username}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-400 hover:text-blue-300 transition-colors"
+                            title="Написать в Telegram"
+                          >
+                            <Send className="w-4 h-4" />
+                          </a>
+                        )}
+                      </td>
                       <td className="p-4">
                         <span className="px-3 py-1 rounded-full text-xs font-medium bg-primary-500/10 text-primary-400 border border-primary-500/20">
                           {roleLabels[u.role]}

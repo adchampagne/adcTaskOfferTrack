@@ -80,7 +80,9 @@ export interface Task {
   created_at: string;
   completed_at: string | null;
   customer_name?: string;
+  customer_username?: string;
   executor_name?: string;
+  executor_username?: string;
   offer_name?: string;
 }
 

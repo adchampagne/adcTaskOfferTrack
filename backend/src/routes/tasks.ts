@@ -24,7 +24,9 @@ router.get('/', authenticateToken, (req: Request, res: Response): void => {
     let query = `
       SELECT t.*, 
              c.full_name as customer_name, 
+             c.username as customer_username,
              e.full_name as executor_name,
+             e.username as executor_username,
              o.name as offer_name
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
@@ -69,7 +71,9 @@ router.get('/my', authenticateToken, (req: Request, res: Response): void => {
     const tasks = db.prepare(`
       SELECT t.*, 
              c.full_name as customer_name, 
+             c.username as customer_username,
              e.full_name as executor_name,
+             e.username as executor_username,
              o.name as offer_name
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
@@ -92,7 +96,9 @@ router.get('/:id', authenticateToken, (req: Request, res: Response): void => {
     const task = db.prepare(`
       SELECT t.*, 
              c.full_name as customer_name, 
+             c.username as customer_username,
              e.full_name as executor_name,
+             e.username as executor_username,
              o.name as offer_name
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
@@ -202,7 +208,9 @@ router.post('/', authenticateToken, (req: Request, res: Response): void => {
     const task = db.prepare(`
       SELECT t.*, 
              c.full_name as customer_name, 
+             c.username as customer_username,
              e.full_name as executor_name,
+             e.username as executor_username,
              o.name as offer_name
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
@@ -255,7 +263,9 @@ router.patch('/:id/status', authenticateToken, (req: Request, res: Response): vo
     const task = db.prepare(`
       SELECT t.*, 
              c.full_name as customer_name, 
+             c.username as customer_username,
              e.full_name as executor_name,
+             e.username as executor_username,
              o.name as offer_name
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
@@ -330,7 +340,9 @@ router.put('/:id', authenticateToken, (req: Request, res: Response): void => {
     const task = db.prepare(`
       SELECT t.*, 
              c.full_name as customer_name, 
+             c.username as customer_username,
              e.full_name as executor_name,
+             e.username as executor_username,
              o.name as offer_name
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
@@ -406,7 +418,9 @@ router.patch('/:id/rate', authenticateToken, (req: Request, res: Response): void
     const task = db.prepare(`
       SELECT t.*, 
              c.full_name as customer_name, 
+             c.username as customer_username,
              e.full_name as executor_name,
+             e.username as executor_username,
              o.name as offer_name
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
