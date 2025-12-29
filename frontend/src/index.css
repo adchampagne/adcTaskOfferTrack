@@ -6,6 +6,18 @@
   --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --gradient-accent: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   --gradient-dark: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  
+  /* Theme variables - будут переопределяться JS */
+  --theme-primary: #667eea;
+  --theme-primary-light: #818cf8;
+  --theme-primary-dark: #5b21b6;
+  --theme-accent: #f093fb;
+  --theme-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  
+  /* Background variables */
+  --app-background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  --background-blur: 0px;
+  --background-opacity: 100%;
 }
 
 * {
@@ -16,9 +28,31 @@
 
 body {
   font-family: 'Outfit', system-ui, sans-serif;
-  background: var(--gradient-dark);
   min-height: 100vh;
   color: #f1f5f9;
+  position: relative;
+}
+
+/* Background layer */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background: var(--app-background);
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  filter: blur(var(--background-blur));
+}
+
+/* Overlay for custom backgrounds */
+:root.has-custom-background body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: rgba(15, 23, 42, calc(1 - var(--background-opacity) / 100));
 }
 
 /* Scrollbar */
@@ -53,10 +87,15 @@ body {
   }
 
   .btn-primary {
-    @apply bg-gradient-to-r from-primary-600 to-primary-500 text-white font-medium 
-           px-6 py-3 rounded-xl hover:from-primary-500 hover:to-primary-400 
-           transition-all duration-200 shadow-lg shadow-primary-500/25
+    @apply text-white font-medium px-6 py-3 rounded-xl 
+           transition-all duration-200
            active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed;
+    background: var(--theme-gradient);
+    box-shadow: 0 10px 15px -3px color-mix(in srgb, var(--theme-primary) 25%, transparent);
+  }
+  
+  .btn-primary:hover {
+    filter: brightness(1.1);
   }
 
   .btn-secondary {
@@ -78,7 +117,10 @@ body {
   }
 
   .nav-link.active {
-    @apply text-primary-400 bg-primary-500/10 border border-primary-500/20;
+    @apply border;
+    color: var(--theme-primary);
+    background: color-mix(in srgb, var(--theme-primary) 10%, transparent);
+    border-color: color-mix(in srgb, var(--theme-primary) 20%, transparent);
   }
 
   .status-badge {

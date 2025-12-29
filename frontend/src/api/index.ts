@@ -393,13 +393,13 @@ export const headDashboardApi = {
   getStats: async () => {
     const { data } = await api.get<{
       department: { id: string; name: string; code: string };
-      members: Array<{ user_id: string; user_name: string; tasks_week: number; tasks_month: number }>;
+      members: Array<{ user_id: string; user_name: string; user_username: string; tasks_week: number; tasks_month: number }>;
     }>('/head-dashboard/stats');
     return data;
   },
 
   getMembers: async () => {
-    const { data } = await api.get<Array<{ user_id: string; user_name: string; user_role: string }>>('/head-dashboard/members');
+    const { data } = await api.get<Array<{ user_id: string; user_name: string; user_username: string; user_role: string }>>('/head-dashboard/members');
     return data;
   },
 

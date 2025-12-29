@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   BarChart3, Users, CheckCircle, Clock, AlertCircle, 
-  Calendar, TrendingUp, X, ArrowUpRight
+  Calendar, TrendingUp, X, ArrowUpRight, Send
 } from 'lucide-react';
 import { headDashboardApi } from '../api';
 import { Task, TaskStatus, TaskPriority, taskStatusLabels, taskPriorityLabels, taskTypeLabels } from '../types';
@@ -14,6 +14,7 @@ import { Navigate } from 'react-router-dom';
 interface DepartmentMember {
   user_id: string;
   user_name: string;
+  user_username: string;
   user_role: string;
 }
 
@@ -204,11 +205,37 @@ function TaskViewModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-dark-800/50 rounded-xl">
               <p className="text-xs text-dark-400 mb-1">Исполнитель</p>
-              <p className="text-dark-100 font-medium">{task.executor_name}</p>
+              <p className="text-dark-100 font-medium flex items-center gap-2">
+                {task.executor_name}
+                {task.executor_username && task.executor_username !== 'admin' && (
+                  <a
+                    href={`https://t.me/${task.executor_username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 transition-colors"
+                    title={`@${task.executor_username}`}
+                  >
+                    <Send className="w-4 h-4" />
+                  </a>
+                )}
+              </p>
             </div>
             <div className="p-4 bg-dark-800/50 rounded-xl">
               <p className="text-xs text-dark-400 mb-1">Заказчик</p>
-              <p className="text-dark-100 font-medium">{task.customer_name}</p>
+              <p className="text-dark-100 font-medium flex items-center gap-2">
+                {task.customer_name}
+                {task.customer_username && task.customer_username !== 'admin' && (
+                  <a
+                    href={`https://t.me/${task.customer_username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-400 hover:text-blue-300 transition-colors"
+                    title={`@${task.customer_username}`}
+                  >
+                    <Send className="w-4 h-4" />
+                  </a>
+                )}
+              </p>
             </div>
           </div>
 
@@ -423,7 +450,20 @@ function HeadDashboard() {
                           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-sm">
                             {member.user_name.charAt(0)}
                           </div>
-                          <span className="text-dark-100 font-medium">{member.user_name}</span>
+                          <span className="text-dark-100 font-medium flex items-center gap-2">
+                            {member.user_name}
+                            {member.user_username && member.user_username !== 'admin' && (
+                              <a
+                                href={`https://t.me/${member.user_username}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-400 hover:text-blue-300 transition-colors"
+                                title={`@${member.user_username}`}
+                              >
+                                <Send className="w-4 h-4" />
+                              </a>
+                            )}
+                          </span>
                         </div>
                       </td>
                       <td className="py-3 px-4 text-center">
@@ -512,8 +552,20 @@ function HeadDashboard() {
                           </span>
                         </div>
                         <h3 className="font-medium text-dark-100 truncate">{task.title}</h3>
-                        <p className="text-sm text-dark-400 mt-1">
+                        <p className="text-sm text-dark-400 mt-1 flex items-center gap-1">
                           Исполнитель: {task.executor_name}
+                          {task.executor_username && task.executor_username !== 'admin' && (
+                            <a
+                              href={`https://t.me/${task.executor_username}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-400 hover:text-blue-300 transition-colors"
+                              onClick={(e) => e.stopPropagation()}
+                              title={`@${task.executor_username}`}
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                            </a>
+                          )}
                         </p>
                       </div>
                       

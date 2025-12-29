@@ -9,12 +9,14 @@ const router = Router();
 interface DepartmentMember {
   user_id: string;
   user_name: string;
+  user_username: string;
   user_role: string;
 }
 
 interface MemberStats {
   user_id: string;
   user_name: string;
+  user_username: string;
   tasks_week: number;
   tasks_month: number;
 }
@@ -42,6 +44,7 @@ function getDepartmentMembers(departmentId: string): DepartmentMember[] {
     SELECT 
       ud.user_id,
       u.full_name as user_name,
+      u.username as user_username,
       u.role as user_role
     FROM user_departments ud
     JOIN users u ON ud.user_id = u.id
@@ -163,6 +166,7 @@ router.get('/stats', authenticateToken, (req: Request, res: Response): void => {
       return {
         user_id: member.user_id,
         user_name: member.user_name,
+        user_username: member.user_username,
         tasks_week: weekTasks.count,
         tasks_month: monthTasks.count
       };

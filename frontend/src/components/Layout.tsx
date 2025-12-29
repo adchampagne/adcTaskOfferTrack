@@ -14,21 +14,31 @@ import {
   Layers,
   BarChart3,
   BookOpen,
-  Key
+  Key,
+  Palette
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { useSettingsStore } from '../store/settingsStore';
 import { roleLabels } from '../types';
 import Notifications from './Notifications';
 import TelegramSettings from './TelegramSettings';
 import ChangePasswordModal from './ChangePasswordModal';
+import PersonalizationSettings from './PersonalizationSettings';
 
 function Layout() {
   const { user, logout, hasRole } = useAuthStore();
+  const { applyTheme, getTheme } = useSettingsStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [showTelegramSettings, setShowTelegramSettings] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showPersonalization, setShowPersonalization] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Применяем тему при монтировании
+  useEffect(() => {
+    applyTheme();
+  }, [applyTheme]);
 
   // Закрывать меню при смене роута
   useEffect(() => {
@@ -85,7 +95,13 @@ function Layout() {
     <>
       {/* Logo */}
       <div className="flex items-center gap-3 mb-10">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/30">
+        <div 
+          className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg"
+          style={{ 
+            background: getTheme().colors.gradient,
+            boxShadow: `0 10px 15px -3px color-mix(in srgb, ${getTheme().colors.primary} 30%, transparent)`
+          }}
+        >
           <Zap className="w-7 h-7 text-white" />
         </div>
         <div>
@@ -114,7 +130,10 @@ function Layout() {
       {/* User info */}
       <div className="pt-6 border-t border-dark-700">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-semibold">
+          <div 
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-semibold"
+            style={{ background: getTheme().colors.gradient }}
+          >
             {user?.full_name?.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
@@ -142,6 +161,13 @@ function Layout() {
           <span>Сменить пароль</span>
         </button>
         <button
+          onClick={() => setShowPersonalization(true)}
+          className="w-full nav-link text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 mb-2"
+        >
+          <Palette className="w-5 h-5" />
+          <span>Персонализация</span>
+        </button>
+        <button
           onClick={handleLogout}
           className="w-full nav-link text-red-400 hover:text-red-300 hover:bg-red-500/10"
         >
@@ -158,7 +184,13 @@ function Layout() {
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 glass-card rounded-none border-x-0 border-t-0">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg shadow-primary-500/30">
+            <div 
+              className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg"
+              style={{ 
+                background: getTheme().colors.gradient,
+                boxShadow: `0 10px 15px -3px color-mix(in srgb, ${getTheme().colors.primary} 30%, transparent)`
+              }}
+            >
               <Zap className="w-5 h-5 text-white" />
             </div>
             <h1 className="text-lg font-bold text-dark-100">Offer Tracker</h1>
@@ -212,6 +244,11 @@ function Layout() {
       <ChangePasswordModal
         isOpen={showChangePassword}
         onClose={() => setShowChangePassword(false)}
+      />
+      
+      <PersonalizationSettings
+        isOpen={showPersonalization}
+        onClose={() => setShowPersonalization(false)}
       />
 
       {/* Main content */}
