@@ -384,5 +384,53 @@ router.post('/change-password', authenticateToken, (req: Request, res: Response)
   }
 });
 
+// Получение настроек персонализации
+router.get('/me/settings', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    const userId = req.user?.userId;
+    const user = db.prepare('SELECT settings FROM users WHERE id = ?').get(userId) as { settings: string | null } | undefined;
+
+    if (!user) {
+      res.status(404).json({ error: 'Пользователь не найден' });
+      return;
+    }
+
+    if (user.settings) {
+      try {
+        res.json(JSON.parse(user.settings));
+      } catch {
+        res.json({});
+      }
+    } else {
+      res.json({});
+    }
+  } catch (error) {
+    console.error('Get settings error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Сохранение настроек персонализации
+router.put('/me/settings', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    const userId = req.user?.userId;
+    const settings = req.body;
+
+    // Проверяем что настройки не слишком большие (макс 50KB)
+    const settingsJson = JSON.stringify(settings);
+    if (settingsJson.length > 50000) {
+      res.status(400).json({ error: 'Настройки слишком большие' });
+      return;
+    }
+
+    db.prepare('UPDATE users SET settings = ? WHERE id = ?').run(settingsJson, userId);
+
+    res.json({ message: 'Настройки сохранены', settings });
+  } catch (error) {
+    console.error('Save settings error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 export default router;
 

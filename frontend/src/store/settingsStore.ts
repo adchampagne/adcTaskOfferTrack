@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { authApi } from '../api';
 
 export interface ThemeColors {
   primary: string;
@@ -163,12 +164,22 @@ export const backgroundOptions: BackgroundOption[] = [
   },
 ];
 
+interface UserSettings {
+  themeId?: string;
+  backgroundId?: string;
+  customBackground?: string | null;
+  backgroundBlur?: number;
+  backgroundOpacity?: number;
+}
+
 interface SettingsState {
   themeId: string;
   backgroundId: string;
-  customBackground: string | null; // URL или base64 кастомного фона
+  customBackground: string | null;
   backgroundBlur: number;
   backgroundOpacity: number;
+  isLoaded: boolean;
+  isSaving: boolean;
   
   setTheme: (themeId: string) => void;
   setBackground: (backgroundId: string) => void;
@@ -178,69 +189,60 @@ interface SettingsState {
   getTheme: () => Theme;
   getBackground: () => string;
   applyTheme: () => void;
+  loadSettings: () => Promise<void>;
+  saveSettings: () => Promise<void>;
+  resetToDefaults: (saveToServer?: boolean) => void;
 }
 
-const STORAGE_KEY = 'user_settings';
+// Debounce для сохранения
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
-const loadSettings = () => {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      return JSON.parse(saved);
-    }
-  } catch {
-    // ignore
+const debouncedSave = (save: () => Promise<void>) => {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
   }
-  return {};
+  saveTimeout = setTimeout(() => {
+    save();
+  }, 500);
 };
-
-const saveSettings = (state: Partial<SettingsState>) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({
-    themeId: state.themeId,
-    backgroundId: state.backgroundId,
-    customBackground: state.customBackground,
-    backgroundBlur: state.backgroundBlur,
-    backgroundOpacity: state.backgroundOpacity,
-  }));
-};
-
-const savedSettings = loadSettings();
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
-  themeId: savedSettings.themeId || 'purple',
-  backgroundId: savedSettings.backgroundId || 'default',
-  customBackground: savedSettings.customBackground || null,
-  backgroundBlur: savedSettings.backgroundBlur ?? 0,
-  backgroundOpacity: savedSettings.backgroundOpacity ?? 100,
+  themeId: 'purple',
+  backgroundId: 'default',
+  customBackground: null,
+  backgroundBlur: 0,
+  backgroundOpacity: 100,
+  isLoaded: false,
+  isSaving: false,
 
   setTheme: (themeId: string) => {
     set({ themeId });
-    saveSettings({ ...get(), themeId });
     get().applyTheme();
+    debouncedSave(() => get().saveSettings());
   },
 
   setBackground: (backgroundId: string) => {
     set({ backgroundId, customBackground: null });
-    saveSettings({ ...get(), backgroundId, customBackground: null });
     get().applyTheme();
+    debouncedSave(() => get().saveSettings());
   },
 
   setCustomBackground: (url: string | null) => {
     set({ customBackground: url });
-    saveSettings({ ...get(), customBackground: url });
     get().applyTheme();
+    debouncedSave(() => get().saveSettings());
   },
 
   setBackgroundBlur: (blur: number) => {
     set({ backgroundBlur: blur });
-    saveSettings({ ...get(), backgroundBlur: blur });
     get().applyTheme();
+    debouncedSave(() => get().saveSettings());
   },
 
   setBackgroundOpacity: (opacity: number) => {
     set({ backgroundOpacity: opacity });
-    saveSettings({ ...get(), backgroundOpacity: opacity });
     get().applyTheme();
+    debouncedSave(() => get().saveSettings());
   },
 
   getTheme: () => {
@@ -283,12 +285,70 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       root.classList.remove('has-custom-background');
     }
   },
+
+  loadSettings: async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        set({ isLoaded: true });
+        return;
+      }
+
+      const settings = await authApi.getSettings() as UserSettings;
+      
+      set({
+        themeId: settings.themeId || 'purple',
+        backgroundId: settings.backgroundId || 'default',
+        customBackground: settings.customBackground || null,
+        backgroundBlur: settings.backgroundBlur ?? 0,
+        backgroundOpacity: settings.backgroundOpacity ?? 100,
+        isLoaded: true,
+      });
+      
+      get().applyTheme();
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+      set({ isLoaded: true });
+    }
+  },
+
+  saveSettings: async () => {
+    const { themeId, backgroundId, customBackground, backgroundBlur, backgroundOpacity, isSaving } = get();
+    
+    if (isSaving) return;
+    
+    try {
+      set({ isSaving: true });
+      
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      await authApi.saveSettings({
+        themeId,
+        backgroundId,
+        customBackground,
+        backgroundBlur,
+        backgroundOpacity,
+      });
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+    } finally {
+      set({ isSaving: false });
+    }
+  },
+
+  resetToDefaults: (saveToServer = false) => {
+    set({
+      themeId: 'purple',
+      backgroundId: 'default',
+      customBackground: null,
+      backgroundBlur: 0,
+      backgroundOpacity: 100,
+      isLoaded: false,
+    });
+    get().applyTheme();
+    if (saveToServer) {
+      debouncedSave(() => get().saveSettings());
+    }
+  },
 }));
-
-// Применяем тему при загрузке
-if (typeof window !== 'undefined') {
-  setTimeout(() => {
-    useSettingsStore.getState().applyTheme();
-  }, 0);
-}
-

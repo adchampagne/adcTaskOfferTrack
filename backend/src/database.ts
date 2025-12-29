@@ -251,6 +251,13 @@ try {
     console.log('✅ Миграция rating для задач завершена');
   }
 
+  // Миграция users: settings колонка для персонализации
+  if (!userColumnNames.includes('settings')) {
+    console.log('🔄 Миграция: добавление настроек персонализации...');
+    db.exec("ALTER TABLE users ADD COLUMN settings TEXT");
+    console.log('✅ Миграция настроек персонализации завершена');
+  }
+
   // Миграция: создание начальных отделов
   const existingDepartments = db.prepare('SELECT COUNT(*) as count FROM departments').get() as { count: number };
   if (existingDepartments.count === 0) {

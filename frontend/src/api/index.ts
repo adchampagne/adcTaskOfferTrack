@@ -130,6 +130,17 @@ export const authApi = {
     });
     return data;
   },
+
+  // Настройки персонализации
+  getSettings: async () => {
+    const { data } = await api.get<Record<string, unknown>>('/auth/me/settings');
+    return data;
+  },
+
+  saveSettings: async (settings: Record<string, unknown>) => {
+    const { data } = await api.put<{ message: string; settings: Record<string, unknown> }>('/auth/me/settings', settings);
+    return data;
+  },
 };
 
 // Partners API

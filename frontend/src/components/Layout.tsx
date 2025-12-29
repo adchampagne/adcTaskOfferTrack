@@ -27,7 +27,7 @@ import PersonalizationSettings from './PersonalizationSettings';
 
 function Layout() {
   const { user, logout, hasRole } = useAuthStore();
-  const { applyTheme, getTheme } = useSettingsStore();
+  const { loadSettings, getTheme, isLoaded } = useSettingsStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [showTelegramSettings, setShowTelegramSettings] = useState(false);
@@ -35,10 +35,12 @@ function Layout() {
   const [showPersonalization, setShowPersonalization] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // Применяем тему при монтировании
+  // Загружаем настройки с сервера при монтировании
   useEffect(() => {
-    applyTheme();
-  }, [applyTheme]);
+    if (!isLoaded) {
+      loadSettings();
+    }
+  }, [loadSettings, isLoaded]);
 
   // Закрывать меню при смене роута
   useEffect(() => {

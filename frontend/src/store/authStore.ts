@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { User, UserRole } from '../types';
 import { authApi } from '../api';
+import { useSettingsStore } from './settingsStore';
 
 interface AuthState {
   user: User | null;
@@ -35,12 +36,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const permissions = await authApi.getMyPermissions().catch(() => []);
     
     set({ token, user, isAuthenticated: true, permissions });
+    
+    // Загружаем настройки персонализации нового пользователя
+    useSettingsStore.getState().loadSettings();
   },
 
   logout: () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     set({ token: null, user: null, isAuthenticated: false, permissions: [] });
+    
+    // Сбрасываем настройки на дефолтные при логауте
+    const settingsStore = useSettingsStore.getState();
+    settingsStore.resetToDefaults();
   },
 
   checkAuth: async () => {

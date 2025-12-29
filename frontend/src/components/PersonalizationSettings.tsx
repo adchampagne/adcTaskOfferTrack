@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { X, Palette, Image, Upload, Trash2, Check, SlidersHorizontal } from 'lucide-react';
+import { X, Palette, Image, Upload, Trash2, Check, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import { useSettingsStore, themes, backgroundOptions } from '../store/settingsStore';
 
 interface Props {
@@ -14,11 +14,13 @@ function PersonalizationSettings({ isOpen, onClose }: Props) {
     customBackground,
     backgroundBlur,
     backgroundOpacity,
+    isSaving,
     setTheme,
     setBackground,
     setCustomBackground,
     setBackgroundBlur,
     setBackgroundOpacity,
+    resetToDefaults,
   } = useSettingsStore();
 
   const [activeTab, setActiveTab] = useState<'theme' | 'background'>('theme');
@@ -277,10 +279,26 @@ function PersonalizationSettings({ isOpen, onClose }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-dark-700 flex justify-end">
-          <button onClick={onClose} className="btn-primary">
-            Готово
+        <div className="p-6 border-t border-dark-700 flex items-center justify-between">
+          <button
+            onClick={() => {
+              if (confirm('Сбросить все настройки на стандартные?')) {
+                resetToDefaults(true);
+              }
+            }}
+            className="btn-secondary text-sm py-2 px-4 flex items-center gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Сбросить
           </button>
+          <div className="flex items-center gap-3">
+            {isSaving && (
+              <span className="text-sm text-dark-400">Сохранение...</span>
+            )}
+            <button onClick={onClose} className="btn-primary">
+              Готово
+            </button>
+          </div>
         </div>
       </div>
     </div>

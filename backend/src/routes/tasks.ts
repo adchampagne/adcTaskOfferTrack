@@ -149,6 +149,7 @@ router.post('/', authenticateToken, (req: Request, res: Response): void => {
 
     // Определяем исполнителя
     let finalExecutorId = executor_id;
+    const customer_id_check = req.user?.userId;
     
     // Админ может указать исполнителя напрямую
     if (currentUserRole === 'admin') {
@@ -156,6 +157,9 @@ router.post('/', authenticateToken, (req: Request, res: Response): void => {
         res.status(400).json({ error: 'Исполнитель обязателен' });
         return;
       }
+      finalExecutorId = executor_id;
+    } else if (executor_id && executor_id === customer_id_check) {
+      // Пользователь назначает задачу себе - не требуем отдел
       finalExecutorId = executor_id;
     } else {
       // Все остальные должны указать отдел

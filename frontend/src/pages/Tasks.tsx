@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   CheckSquare, Plus, X, Calendar, User, Clock, 
@@ -46,6 +46,44 @@ function FileItem({
   const isImage = file.mime_type.startsWith('image/');
   const isVideo = file.mime_type.startsWith('video/');
   const [showPreview, setShowPreview] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+
+  // Загрузка превью с авторизацией
+  const loadPreview = async () => {
+    if (previewUrl) return; // Уже загружено
+    setIsLoadingPreview(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`/api/files/view/${file.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        setPreviewUrl(url);
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки превью:', error);
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
+
+  // Открытие превью
+  const handleOpenPreview = () => {
+    setShowPreview(true);
+    loadPreview();
+  };
+
+  // Очистка blob URL при размонтировании
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        window.URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const handleDownload = async () => {
     try {
@@ -86,7 +124,7 @@ function FileItem({
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {(isImage || isVideo) && (
             <button
-              onClick={() => setShowPreview(true)}
+              onClick={handleOpenPreview}
               className="p-2 text-dark-400 hover:text-primary-400 hover:bg-dark-700/50 rounded-lg transition-colors"
               title="Просмотреть"
             >
@@ -125,16 +163,21 @@ function FileItem({
             >
               <X className="w-8 h-8" />
             </button>
-            {isImage && (
+            {isLoadingPreview && (
+              <div className="flex items-center justify-center p-12">
+                <Loader2 className="w-12 h-12 text-primary-400 animate-spin" />
+              </div>
+            )}
+            {isImage && previewUrl && (
               <img 
-                src={`/api/files/view/${file.id}`} 
+                src={previewUrl} 
                 alt={file.original_name}
                 className="max-w-full max-h-[80vh] rounded-xl"
               />
             )}
-            {isVideo && (
+            {isVideo && previewUrl && (
               <video 
-                src={`/api/files/view/${file.id}`}
+                src={previewUrl}
                 controls
                 className="max-w-full max-h-[80vh] rounded-xl"
               />
@@ -205,6 +248,12 @@ function TaskModal({
   const myDepartmentCode = headCheck?.department?.code as Department | undefined;
   const isAdmin = currentUserRole === 'admin';
 
+  // Получаем текущего пользователя
+  const { user: currentUser } = useAuthStore();
+
+  // Состояние "Назначить себе"
+  const [assignToSelf, setAssignToSelf] = useState(false);
+
   const [formData, setFormData] = useState<TaskFormData>({
     title: task?.title || '',
     description: task?.description || '',
@@ -218,6 +267,24 @@ function TaskModal({
       ? format(new Date(task.deadline), "yyyy-MM-dd'T'HH:mm")
       : format(new Date(Date.now() + 24 * 60 * 60 * 1000), "yyyy-MM-dd'T'HH:mm"),
   });
+
+  // При включении "Назначить себе" устанавливаем executor_id
+  const handleAssignToSelfChange = (checked: boolean) => {
+    setAssignToSelf(checked);
+    if (checked && currentUser) {
+      setFormData(prev => ({ 
+        ...prev, 
+        executor_id: currentUser.id,
+        department: undefined // Сбрасываем отдел
+      }));
+    } else {
+      setFormData(prev => ({ 
+        ...prev, 
+        executor_id: '',
+        department: undefined
+      }));
+    }
+  };
 
   // Показывать выбор сотрудника только если выбран свой отдел
   const showEmployeeSelect = isHead && formData.department === myDepartmentCode;
@@ -238,8 +305,14 @@ function TaskModal({
       return;
     }
 
-    // Админ может выбрать любого исполнителя напрямую
-    if (isAdmin) {
+    // Если задача назначена себе - не требуем отдел
+    if (assignToSelf) {
+      if (!formData.executor_id) {
+        toast.error('Ошибка назначения себе');
+        return;
+      }
+    } else if (isAdmin) {
+      // Админ может выбрать любого исполнителя напрямую
       if (!formData.executor_id) {
         toast.error('Выберите исполнителя');
         return;
@@ -257,6 +330,7 @@ function TaskModal({
       }
     }
     
+    // Передаём флаг assignToSelf через executor_id (если себе - он уже установлен)
     onSave({ ...formData, files: pendingFiles });
   };
 
@@ -336,58 +410,79 @@ function TaskModal({
               </select>
             </div>
 
-            {isAdmin ? (
-              /* Админ выбирает исполнителя напрямую */
-              <div>
-                <label className="block text-sm font-medium text-dark-300 mb-2">
-                  Исполнитель *
-                </label>
-                <select
-                  value={formData.executor_id}
-                  onChange={(e) => setFormData({ ...formData, executor_id: e.target.value })}
-                  className="glass-input w-full"
-                >
-                  <option value="">Выберите...</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.full_name} ({roleLabels[u.role]})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              /* Все остальные выбирают отдел */
-              <div>
-                <label className="block text-sm font-medium text-dark-300 mb-2">
-                  Отдел *
-                </label>
-                <select
-                  value={formData.department || ''}
-                  onChange={(e) => {
-                    const dept = e.target.value as Department;
-                    setFormData({ 
-                      ...formData, 
-                      department: dept,
-                      // Сбрасываем исполнителя при смене отдела
-                      executor_id: ''
-                    });
-                  }}
-                  className="glass-input w-full"
-                >
-                  <option value="">Выберите отдел...</option>
-                  {Object.entries(departmentLabels).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                      {isHead && value === myDepartmentCode && ' (мой отдел)'}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {/* Кнопка "Назначить себе" */}
+            <div className="flex flex-col justify-end">
+              <label className="flex items-center gap-3 p-3 bg-dark-700/50 rounded-xl border border-dark-600 hover:border-primary-500/50 cursor-pointer transition-all">
+                <input
+                  type="checkbox"
+                  checked={assignToSelf}
+                  onChange={(e) => handleAssignToSelfChange(e.target.checked)}
+                  className="w-5 h-5 rounded border-dark-500 bg-dark-700 text-primary-500 focus:ring-primary-500 focus:ring-offset-0"
+                />
+                <div>
+                  <span className="text-sm font-medium text-dark-200">Назначить себе</span>
+                  <p className="text-xs text-dark-500">Задача будет назначена вам</p>
+                </div>
+              </label>
+            </div>
           </div>
 
-          {/* Выбор сотрудника - только если руководитель выбрал свой отдел */}
-          {showEmployeeSelect && (
+          {/* Выбор отдела/исполнителя - только если не назначено себе */}
+          {!assignToSelf && (
+            <div>
+              {isAdmin ? (
+                /* Админ выбирает исполнителя напрямую */
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">
+                    Исполнитель *
+                  </label>
+                  <select
+                    value={formData.executor_id}
+                    onChange={(e) => setFormData({ ...formData, executor_id: e.target.value })}
+                    className="glass-input w-full"
+                  >
+                    <option value="">Выберите...</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.full_name} ({roleLabels[u.role]})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                /* Все остальные выбирают отдел */
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">
+                    Отдел *
+                  </label>
+                  <select
+                    value={formData.department || ''}
+                    onChange={(e) => {
+                      const dept = e.target.value as Department;
+                      setFormData({ 
+                        ...formData, 
+                        department: dept,
+                        // Сбрасываем исполнителя при смене отдела
+                        executor_id: ''
+                      });
+                    }}
+                    className="glass-input w-full"
+                  >
+                    <option value="">Выберите отдел...</option>
+                    {Object.entries(departmentLabels).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                        {isHead && value === myDepartmentCode && ' (мой отдел)'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Выбор сотрудника - только если руководитель выбрал свой отдел и не назначено себе */}
+          {!assignToSelf && showEmployeeSelect && (
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">
                 Назначить сотруднику *
