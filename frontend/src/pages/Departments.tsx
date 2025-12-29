@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Building2, Users, Crown, X, UserPlus, UserMinus, Edit2, Plus, Trash2 } from 'lucide-react';
-import { departmentsApi, authApi, Department, DepartmentHead } from '../api';
+import { departmentsApi, authApi, Department } from '../api';
 import { useAuthStore } from '../store/authStore';
 import { User, roleLabels, UserRole } from '../types';
 import toast from 'react-hot-toast';

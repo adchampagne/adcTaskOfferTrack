@@ -120,6 +120,14 @@ export const authApi = {
     const { data } = await api.get<string[]>('/auth/me/permissions');
     return data;
   },
+
+  changePassword: async (oldPassword: string, newPassword: string) => {
+    const { data } = await api.post<{ message: string }>('/auth/change-password', {
+      old_password: oldPassword,
+      new_password: newPassword,
+    });
+    return data;
+  },
 };
 
 // Partners API

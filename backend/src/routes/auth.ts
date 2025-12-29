@@ -343,5 +343,46 @@ router.get('/me/permissions', authenticateToken, (req: Request, res: Response): 
   }
 });
 
+// Смена пароля (пользователь меняет свой пароль)
+router.post('/change-password', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    const { old_password, new_password } = req.body;
+    const userId = req.user?.userId;
+
+    if (!old_password || !new_password) {
+      res.status(400).json({ error: 'Старый и новый пароль обязательны' });
+      return;
+    }
+
+    if (new_password.length < 4) {
+      res.status(400).json({ error: 'Новый пароль должен быть не менее 4 символов' });
+      return;
+    }
+
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as User | undefined;
+
+    if (!user) {
+      res.status(404).json({ error: 'Пользователь не найден' });
+      return;
+    }
+
+    // Проверяем старый пароль
+    const validPassword = bcrypt.compareSync(old_password, user.password);
+    if (!validPassword) {
+      res.status(401).json({ error: 'Неверный старый пароль' });
+      return;
+    }
+
+    // Хэшируем и сохраняем новый пароль
+    const hashedPassword = bcrypt.hashSync(new_password, 10);
+    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, userId);
+
+    res.json({ message: 'Пароль успешно изменён' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 export default router;
 

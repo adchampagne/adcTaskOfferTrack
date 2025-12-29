@@ -13,18 +13,21 @@ import {
   X,
   Layers,
   BarChart3,
-  BookOpen
+  BookOpen,
+  Key
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { roleLabels } from '../types';
 import Notifications from './Notifications';
 import TelegramSettings from './TelegramSettings';
+import ChangePasswordModal from './ChangePasswordModal';
 
 function Layout() {
   const { user, logout, hasRole } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [showTelegramSettings, setShowTelegramSettings] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Закрывать меню при смене роута
@@ -125,6 +128,13 @@ function Layout() {
           <span>Telegram</span>
         </button>
         <button
+          onClick={() => setShowChangePassword(true)}
+          className="w-full nav-link text-primary-400 hover:text-primary-300 hover:bg-primary-500/10 mb-2"
+        >
+          <Key className="w-5 h-5" />
+          <span>Сменить пароль</span>
+        </button>
+        <button
           onClick={handleLogout}
           className="w-full nav-link text-red-400 hover:text-red-300 hover:bg-red-500/10"
         >
@@ -190,6 +200,11 @@ function Layout() {
       <TelegramSettings 
         isOpen={showTelegramSettings} 
         onClose={() => setShowTelegramSettings(false)} 
+      />
+      
+      <ChangePasswordModal
+        isOpen={showChangePassword}
+        onClose={() => setShowChangePassword(false)}
       />
 
       {/* Main content */}
