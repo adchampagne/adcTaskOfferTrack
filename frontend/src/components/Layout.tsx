@@ -52,12 +52,19 @@ function Layout() {
     navigate('/login');
   };
 
-  const navItems = [
+  const navItems: { to: string; icon: typeof LayoutDashboard; label: string }[] = [
     { to: '/', icon: LayoutDashboard, label: 'Дашборд' },
-    { to: '/partners', icon: Building2, label: 'Партнёрки' },
+  ];
+
+  // Партнёрки видят только админы, руководители баинга и биздевы
+  if (hasRole('admin', 'buying_head', 'bizdev')) {
+    navItems.push({ to: '/partners', icon: Building2, label: 'Партнёрки' });
+  }
+
+  navItems.push(
     { to: '/offers', icon: Package, label: 'Офферы' },
     { to: '/tasks', icon: CheckSquare, label: 'Задачи' },
-  ];
+  );
 
   // Отделы видны всем
   navItems.push({ to: '/departments', icon: Layers, label: 'Отделы' });
