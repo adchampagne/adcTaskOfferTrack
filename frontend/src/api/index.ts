@@ -316,11 +316,12 @@ export const filesApi = {
     return data;
   },
 
-  upload: async (taskId: string, files: File[]) => {
+  upload: async (taskId: string, files: File[], isResult: boolean = false) => {
     const formData = new FormData();
     files.forEach((file) => {
       formData.append('files', file);
     });
+    formData.append('is_result', isResult ? '1' : '0');
 
     const { data } = await api.post<TaskFile[]>(`/files/upload/${taskId}`, formData, {
       headers: {

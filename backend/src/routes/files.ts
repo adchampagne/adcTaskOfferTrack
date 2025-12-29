@@ -84,6 +84,7 @@ interface TaskFile {
   mime_type: string;
   size: number;
   uploaded_by: string;
+  is_result: number;
   created_at: string;
   uploader_name?: string;
 }
@@ -97,6 +98,10 @@ router.post(
     try {
       const { taskId } = req.params;
       const files = req.files as Express.Multer.File[];
+      // Параметр is_result может прийти в query или body
+      const isResult = req.query.is_result === '1' || req.query.is_result === 'true' || 
+                       req.body?.is_result === '1' || req.body?.is_result === 'true' ||
+                       req.body?.is_result === true ? 1 : 0;
 
       if (!files || files.length === 0) {
         res.status(400).json({ error: 'Файлы не выбраны' });
@@ -115,8 +120,8 @@ router.post(
       }
 
       const insertFile = db.prepare(`
-        INSERT INTO task_files (id, task_id, original_name, stored_name, mime_type, size, uploaded_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO task_files (id, task_id, original_name, stored_name, mime_type, size, uploaded_by, is_result)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
       const uploadedFiles: TaskFile[] = [];
@@ -130,7 +135,8 @@ router.post(
           file.filename,
           file.mimetype,
           file.size,
-          req.user?.userId
+          req.user?.userId,
+          isResult
         );
 
         const insertedFile = db.prepare('SELECT * FROM task_files WHERE id = ?').get(fileId) as TaskFile;
@@ -155,7 +161,7 @@ router.get('/task/:taskId', authenticateToken, (req: Request, res: Response): vo
       FROM task_files f
       LEFT JOIN users u ON f.uploaded_by = u.id
       WHERE f.task_id = ?
-      ORDER BY f.created_at DESC
+      ORDER BY f.is_result ASC, f.created_at DESC
     `).all(taskId) as TaskFile[];
 
     res.json(files);
@@ -194,9 +200,31 @@ router.get('/download/:fileId', authenticateToken, (req: Request, res: Response)
 });
 
 // Просмотр файла (для изображений и видео)
-router.get('/view/:fileId', authenticateToken, (req: Request, res: Response): void => {
+// Поддерживает токен как в заголовке Authorization, так и в query параметре
+router.get('/view/:fileId', (req: Request, res: Response): void => {
   try {
     const { fileId } = req.params;
+    
+    // Получаем токен из заголовка или из query параметра
+    const authHeader = req.headers['authorization'];
+    const headerToken = authHeader && authHeader.split(' ')[1];
+    const queryToken = req.query.token as string;
+    const token = headerToken || queryToken;
+    
+    if (!token) {
+      res.status(401).json({ error: 'Требуется авторизация' });
+      return;
+    }
+    
+    // Проверяем токен
+    const jwt = require('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-change-in-production';
+    try {
+      jwt.verify(token, JWT_SECRET);
+    } catch {
+      res.status(403).json({ error: 'Неверный или просроченный токен' });
+      return;
+    }
 
     const file = db.prepare('SELECT * FROM task_files WHERE id = ?').get(fileId) as TaskFile | undefined;
 
@@ -213,6 +241,7 @@ router.get('/view/:fileId', authenticateToken, (req: Request, res: Response): vo
     }
 
     res.setHeader('Content-Type', file.mime_type);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
     res.sendFile(filePath);
   } catch (error) {
     console.error('View file error:', error);

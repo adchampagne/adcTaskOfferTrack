@@ -72,6 +72,7 @@ db.exec(`
     mime_type TEXT NOT NULL,
     size INTEGER NOT NULL,
     uploaded_by TEXT NOT NULL REFERENCES users(id),
+    is_result INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -408,6 +409,16 @@ try {
     );
 
     console.log('✅ Начальные инструкции базы знаний созданы');
+  }
+
+  // Миграция: is_result колонка для файлов задач
+  const fileColumns = db.prepare("PRAGMA table_info(task_files)").all() as Array<{ name: string }>;
+  const fileColumnNames = fileColumns.map(c => c.name);
+  
+  if (!fileColumnNames.includes('is_result')) {
+    console.log('🔄 Миграция: добавление is_result к файлам задач...');
+    db.exec("ALTER TABLE task_files ADD COLUMN is_result INTEGER DEFAULT 0");
+    console.log('✅ Миграция is_result для файлов задач завершена');
   }
 
   // Миграция: перенос head_id из departments в department_heads

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   CheckSquare, Plus, X, Calendar, User, Clock, 
@@ -46,44 +46,12 @@ function FileItem({
   const isImage = file.mime_type.startsWith('image/');
   const isVideo = file.mime_type.startsWith('video/');
   const [showPreview, setShowPreview] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
-  // Загрузка превью с авторизацией
-  const loadPreview = async () => {
-    if (previewUrl) return; // Уже загружено
-    setIsLoadingPreview(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/files/view/${file.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        setPreviewUrl(url);
-      }
-    } catch (error) {
-      console.error('Ошибка загрузки превью:', error);
-    } finally {
-      setIsLoadingPreview(false);
-    }
+  // URL с токеном для просмотра файла
+  const getViewUrl = () => {
+    const token = localStorage.getItem('token');
+    return `/api/files/view/${file.id}?token=${token}`;
   };
-
-  // Открытие превью
-  const handleOpenPreview = () => {
-    setShowPreview(true);
-    loadPreview();
-  };
-
-  // Очистка blob URL при размонтировании
-  useEffect(() => {
-    return () => {
-      if (previewUrl) {
-        window.URL.revokeObjectURL(previewUrl);
-      }
-    };
-  }, [previewUrl]);
 
   const handleDownload = async () => {
     try {
@@ -124,7 +92,7 @@ function FileItem({
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {(isImage || isVideo) && (
             <button
-              onClick={handleOpenPreview}
+              onClick={() => setShowPreview(true)}
               className="p-2 text-dark-400 hover:text-primary-400 hover:bg-dark-700/50 rounded-lg transition-colors"
               title="Просмотреть"
             >
@@ -163,21 +131,16 @@ function FileItem({
             >
               <X className="w-8 h-8" />
             </button>
-            {isLoadingPreview && (
-              <div className="flex items-center justify-center p-12">
-                <Loader2 className="w-12 h-12 text-primary-400 animate-spin" />
-              </div>
-            )}
-            {isImage && previewUrl && (
+            {isImage && (
               <img 
-                src={previewUrl} 
+                src={getViewUrl()} 
                 alt={file.original_name}
                 className="max-w-full max-h-[80vh] rounded-xl"
               />
             )}
-            {isVideo && previewUrl && (
+            {isVideo && (
               <video 
-                src={previewUrl}
+                src={getViewUrl()}
                 controls
                 className="max-w-full max-h-[80vh] rounded-xl"
               />
@@ -893,6 +856,135 @@ function TaskModal({
   );
 }
 
+// Модальное окно завершения задачи с загрузкой результатов
+function CompleteTaskModal({
+  task,
+  onClose,
+  onComplete,
+}: {
+  task: Task;
+  onClose: () => void;
+  onComplete: (files: File[]) => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+    if (!selectedFiles) return;
+    setPendingFiles(prev => [...prev, ...Array.from(selectedFiles)]);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const removePendingFile = (index: number) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = () => {
+    onComplete(pendingFiles);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+      <div className="glass-card w-full max-w-md p-6 animate-scale-in">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-dark-100 flex items-center gap-2">
+            <CheckCircle className="w-5 h-5 text-green-400" />
+            Завершение задачи
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-dark-400 hover:text-dark-200 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <p className="text-dark-300 text-sm mb-4">
+          Задача: <span className="text-dark-100 font-medium">#{task.task_number} {task.title}</span>
+        </p>
+
+        <div className="bg-dark-800/50 rounded-xl p-4 border border-dark-700 mb-4">
+          <h3 className="text-sm font-medium text-dark-300 mb-3 flex items-center gap-2">
+            <Upload className="w-4 h-4" />
+            Результаты работы
+          </h3>
+          <p className="text-xs text-dark-500 mb-3">
+            Приложите файлы с результатами выполнения задачи (лендинги, креативы, архивы и т.д.)
+          </p>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            onChange={handleFileSelect}
+            className="hidden"
+            accept="image/*,video/*,.zip,.rar,.7z,.gz,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+          />
+          
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full py-3 border-2 border-dashed border-dark-600 rounded-xl text-dark-400 hover:border-primary-500/50 hover:text-primary-400 transition-colors flex items-center justify-center gap-2"
+          >
+            <Upload className="w-5 h-5" />
+            Выбрать файлы
+          </button>
+
+          {pendingFiles.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {pendingFiles.map((file, index) => {
+                const Icon = getFileIcon(file.type);
+                return (
+                  <div key={index} className="flex items-center gap-2 p-2 bg-green-500/10 border border-green-500/30 rounded-lg text-sm">
+                    <Icon className="w-4 h-4 text-green-400" />
+                    <span className="flex-1 truncate text-dark-200">{file.name}</span>
+                    <span className="text-xs text-dark-500">{formatFileSize(file.size)}</span>
+                    <button
+                      type="button"
+                      onClick={() => removePendingFile(index)}
+                      className="p-1 text-dark-400 hover:text-red-400 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="btn-secondary flex-1"
+          >
+            Отмена
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="btn-primary flex-1 flex items-center justify-center gap-2"
+          >
+            {pendingFiles.length > 0 ? (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                Завершить (+{pendingFiles.length})
+              </>
+            ) : (
+              <>
+                <XCircle className="w-4 h-4" />
+                Без вложений
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Модальное окно просмотра задачи
 function TaskViewModal({
   task,
@@ -900,18 +992,21 @@ function TaskViewModal({
   onClose,
   onEdit,
   onStatusChange,
+  onCompleteWithFiles,
 }: {
   task: Task;
   currentUserId: string;
   onClose: () => void;
   onEdit: () => void;
   onStatusChange: (status: TaskStatus) => void;
+  onCompleteWithFiles: (files: File[]) => void;
 }) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showAssignSelect, setShowAssignSelect] = useState(false);
   const [selectedExecutor, setSelectedExecutor] = useState('');
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   // Проверяем, является ли пользователь руководителем
   const { data: headCheck } = useQuery({
@@ -1206,15 +1301,60 @@ function TaskViewModal({
                 )}
               </div>
             ) : (
-              <div className="space-y-2">
-                {files.map((file) => (
-                  <FileItem
-                    key={file.id}
-                    file={file}
-                    onDelete={() => handleDeleteFile(file.id)}
-                    canDelete={file.uploaded_by === currentUserId || task.customer_id === currentUserId}
-                  />
-                ))}
+              <div className="space-y-4">
+                {/* Вложения к задаче */}
+                {files.filter(f => !f.is_result).length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-medium text-dark-500 mb-2 flex items-center gap-1">
+                      <Paperclip className="w-3 h-3" />
+                      Вложения к задаче ({files.filter(f => !f.is_result).length})
+                    </h4>
+                    <div className="space-y-2">
+                      {files.filter(f => !f.is_result).map((file) => (
+                        <FileItem
+                          key={file.id}
+                          file={file}
+                          onDelete={() => handleDeleteFile(file.id)}
+                          canDelete={file.uploaded_by === currentUserId || task.customer_id === currentUserId}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Результаты работы */}
+                {files.filter(f => f.is_result).length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-medium text-green-400 mb-2 flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      Результаты работы ({files.filter(f => f.is_result).length})
+                    </h4>
+                    <div className="space-y-2">
+                      {files.filter(f => f.is_result).map((file) => (
+                        <FileItem
+                          key={file.id}
+                          file={file}
+                          onDelete={() => handleDeleteFile(file.id)}
+                          canDelete={file.uploaded_by === currentUserId || task.customer_id === currentUserId}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Если все файлы одного типа - показываем их без категоризации */}
+                {files.filter(f => !f.is_result).length === 0 && files.filter(f => f.is_result).length === 0 && (
+                  <div className="space-y-2">
+                    {files.map((file) => (
+                      <FileItem
+                        key={file.id}
+                        file={file}
+                        onDelete={() => handleDeleteFile(file.id)}
+                        canDelete={file.uploaded_by === currentUserId || task.customer_id === currentUserId}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1345,13 +1485,24 @@ function TaskViewModal({
                     <span className="hidden sm:inline">В работе</span>
                   </button>
                 )}
-                <button
-                  onClick={() => onStatusChange('completed')}
-                  className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20 transition-colors text-xs sm:text-sm"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  <span className="hidden sm:inline">Завершить</span>
-                </button>
+                {/* Кнопка "Завершить" - только для исполнителя открывает модальное окно */}
+                {isMyTask ? (
+                  <button
+                    onClick={() => setShowCompleteModal(true)}
+                    className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20 transition-colors text-xs sm:text-sm"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    <span className="hidden sm:inline">Завершить</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => onStatusChange('completed')}
+                    className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg bg-green-500/10 text-green-400 border border-green-500/30 hover:bg-green-500/20 transition-colors text-xs sm:text-sm"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    <span className="hidden sm:inline">Завершить</span>
+                  </button>
+                )}
                 <button
                   onClick={() => onStatusChange('cancelled')}
                   className="flex items-center justify-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20 transition-colors text-xs sm:text-sm"
@@ -1363,6 +1514,18 @@ function TaskViewModal({
             </div>
           )}
         </div>
+
+        {/* Модальное окно завершения задачи */}
+        {showCompleteModal && (
+          <CompleteTaskModal
+            task={task}
+            onClose={() => setShowCompleteModal(false)}
+            onComplete={(files) => {
+              setShowCompleteModal(false);
+              onCompleteWithFiles(files);
+            }}
+          />
+        )}
 
         {/* Footer */}
         <div className="p-4 border-t border-dark-700 flex gap-3">
@@ -2141,6 +2304,21 @@ function Tasks() {
           }}
           onStatusChange={(status) => {
             statusMutation.mutate({ id: viewingTask.id, status });
+            setViewingTask(undefined);
+          }}
+          onCompleteWithFiles={async (files) => {
+            // Сначала загружаем файлы результатов (если есть)
+            if (files.length > 0) {
+              try {
+                await filesApi.upload(viewingTask.id, files, true); // is_result = true
+                queryClient.invalidateQueries({ queryKey: ['task-files', viewingTask.id] });
+              } catch (err) {
+                console.error('File upload error:', err);
+                toast.error('Ошибка загрузки файлов результата');
+              }
+            }
+            // Потом меняем статус на completed
+            statusMutation.mutate({ id: viewingTask.id, status: 'completed' });
             setViewingTask(undefined);
           }}
         />

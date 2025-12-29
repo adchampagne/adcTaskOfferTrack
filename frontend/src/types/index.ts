@@ -296,6 +296,7 @@ export interface TaskFile {
   mime_type: string;
   size: number;
   uploaded_by: string;
+  is_result: number;
   created_at: string;
   uploader_name?: string;
 }
