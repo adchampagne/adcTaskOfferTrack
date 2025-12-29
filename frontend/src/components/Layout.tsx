@@ -12,9 +12,10 @@ import {
   X,
   Layers,
   BarChart3,
+  TrendingUp,
   BookOpen,
   Settings,
-  ShieldCheck
+  Wrench
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
@@ -79,12 +80,17 @@ function Layout() {
     navItems.push({ to: '/head-dashboard', icon: BarChart3, label: 'Мой отдел' });
   }
 
+  // Аналитика - для руководителей отделов, биздева и админа
+  if (hasRole('admin', 'buying_head', 'creo_head', 'dev_head', 'bizdev')) {
+    navItems.push({ to: '/analytics', icon: TrendingUp, label: 'Аналитика' });
+  }
+
   // База знаний (доступна всем, но контент фильтруется по отделу)
   navItems.push({ to: '/knowledge-base', icon: BookOpen, label: 'База знаний' });
 
-  // Очистка метаданных - для крео и байеров
+  // Инструменты - для крео и байеров
   if (hasRole('admin', 'buyer', 'buying_head', 'creo_manager', 'creo_head')) {
-    navItems.push({ to: '/metadata-cleaner', icon: ShieldCheck, label: 'Очистка метаданных' });
+    navItems.push({ to: '/tools', icon: Wrench, label: 'Инструменты' });
   }
   
   if (hasRole('admin')) {

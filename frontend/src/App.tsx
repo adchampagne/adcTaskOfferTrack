@@ -13,6 +13,9 @@ import HeadDashboard from './pages/HeadDashboard';
 import KnowledgeBase from './pages/KnowledgeBase';
 import Settings from './pages/Settings';
 import MetadataCleaner from './pages/MetadataCleaner';
+import Analytics from './pages/Analytics';
+import Tools from './pages/Tools';
+import ImageConverter from './pages/ImageConverter';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -63,7 +66,11 @@ function App() {
         <Route path="head-dashboard" element={<HeadDashboard />} />
         <Route path="knowledge-base" element={<KnowledgeBase />} />
         <Route path="settings" element={<Settings />} />
-        <Route path="metadata-cleaner" element={<MetadataCleaner />} />
+        <Route path="tools" element={<Tools />} />
+        <Route path="tools/metadata-cleaner" element={<MetadataCleaner />} />
+        <Route path="tools/image-converter" element={<ImageConverter />} />
+        <Route path="metadata-cleaner" element={<Navigate to="/tools/metadata-cleaner" />} />
+        <Route path="analytics" element={<Analytics />} />
       </Route>
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>

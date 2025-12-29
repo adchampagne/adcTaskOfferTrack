@@ -610,5 +610,86 @@ export const metadataApi = {
   },
 };
 
+// Analytics API (Аналитика)
+export interface AnalyticsSummary {
+  tasksThisWeek: number;
+  tasksThisMonth: number;
+  monthChange: number;
+  totalCompleted: number;
+  activeTasks: number;
+  departmentCode: string | null;
+}
+
+export interface TasksByDay {
+  date: string;
+  count: number;
+}
+
+export interface TasksByWeek {
+  week: string;
+  weekStart: string;
+  weekEnd: string;
+  count: number;
+}
+
+export interface AvgCompletionTime {
+  task_type: string;
+  total_tasks: number;
+  avg_hours: number;
+  avg_days: number;
+}
+
+export interface DepartmentStats {
+  department: string;
+  total: number;
+  completed: number;
+  completed_month: number;
+}
+
+export interface TopExecutor {
+  id: string;
+  full_name: string;
+  username: string;
+  tasks_completed: number;
+  avg_hours: number;
+}
+
+export const analyticsApi = {
+  checkAccess: async () => {
+    const { data } = await api.get<{ hasAccess: boolean }>('/analytics/check-access');
+    return data;
+  },
+
+  getSummary: async () => {
+    const { data } = await api.get<AnalyticsSummary>('/analytics/summary');
+    return data;
+  },
+
+  getTasksCompleted: async () => {
+    const { data } = await api.get<TasksByDay[]>('/analytics/tasks-completed');
+    return data;
+  },
+
+  getTasksByWeek: async () => {
+    const { data } = await api.get<TasksByWeek[]>('/analytics/tasks-by-week');
+    return data;
+  },
+
+  getAvgCompletionTime: async () => {
+    const { data } = await api.get<AvgCompletionTime[]>('/analytics/avg-completion-time');
+    return data;
+  },
+
+  getByDepartment: async () => {
+    const { data } = await api.get<DepartmentStats[]>('/analytics/by-department');
+    return data;
+  },
+
+  getTopExecutors: async () => {
+    const { data } = await api.get<TopExecutor[]>('/analytics/top-executors');
+    return data;
+  },
+};
+
 export default api;
 

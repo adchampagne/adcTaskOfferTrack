@@ -13,6 +13,7 @@ import {
   X,
   FileWarning
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { metadataApi } from '../api';
 import { useSettingsStore } from '../store/settingsStore';
 
@@ -205,12 +206,21 @@ function MetadataCleaner() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Back link */}
+      <div className="flex items-center gap-3 mb-4 flex-shrink-0">
+        <Link 
+          to="/tools"
+          className="text-dark-400 hover:text-dark-200 transition-colors"
+        >
+          ← Инструменты
+        </Link>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-shrink-0">
         <div className="flex items-center gap-3">
           <div 
-            className="w-12 h-12 rounded-xl flex items-center justify-center"
-            style={{ background: getTheme().colors.gradient }}
+            className="w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br from-green-500 to-emerald-600"
           >
             <ShieldCheck className="w-6 h-6 text-white" />
           </div>
