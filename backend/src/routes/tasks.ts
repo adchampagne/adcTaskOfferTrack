@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db, { getNextTaskNumber } from '../database';
 import { authenticateToken } from '../middleware/auth';
 import { Task, TaskWithUsers, Department, departmentHeadRole, UserRole } from '../types';
-import { notifyTaskAssigned, notifyStatusChanged, notifySubtaskCompleted } from './notifications';
+import { notifyTaskAssigned, notifyStatusChanged, notifySubtaskCompleted, notifyTaskRevision } from './notifications';
 
 const router = Router();
 
@@ -505,6 +505,77 @@ router.patch('/:id/rate', authenticateToken, (req: Request, res: Response): void
     res.json(task);
   } catch (error) {
     console.error('Rate task error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Вернуть задачу на доработку (только заказчик)
+router.patch('/:id/revision', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    const { comment } = req.body;
+    const { id } = req.params;
+
+    if (!comment || !comment.trim()) {
+      res.status(400).json({ error: 'Комментарий обязателен при возврате на доработку' });
+      return;
+    }
+
+    const existing = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as Task | undefined;
+    if (!existing) {
+      res.status(404).json({ error: 'Задача не найдена' });
+      return;
+    }
+
+    // Вернуть на доработку может только заказчик
+    if (existing.customer_id !== req.user?.userId) {
+      res.status(403).json({ error: 'Только заказчик может вернуть задачу на доработку' });
+      return;
+    }
+
+    // Можно вернуть только выполненную задачу
+    if (existing.status !== 'completed') {
+      res.status(400).json({ error: 'Можно вернуть на доработку только выполненную задачу' });
+      return;
+    }
+
+    // Меняем статус на "в работе" и сбрасываем оценку и дату завершения
+    db.prepare(`
+      UPDATE tasks 
+      SET status = 'in_progress', rating = NULL, completed_at = NULL
+      WHERE id = ?
+    `).run(id);
+
+    // Добавляем комментарий от заказчика
+    const commentId = uuidv4();
+    const revisionComment = `🔄 **Возврат на доработку**\n\n${comment.trim()}`;
+    db.prepare(`
+      INSERT INTO task_comments (id, task_id, user_id, message)
+      VALUES (?, ?, ?, ?)
+    `).run(commentId, id, req.user?.userId, revisionComment);
+
+    const task = db.prepare(`
+      SELECT t.*, 
+             c.full_name as customer_name, 
+             c.username as customer_username,
+             e.full_name as executor_name,
+             e.username as executor_username,
+             o.name as offer_name
+      FROM tasks t
+      LEFT JOIN users c ON t.customer_id = c.id
+      LEFT JOIN users e ON t.executor_id = e.id
+      LEFT JOIN offers o ON t.offer_id = o.id
+      WHERE t.id = ?
+    `).get(id) as TaskWithUsers;
+
+    // Получаем имя заказчика
+    const currentUser = db.prepare('SELECT full_name FROM users WHERE id = ?').get(req.user?.userId) as { full_name: string } | undefined;
+
+    // Отправляем уведомление исполнителю
+    notifyTaskRevision(task, currentUser?.full_name || 'Заказчик', comment.trim());
+
+    res.json(task);
+  } catch (error) {
+    console.error('Return to revision error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

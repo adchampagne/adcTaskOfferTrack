@@ -322,7 +322,8 @@ export type NotificationType =
   | 'task_deadline_soon'
   | 'task_overdue'
   | 'task_completed'
-  | 'subtask_completed';
+  | 'subtask_completed'
+  | 'task_revision';
 
 export interface Notification {
   id: string;

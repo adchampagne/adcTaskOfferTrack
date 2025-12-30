@@ -268,6 +268,11 @@ export const tasksApi = {
     return data;
   },
 
+  returnToRevision: async (id: string, comment: string) => {
+    const { data } = await api.patch<Task>(`/tasks/${id}/revision`, { comment });
+    return data;
+  },
+
   delete: async (id: string) => {
     const { data } = await api.delete(`/tasks/${id}`);
     return data;

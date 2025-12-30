@@ -71,6 +71,7 @@ export const NotificationTypes = {
   TASK_OVERDUE: 'task_overdue',
   TASK_COMPLETED: 'task_completed',
   SUBTASK_COMPLETED: 'subtask_completed',
+  TASK_REVISION: 'task_revision',
 } as const;
 
 // Получить уведомления текущего пользователя
@@ -355,6 +356,28 @@ export function notifySubtaskCompleted(
     `Подзадача ${subtaskNum} выполнена!`,
     message,
     parentTask.id // Ссылаемся на родительскую задачу для удобства
+  );
+}
+
+// Уведомление о возврате задачи на доработку (исполнителю)
+export function notifyTaskRevision(
+  task: Task,
+  customerName: string,
+  revisionComment: string
+): void {
+  const taskNum = task.task_number ? `#${task.task_number}` : '';
+  const geoInfo = task.geo ? ` [${task.geo.toUpperCase()}]` : '';
+  
+  let message = `🔄 Задача ${taskNum}${geoInfo}: ${task.title}\n\n`;
+  message += `👤 ${customerName} вернул задачу на доработку\n\n`;
+  message += `💬 Комментарий:\n${revisionComment}`;
+
+  createNotification(
+    task.executor_id,
+    NotificationTypes.TASK_REVISION,
+    `Задача ${taskNum} возвращена на доработку`,
+    message,
+    task.id
   );
 }
 

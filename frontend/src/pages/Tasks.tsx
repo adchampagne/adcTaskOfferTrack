@@ -6,7 +6,7 @@ import {
   AlertCircle, PlayCircle, CheckCircle, XCircle, Edit2, Trash2,
   Eye, FileText, ArrowRight, Upload, Download, Image, Video, 
   FileArchive, File, Paperclip, Loader2, HelpCircle, Filter, Send, MessageSquare,
-  GitBranch, ChevronRight
+  GitBranch, ChevronRight, RotateCcw
 } from 'lucide-react';
 import UserLink from '../components/UserLink';
 import { tasksApi, authApi, filesApi, headDashboardApi, offersApi, commentsApi } from '../api';
@@ -1011,6 +1011,93 @@ function CompleteTaskModal({
   );
 }
 
+// Модальное окно возврата на доработку
+function RevisionModal({
+  task,
+  onClose,
+  onSubmit,
+  isLoading,
+}: {
+  task: Task;
+  onClose: () => void;
+  onSubmit: (comment: string) => void;
+  isLoading: boolean;
+}) {
+  const [comment, setComment] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!comment.trim()) {
+      toast.error('Укажите причину возврата на доработку');
+      return;
+    }
+    onSubmit(comment.trim());
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+      <div className="glass-card w-full max-w-md p-6 animate-scale-in">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-dark-100 flex items-center gap-2">
+            <RotateCcw className="w-5 h-5 text-orange-400" />
+            Возврат на доработку
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-dark-400 hover:text-dark-200 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <p className="text-dark-300 text-sm mb-4">
+          Задача: <span className="text-dark-100 font-medium">#{task.task_number} {task.title}</span>
+        </p>
+
+        <form onSubmit={handleSubmit}>
+          <div className="bg-dark-800/50 rounded-xl p-4 border border-dark-700 mb-4">
+            <h3 className="text-sm font-medium text-dark-300 mb-3 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Причина возврата *
+            </h3>
+            <p className="text-xs text-dark-500 mb-3">
+              Опишите, что нужно доработать или исправить
+            </p>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Что нужно исправить..."
+              className="glass-input w-full resize-none"
+              rows={4}
+              autoFocus
+              required
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-secondary flex-1"
+              disabled={isLoading}
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-orange-500/20 text-orange-400 border border-orange-500/30 hover:bg-orange-500/30 transition-colors disabled:opacity-50"
+              disabled={isLoading || !comment.trim()}
+            >
+              <RotateCcw className="w-4 h-4" />
+              {isLoading ? 'Отправка...' : 'Вернуть на доработку'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // Модальное окно создания подзадачи
 function SubtaskModal({
   parentTask,
@@ -1215,6 +1302,7 @@ function TaskViewModal({
   const [selectedExecutor, setSelectedExecutor] = useState('');
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showSubtaskModal, setShowSubtaskModal] = useState(false);
+  const [showRevisionModal, setShowRevisionModal] = useState(false);
 
   // Проверяем, является ли пользователь руководителем
   const { data: headCheck } = useQuery({
@@ -1262,6 +1350,9 @@ function TaskViewModal({
   // Заказчик может оценить выполненную задачу
   const canRate = isMyCreatedTask && task.status === 'completed' && !task.rating;
 
+  // Заказчик может вернуть выполненную задачу на доработку
+  const canReturnToRevision = isMyCreatedTask && task.status === 'completed';
+
   // Мутация для оценки задачи
   const rateMutation = useMutation({
     mutationFn: (rating: TaskRating) => tasksApi.rate(task.id, rating),
@@ -1272,6 +1363,21 @@ function TaskViewModal({
     onError: (error: unknown) => {
       const err = error as { response?: { data?: { error?: string } } };
       toast.error(err.response?.data?.error || 'Ошибка оценки');
+    },
+  });
+
+  // Мутация для возврата на доработку
+  const revisionMutation = useMutation({
+    mutationFn: (comment: string) => tasksApi.returnToRevision(task.id, comment),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
+      setShowRevisionModal(false);
+      toast.success('Задача возвращена на доработку');
+    },
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || 'Ошибка возврата на доработку');
     },
   });
 
@@ -1925,6 +2031,17 @@ function TaskViewModal({
               ) : (
                 <p className="text-dark-500 text-sm italic">Ожидает оценки от заказчика</p>
               )}
+
+              {/* Кнопка возврата на доработку */}
+              {canReturnToRevision && (
+                <button
+                  onClick={() => setShowRevisionModal(true)}
+                  className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/30 hover:bg-orange-500/20 transition-colors text-sm"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Вернуть на доработку
+                </button>
+              )}
             </div>
           )}
 
@@ -1990,6 +2107,16 @@ function TaskViewModal({
               setShowCompleteModal(false);
               onCompleteWithFiles(files, comment);
             }}
+          />
+        )}
+
+        {/* Модальное окно возврата на доработку */}
+        {showRevisionModal && (
+          <RevisionModal
+            task={task}
+            onClose={() => setShowRevisionModal(false)}
+            onSubmit={(comment) => revisionMutation.mutate(comment)}
+            isLoading={revisionMutation.isPending}
           />
         )}
 
