@@ -16,6 +16,7 @@ import MetadataCleaner from './pages/MetadataCleaner';
 import Analytics from './pages/Analytics';
 import Tools from './pages/Tools';
 import ImageConverter from './pages/ImageConverter';
+import DataGenerator from './pages/DataGenerator';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -69,6 +70,7 @@ function App() {
         <Route path="tools" element={<Tools />} />
         <Route path="tools/metadata-cleaner" element={<MetadataCleaner />} />
         <Route path="tools/image-converter" element={<ImageConverter />} />
+        <Route path="tools/data-generator" element={<DataGenerator />} />
         <Route path="metadata-cleaner" element={<Navigate to="/tools/metadata-cleaner" />} />
         <Route path="analytics" element={<Analytics />} />
       </Route>

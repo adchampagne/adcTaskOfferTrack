@@ -3,7 +3,8 @@ import {
   Wrench, 
   ShieldCheck, 
   ImageIcon,
-  ArrowRight
+  ArrowRight,
+  Users
 } from 'lucide-react';
 import { useSettingsStore } from '../store/settingsStore';
 
@@ -68,9 +69,17 @@ function Tools() {
       to: '/tools/image-converter',
       icon: ImageIcon,
       title: 'Конвертер изображений',
-      description: 'Конвертация форматов, сжатие и изменение размера изображений',
+      description: 'Конвертация изображений в WebP, JPG или PNG с настройкой качества и размера',
       gradient: 'bg-gradient-to-br from-blue-500 to-cyan-600',
       tags: ['PNG', 'JPG', 'WebP', 'Сжатие', 'Ресайз']
+    },
+    {
+      to: '/tools/data-generator',
+      icon: Users,
+      title: 'Генератор данных',
+      description: 'Создание случайных имён, телефонов и email для разных гео с учётом страны и пола',
+      gradient: 'bg-gradient-to-br from-purple-500 to-pink-600',
+      tags: ['Имена', 'Телефоны', 'Email', 'Гео', 'Тесты']
     }
   ];
 
