@@ -88,10 +88,8 @@ function Layout() {
   // База знаний (доступна всем, но контент фильтруется по отделу)
   navItems.push({ to: '/knowledge-base', icon: BookOpen, label: 'База знаний' });
 
-  // Инструменты - для крео и байеров
-  if (hasRole('admin', 'buyer', 'buying_head', 'creo_manager', 'creo_head')) {
-    navItems.push({ to: '/tools', icon: Wrench, label: 'Инструменты' });
-  }
+  // Инструменты - доступны всем
+  navItems.push({ to: '/tools', icon: Wrench, label: 'Инструменты' });
   
   if (hasRole('admin')) {
     navItems.push({ to: '/users', icon: Users, label: 'Пользователи' });
