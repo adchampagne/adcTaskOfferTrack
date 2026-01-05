@@ -1,11 +1,73 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Package, Plus, ExternalLink, Edit2, Trash2, X, Filter, Globe } from 'lucide-react';
+import { Package, Plus, ExternalLink, Edit2, Trash2, X, Filter, Globe, Search } from 'lucide-react';
 import { offersApi, partnersApi } from '../api';
 import { useAuthStore } from '../store/authStore';
 import { Offer, Partner, geoOptions } from '../types';
 import GeoSelect from '../components/GeoSelect';
 import toast from 'react-hot-toast';
+
+// Транслитерация для поиска (рус <-> англ)
+const translitMap: Record<string, string> = {
+  'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e',
+  'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+  'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+  'ф': 'f', 'х': 'h', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+  'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+};
+
+const reverseTranslitMap: Record<string, string> = {};
+Object.entries(translitMap).forEach(([rus, eng]) => {
+  if (eng) reverseTranslitMap[eng] = rus;
+});
+
+// Транслитерирует русский текст в английский
+function transliterate(text: string): string {
+  return text.toLowerCase().split('').map(char => translitMap[char] || char).join('');
+}
+
+// Транслитерирует английский текст в русский (приблизительно)
+function reverseTransliterate(text: string): string {
+  let result = text.toLowerCase();
+  // Сначала многосимвольные комбинации
+  const multiChar = ['sch', 'zh', 'ts', 'ch', 'sh', 'yu', 'ya'];
+  multiChar.forEach(eng => {
+    if (reverseTranslitMap[eng]) {
+      result = result.replace(new RegExp(eng, 'g'), reverseTranslitMap[eng]);
+    }
+  });
+  // Потом односимвольные
+  for (const [eng, rus] of Object.entries(reverseTranslitMap)) {
+    if (eng.length === 1) {
+      result = result.replace(new RegExp(eng, 'g'), rus);
+    }
+  }
+  return result;
+}
+
+// Проверяет совпадение с учётом транслитерации
+function matchesWithTranslit(text: string, query: string): boolean {
+  const textLower = text.toLowerCase();
+  const queryLower = query.toLowerCase();
+  
+  // Прямое совпадение
+  if (textLower.includes(queryLower)) return true;
+  
+  // Транслитерированный запрос (рус -> англ) ищем в тексте
+  const queryTranslit = transliterate(queryLower);
+  if (textLower.includes(queryTranslit)) return true;
+  
+  // Обратная транслитерация запроса (англ -> рус) ищем в тексте
+  const queryReverseTranslit = reverseTransliterate(queryLower);
+  if (textLower.includes(queryReverseTranslit)) return true;
+  
+  // Транслитерируем текст и ищем запрос
+  const textTranslit = transliterate(textLower);
+  if (textTranslit.includes(queryLower)) return true;
+  if (textTranslit.includes(queryTranslit)) return true;
+  
+  return false;
+}
 
 interface OfferFormData {
   partner_id: string;
@@ -288,6 +350,7 @@ function Offers() {
   const [filterPartnerId, setFilterPartnerId] = useState<string>('');
   const [filterGeo, setFilterGeo] = useState<string>('');
   const [filterTheme, setFilterTheme] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   const { data: partners = [] } = useQuery({
     queryKey: ['partners'],
@@ -361,6 +424,15 @@ function Offers() {
   // Применяем фильтры
   let filteredOffers = offers;
   
+  if (searchQuery.trim()) {
+    const query = searchQuery.trim();
+    filteredOffers = filteredOffers.filter(o => 
+      matchesWithTranslit(o.name, query) ||
+      (o.partner_name && matchesWithTranslit(o.partner_name, query)) ||
+      (o.theme && matchesWithTranslit(o.theme, query))
+    );
+  }
+  
   if (filterGeo) {
     filteredOffers = filteredOffers.filter(o => o.geo === filterGeo);
   }
@@ -383,6 +455,18 @@ function Offers() {
           </p>
         </div>
         <div className="flex gap-2 sm:gap-3 flex-wrap items-center">
+          {/* Search */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-dark-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Поиск офферов..."
+              className="glass-input py-2 pl-9 pr-3 text-sm w-40 sm:w-56"
+            />
+          </div>
+          
           {/* Filters */}
           <Filter className="w-4 h-4 text-dark-400 hidden sm:block" />
           
