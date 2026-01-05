@@ -14,8 +14,7 @@ if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir, { recursive: true });
 }
 
-// Разрешённые роли для использования инструмента
-const allowedRoles = ['admin', 'buyer', 'buying_head', 'creo_manager', 'creo_head'];
+// Инструменты доступны всем авторизованным пользователям
 
 // Разрешённые типы файлов для очистки метаданных
 const allowedMimeTypes = [
@@ -72,15 +71,6 @@ const upload = multer({
   },
 });
 
-// Проверка доступа
-const checkAccess = (req: Request, res: Response, next: () => void): void => {
-  const userRole = req.user?.role;
-  if (!userRole || !allowedRoles.includes(userRole)) {
-    res.status(403).json({ error: 'У вас нет доступа к этому инструменту' });
-    return;
-  }
-  next();
-};
 
 // Функция очистки метаданных через FFmpeg
 const cleanMetadataWithFFmpeg = (inputPath: string, outputPath: string): Promise<void> => {
@@ -167,7 +157,6 @@ const cleanImageMetadata = async (inputPath: string, outputPath: string, mimeTyp
 router.post(
   '/clean',
   authenticateToken,
-  checkAccess,
   upload.single('file'),
   async (req: Request, res: Response): Promise<void> => {
     const inputFile = req.file;
@@ -245,7 +234,6 @@ router.post(
 router.post(
   '/clean-batch',
   authenticateToken,
-  checkAccess,
   upload.array('files', 20), // Максимум 20 файлов
   async (req: Request, res: Response): Promise<void> => {
     const inputFiles = req.files as Express.Multer.File[];
@@ -383,7 +371,7 @@ router.post(
 );
 
 // Скачать файл из batch
-router.get('/batch/:batchId/:fileIndex', authenticateToken, checkAccess, (req: Request, res: Response): void => {
+router.get('/batch/:batchId/:fileIndex', authenticateToken, (req: Request, res: Response): void => {
   try {
     const { batchId, fileIndex } = req.params;
     const batchInfoPath = path.join(tempDir, `batch_${batchId}.json`);
@@ -410,7 +398,7 @@ router.get('/batch/:batchId/:fileIndex', authenticateToken, checkAccess, (req: R
 });
 
 // Удалить batch (очистить временные файлы)
-router.delete('/batch/:batchId', authenticateToken, checkAccess, (req: Request, res: Response): void => {
+router.delete('/batch/:batchId', authenticateToken, (req: Request, res: Response): void => {
   try {
     const { batchId } = req.params;
     const batchInfoPath = path.join(tempDir, `batch_${batchId}.json`);
@@ -437,11 +425,9 @@ router.delete('/batch/:batchId', authenticateToken, checkAccess, (req: Request, 
   }
 });
 
-// Проверка доступа к инструменту
-router.get('/check-access', authenticateToken, (req: Request, res: Response): void => {
-  const userRole = req.user?.role;
-  const hasAccess = userRole && allowedRoles.includes(userRole);
-  res.json({ hasAccess, allowedRoles });
+// Проверка доступа к инструменту (доступно всем авторизованным)
+router.get('/check-access', authenticateToken, (_req: Request, res: Response): void => {
+  res.json({ hasAccess: true });
 });
 
 export default router;

@@ -183,24 +183,38 @@ export function createNotification(
   taskId?: string
 ): void {
   try {
+    console.log(`📝 [Notify] Создание уведомления типа "${type}" для пользователя ${userId}`);
+    console.log(`📝 [Notify] Заголовок: ${title}`);
+    
     const id = uuidv4();
     db.prepare(`
       INSERT INTO notifications (id, user_id, type, title, message, task_id)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(id, userId, type, title, message, taskId || null);
+    
+    console.log(`✅ [Notify] Уведомление сохранено в БД с id: ${id}`);
 
     // Отправляем уведомление в Telegram
-    sendNotificationToUser(userId, title, message).catch((err) => {
-      console.error('Telegram notification error:', err);
+    console.log(`📤 [Notify] Отправка в Telegram для пользователя ${userId}...`);
+    sendNotificationToUser(userId, title, message).then((success) => {
+      console.log(`📤 [Notify] Telegram отправка для ${userId}: ${success ? 'успех' : 'неудача'}`);
+    }).catch((err) => {
+      console.error('❌ [Notify] Telegram notification error:', err);
     });
   } catch (error) {
-    console.error('Create notification error:', error);
+    console.error('❌ [Notify] Create notification error:', error);
   }
 }
 
 // Уведомление о новой задаче (исполнителю/руководителю отдела)
 export function notifyTaskAssigned(task: Task, creatorName: string): void {
-  if (task.customer_id === task.executor_id) return; // Не уведомляем себя
+  console.log(`🔔 [Notify] notifyTaskAssigned вызван для задачи ${task.task_number || task.id}`);
+  console.log(`🔔 [Notify] customer_id: ${task.customer_id}, executor_id: ${task.executor_id}`);
+  
+  if (task.customer_id === task.executor_id) {
+    console.log(`⏭️ [Notify] Пропуск: заказчик и исполнитель совпадают`);
+    return; // Не уведомляем себя
+  }
 
   const taskNum = task.task_number ? `#${task.task_number}` : '';
   const desc = truncateDescription(task.description);
@@ -230,7 +244,12 @@ export function notifyTaskAssigned(task: Task, creatorName: string): void {
 
 // Уведомление о переназначении задачи сотруднику (от руководителя)
 export function notifyTaskReassigned(task: Task, headName: string, newExecutorId: string): void {
-  if (task.executor_id === newExecutorId) return; // Уже назначен
+  console.log(`🔔 [Notify] notifyTaskReassigned для задачи ${task.task_number || task.id}`);
+  console.log(`🔔 [Notify] task.executor_id: ${task.executor_id}, newExecutorId: ${newExecutorId}`);
+  
+  // Примечание: проверка task.executor_id === newExecutorId была удалена,
+  // так как task уже содержит обновлённые данные на момент вызова.
+  // Проверка на изменение исполнителя делается в вызывающем коде (head-dashboard.ts)
 
   const taskNum = task.task_number ? `#${task.task_number}` : '';
   const desc = truncateDescription(task.description);
@@ -260,6 +279,9 @@ export function notifyStatusChanged(
   changedByUserId: string,
   changedByName: string
 ): void {
+  console.log(`🔔 [Notify] notifyStatusChanged для задачи ${task.task_number || task.id}, новый статус: ${newStatus}`);
+  console.log(`🔔 [Notify] customer_id: ${task.customer_id}, executor_id: ${task.executor_id}, changedBy: ${changedByUserId}`);
+  
   const statusLabels: Record<string, string> = {
     pending: '⏳ Ожидает',
     in_progress: '🔄 В работе',
@@ -274,11 +296,19 @@ export function notifyStatusChanged(
   // Уведомляем заказчика и исполнителя (кроме того, кто изменил)
   if (task.customer_id !== changedByUserId) {
     usersToNotify.add(task.customer_id);
+    console.log(`🔔 [Notify] Добавлен заказчик ${task.customer_id} в список уведомлений`);
+  } else {
+    console.log(`⏭️ [Notify] Пропуск заказчика - он же автор изменения`);
   }
   if (task.executor_id !== changedByUserId) {
     usersToNotify.add(task.executor_id);
+    console.log(`🔔 [Notify] Добавлен исполнитель ${task.executor_id} в список уведомлений`);
+  } else {
+    console.log(`⏭️ [Notify] Пропуск исполнителя - он же автор изменения`);
   }
 
+  console.log(`🔔 [Notify] Итого уведомляем ${usersToNotify.size} пользователей`);
+  
   const message = `📋 Задача ${taskNum}: ${task.title}\n\n${changedByName} изменил статус на: ${statusLabel}`;
 
   usersToNotify.forEach((userId) => {
@@ -338,6 +368,9 @@ export function notifySubtaskCompleted(
   parentTask: Task & { customer_name?: string; executor_name?: string },
   completedByName: string
 ): void {
+  console.log(`🔔 [Notify] notifySubtaskCompleted для подзадачи ${subtask.task_number || subtask.id}`);
+  console.log(`🔔 [Notify] Уведомляем исполнителя родительской задачи: ${parentTask.executor_id}`);
+  
   const subtaskNum = subtask.task_number ? `#${subtask.task_number}` : '';
   const parentTaskNum = parentTask.task_number ? `#${parentTask.task_number}` : '';
   const geoInfo = subtask.geo ? ` [${subtask.geo.toUpperCase()}]` : '';
@@ -365,6 +398,9 @@ export function notifyTaskRevision(
   customerName: string,
   revisionComment: string
 ): void {
+  console.log(`🔔 [Notify] notifyTaskRevision для задачи ${task.task_number || task.id}`);
+  console.log(`🔔 [Notify] Уведомляем исполнителя: ${task.executor_id}`);
+  
   const taskNum = task.task_number ? `#${task.task_number}` : '';
   const geoInfo = task.geo ? ` [${task.geo.toUpperCase()}]` : '';
   

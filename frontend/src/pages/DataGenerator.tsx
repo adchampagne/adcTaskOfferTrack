@@ -164,16 +164,6 @@ const NAMES_DATABASE: Record<string, { male: { first: string[], last: string[] }
       last: ['Иванова', 'Смирнова', 'Кузнецова', 'Попова', 'Васильева', 'Петрова', 'Соколова', 'Михайлова', 'Новикова', 'Фёдорова', 'Морозова', 'Волкова', 'Алексеева', 'Лебедева', 'Семёнова', 'Егорова', 'Павлова', 'Козлова', 'Степанова', 'Николаева', 'Орлова', 'Андреева', 'Макарова', 'Никитина', 'Захарова', 'Зайцева', 'Соловьёва', 'Борисова', 'Яковлева', 'Григорьева', 'Романова', 'Воробьёва', 'Сергеева', 'Кузьмина', 'Фролова', 'Александрова', 'Дмитриева', 'Королёва', 'Гусева', 'Киселёва']
     }
   },
-  UA: { // Украина
-    male: {
-      first: ['Олександр', 'Максим', 'Артем', 'Дмитро', 'Андрій', 'Богдан', 'Владислав', 'Микола', 'Іван', 'Михайло', 'Денис', 'Євген', 'Віталій', 'Роман', 'Олег', 'Сергій', 'Володимир', 'Ярослав', 'Назар', 'Тарас', 'Павло', 'Юрій', 'Василь', 'Петро', 'Ігор', 'Олексій', 'Вадим', 'Станіслав', 'Тимур', 'Кирило', 'Данило', 'Нікіта', 'Марко', 'Леонід', 'Григорій'],
-      last: ['Шевченко', 'Бондаренко', 'Коваленко', 'Бойко', 'Ткаченко', 'Кравченко', 'Олійник', 'Шевчук', 'Поліщук', 'Коваль', 'Бондар', 'Ткачук', 'Марченко', 'Савченко', 'Руденко', 'Мельник', 'Сидоренко', 'Петренко', 'Іваненко', 'Павленко', 'Литвиненко', 'Мороз', 'Лисенко', 'Гончаренко', 'Левченко', 'Кузьменко', 'Клименко', 'Пономаренко', 'Гриценко', 'Романенко', 'Степаненко', 'Федоренко', 'Тимошенко', 'Дяченко', 'Захарченко']
-    },
-    female: {
-      first: ['Анна', 'Марія', 'Софія', 'Вікторія', 'Дарина', 'Анастасія', 'Катерина', 'Юлія', 'Ольга', 'Наталія', 'Тетяна', 'Ірина', 'Оксана', 'Олена', 'Світлана', 'Валентина', 'Людмила', 'Галина', 'Надія', 'Любов', 'Леся', 'Христина', 'Аліна', 'Діана', 'Яна', 'Марина', 'Злата', 'Вероніка', 'Поліна', 'Євгенія', 'Алла', 'Інна', 'Лариса', 'Зоя', 'Віра'],
-      last: ['Шевченко', 'Бондаренко', 'Коваленко', 'Бойко', 'Ткаченко', 'Кравченко', 'Олійник', 'Шевчук', 'Поліщук', 'Коваль', 'Бондар', 'Ткачук', 'Марченко', 'Савченко', 'Руденко', 'Мельник', 'Сидоренко', 'Петренко', 'Іваненко', 'Павленко', 'Литвиненко', 'Мороз', 'Лисенко', 'Гончаренко', 'Левченко', 'Кузьменко', 'Клименко', 'Пономаренко', 'Гриценко', 'Романенко', 'Степаненко', 'Федоренко', 'Тимошенко', 'Дяченко', 'Захарченко']
-    }
-  },
   KZ: { // Казахстан
     male: {
       first: ['Алихан', 'Нурсултан', 'Арман', 'Ернар', 'Бауыржан', 'Дархан', 'Жанибек', 'Нурлан', 'Серик', 'Тимур', 'Асхат', 'Данияр', 'Ерлан', 'Канат', 'Мурат', 'Азамат', 'Берик', 'Болат', 'Галым', 'Дастан', 'Ержан', 'Жандос', 'Кайрат', 'Куаныш', 'Марат', 'Нуржан', 'Олжас', 'Рустем', 'Самат', 'Талгат', 'Уланбек', 'Бахытжан', 'Досым', 'Ескендир', 'Жанболат'],
@@ -233,11 +223,123 @@ const NAMES_DATABASE: Record<string, { male: { first: string[], last: string[] }
       first: ['Linh', 'Huong', 'Mai', 'Lan', 'Ngoc', 'Hoa', 'Thu', 'Hong', 'Thao', 'Hanh', 'Phuong', 'Anh', 'Trang', 'Yen', 'Nhung', 'Bich', 'Chi', 'Diem', 'Ha', 'Hang', 'Khanh', 'Kim', 'Lien', 'Loan', 'My', 'Ngan', 'Nhi', 'Oanh', 'Quyen', 'Suong', 'Tam', 'Thanh', 'Thuy', 'Tram', 'Van'],
       last: ['Nguyen', 'Tran', 'Le', 'Pham', 'Hoang', 'Huynh', 'Phan', 'Vu', 'Vo', 'Dang', 'Bui', 'Do', 'Ho', 'Ngo', 'Duong', 'Ly', 'Truong', 'Dinh', 'Ha', 'Luu', 'Mai', 'Trinh', 'Cao', 'Lam', 'Luong', 'Ta', 'Dao', 'Doan', 'Diep', 'Tran', 'Bach', 'Chau', 'Kieu', 'Thai', 'Quach']
     }
+  },
+  // Дополнительные языковые группы
+  AR_ARAB: { // Арабские страны
+    male: {
+      first: ['Mohammed', 'Ahmed', 'Ali', 'Omar', 'Youssef', 'Ibrahim', 'Khalid', 'Hassan', 'Mahmoud', 'Mustafa', 'Abdallah', 'Tariq', 'Faisal', 'Samir', 'Karim', 'Nasser', 'Rashid', 'Walid', 'Jamal', 'Hani', 'Ziad', 'Rami', 'Sami', 'Adel', 'Bilal', 'Hamza', 'Younis', 'Majid', 'Saleh', 'Fahad'],
+      last: ['Al-Ahmad', 'Al-Hassan', 'Al-Mohammed', 'Al-Ali', 'Al-Omar', 'Al-Ibrahim', 'Al-Khalid', 'Al-Rashid', 'Al-Sultan', 'Al-Nasser', 'Al-Farsi', 'Al-Qasim', 'Al-Mansour', 'Al-Zahrani', 'Al-Ghamdi', 'Al-Harbi', 'Al-Shammari', 'Al-Dosari', 'Al-Otaibi', 'Al-Mutairi', 'Al-Qahtani', 'Al-Malki', 'Al-Juhani', 'Al-Suwaidi', 'Al-Maktoum']
+    },
+    female: {
+      first: ['Fatima', 'Aisha', 'Maryam', 'Nour', 'Sara', 'Layla', 'Hana', 'Yasmin', 'Amira', 'Dina', 'Rania', 'Lina', 'Jana', 'Salma', 'Noura', 'Mariam', 'Zainab', 'Aya', 'Malak', 'Reem', 'Dana', 'Farah', 'Huda', 'Mona', 'Samira', 'Lamia', 'Nadia', 'Rasha', 'Sawsan', 'Wafa'],
+      last: ['Al-Ahmad', 'Al-Hassan', 'Al-Mohammed', 'Al-Ali', 'Al-Omar', 'Al-Ibrahim', 'Al-Khalid', 'Al-Rashid', 'Al-Sultan', 'Al-Nasser', 'Al-Farsi', 'Al-Qasim', 'Al-Mansour', 'Al-Zahrani', 'Al-Ghamdi', 'Al-Harbi', 'Al-Shammari', 'Al-Dosari', 'Al-Otaibi', 'Al-Mutairi', 'Al-Qahtani', 'Al-Malki', 'Al-Juhani', 'Al-Suwaidi', 'Al-Maktoum']
+    }
+  },
+  TR: { // Турция
+    male: {
+      first: ['Mehmet', 'Mustafa', 'Ahmet', 'Ali', 'Hüseyin', 'Hasan', 'İbrahim', 'İsmail', 'Osman', 'Yusuf', 'Murat', 'Ömer', 'Fatih', 'Emre', 'Burak', 'Cem', 'Kaan', 'Serkan', 'Onur', 'Tolga', 'Berk', 'Arda', 'Deniz', 'Kerem', 'Efe', 'Can', 'Eren', 'Yiğit', 'Barış', 'Umut'],
+      last: ['Yılmaz', 'Kaya', 'Demir', 'Çelik', 'Şahin', 'Yıldız', 'Yıldırım', 'Öztürk', 'Aydın', 'Özdemir', 'Arslan', 'Doğan', 'Kılıç', 'Aslan', 'Çetin', 'Kara', 'Koç', 'Kurt', 'Özkan', 'Şimşek', 'Polat', 'Korkmaz', 'Karaca', 'Tekin', 'Güneş', 'Aksoy', 'Erdoğan', 'Ünal', 'Aktaş', 'Bal']
+    },
+    female: {
+      first: ['Fatma', 'Ayşe', 'Emine', 'Hatice', 'Zeynep', 'Elif', 'Merve', 'Büşra', 'Esra', 'Nur', 'Seda', 'Gamze', 'Özge', 'Derya', 'Aslı', 'Gül', 'Hülya', 'Sibel', 'Sevgi', 'Dilek', 'Pınar', 'Ceren', 'Tuğba', 'İrem', 'Ebru', 'Gizem', 'Şeyma', 'Ece', 'Melis', 'Dilan'],
+      last: ['Yılmaz', 'Kaya', 'Demir', 'Çelik', 'Şahin', 'Yıldız', 'Yıldırım', 'Öztürk', 'Aydın', 'Özdemir', 'Arslan', 'Doğan', 'Kılıç', 'Aslan', 'Çetin', 'Kara', 'Koç', 'Kurt', 'Özkan', 'Şimşek', 'Polat', 'Korkmaz', 'Karaca', 'Tekin', 'Güneş', 'Aksoy', 'Erdoğan', 'Ünal', 'Aktaş', 'Bal']
+    }
+  },
+  CN: { // Китай
+    male: {
+      first: ['Wei', 'Fang', 'Lei', 'Jun', 'Tao', 'Ming', 'Chao', 'Jian', 'Hao', 'Yang', 'Long', 'Feng', 'Bo', 'Chen', 'Xiang', 'Peng', 'Dong', 'Bin', 'Gang', 'Hui', 'Jie', 'Kai', 'Liang', 'Nan', 'Ping', 'Qiang', 'Rui', 'Sheng', 'Ting', 'Wen'],
+      last: ['Wang', 'Li', 'Zhang', 'Liu', 'Chen', 'Yang', 'Huang', 'Zhao', 'Wu', 'Zhou', 'Xu', 'Sun', 'Ma', 'Zhu', 'Hu', 'Guo', 'He', 'Lin', 'Luo', 'Gao', 'Zheng', 'Liang', 'Xie', 'Tang', 'Han', 'Cao', 'Feng', 'Deng', 'Xiao', 'Cheng']
+    },
+    female: {
+      first: ['Fang', 'Jing', 'Li', 'Mei', 'Na', 'Ping', 'Qing', 'Rong', 'Shan', 'Ting', 'Wei', 'Xia', 'Yan', 'Ying', 'Yu', 'Yue', 'Zhen', 'Hui', 'Juan', 'Lan', 'Lei', 'Lin', 'Min', 'Ning', 'Qian', 'Xin', 'Hong', 'Jie', 'Ling', 'Xue'],
+      last: ['Wang', 'Li', 'Zhang', 'Liu', 'Chen', 'Yang', 'Huang', 'Zhao', 'Wu', 'Zhou', 'Xu', 'Sun', 'Ma', 'Zhu', 'Hu', 'Guo', 'He', 'Lin', 'Luo', 'Gao', 'Zheng', 'Liang', 'Xie', 'Tang', 'Han', 'Cao', 'Feng', 'Deng', 'Xiao', 'Cheng']
+    }
+  },
+  JP: { // Япония
+    male: {
+      first: ['Hiroshi', 'Takeshi', 'Kenji', 'Taro', 'Yuki', 'Kazuki', 'Daiki', 'Shota', 'Ren', 'Haruto', 'Yuto', 'Sota', 'Kaito', 'Riku', 'Kento', 'Hayato', 'Ryota', 'Takumi', 'Yuma', 'Shun', 'Naoki', 'Akira', 'Makoto', 'Kouki', 'Ryusei', 'Taiga', 'Yamato', 'Koki', 'Ryo', 'Sho'],
+      last: ['Sato', 'Suzuki', 'Takahashi', 'Tanaka', 'Watanabe', 'Ito', 'Yamamoto', 'Nakamura', 'Kobayashi', 'Kato', 'Yoshida', 'Yamada', 'Sasaki', 'Yamaguchi', 'Matsumoto', 'Inoue', 'Kimura', 'Hayashi', 'Shimizu', 'Yamazaki', 'Mori', 'Abe', 'Ikeda', 'Hashimoto', 'Yamashita', 'Ishikawa', 'Nakajima', 'Maeda', 'Fujita', 'Ogawa']
+    },
+    female: {
+      first: ['Yuko', 'Keiko', 'Sachiko', 'Yuki', 'Hana', 'Sakura', 'Aoi', 'Yui', 'Rin', 'Mio', 'Mei', 'Himari', 'Koharu', 'Akari', 'Riko', 'Mana', 'Saki', 'Nanami', 'Yuna', 'Honoka', 'Ayaka', 'Misaki', 'Haruka', 'Kana', 'Nana', 'Rika', 'Momoka', 'Shiori', 'Miyu', 'Hinata'],
+      last: ['Sato', 'Suzuki', 'Takahashi', 'Tanaka', 'Watanabe', 'Ito', 'Yamamoto', 'Nakamura', 'Kobayashi', 'Kato', 'Yoshida', 'Yamada', 'Sasaki', 'Yamaguchi', 'Matsumoto', 'Inoue', 'Kimura', 'Hayashi', 'Shimizu', 'Yamazaki', 'Mori', 'Abe', 'Ikeda', 'Hashimoto', 'Yamashita', 'Ishikawa', 'Nakajima', 'Maeda', 'Fujita', 'Ogawa']
+    }
+  },
+  KR: { // Южная Корея
+    male: {
+      first: ['Min-jun', 'Seo-jun', 'Do-yun', 'Ye-jun', 'Si-woo', 'Ha-jun', 'Jun-seo', 'Jun-woo', 'Hyun-woo', 'Ji-hoon', 'Sung-min', 'Jae-min', 'Young-ho', 'Dong-hyun', 'Min-ho', 'Sung-ho', 'Jun-ho', 'Hyun-jin', 'Tae-min', 'Woo-jin', 'Jin-woo', 'Seung-hyun', 'Joon-hyuk', 'Sang-woo', 'Ki-tae', 'Dae-hyun', 'Chang-min', 'Seong-jin', 'Ji-sung', 'Yong-jun'],
+      last: ['Kim', 'Lee', 'Park', 'Choi', 'Jung', 'Kang', 'Cho', 'Yoon', 'Jang', 'Lim', 'Han', 'Oh', 'Seo', 'Shin', 'Kwon', 'Hwang', 'Ahn', 'Song', 'Yoo', 'Hong', 'Moon', 'Yang', 'Ko', 'Bae', 'Baek', 'Heo', 'Nam', 'Shim', 'Noh', 'Ha']
+    },
+    female: {
+      first: ['Seo-yeon', 'Ha-yoon', 'Ji-woo', 'Seo-yoon', 'Min-seo', 'Chae-won', 'Ji-min', 'Ye-eun', 'Yoon-seo', 'Ji-yoon', 'Su-bin', 'Ye-jin', 'Min-ji', 'Hye-jin', 'Eun-ji', 'Ji-hye', 'Yoon-ah', 'Soo-yeon', 'Yeon-woo', 'Hye-won', 'Seung-hee', 'Jung-eun', 'So-young', 'Eun-young', 'Mi-young', 'Jin-ah', 'Hyun-jung', 'Sun-hee', 'Young-mi', 'Hee-jung'],
+      last: ['Kim', 'Lee', 'Park', 'Choi', 'Jung', 'Kang', 'Cho', 'Yoon', 'Jang', 'Lim', 'Han', 'Oh', 'Seo', 'Shin', 'Kwon', 'Hwang', 'Ahn', 'Song', 'Yoo', 'Hong', 'Moon', 'Yang', 'Ko', 'Bae', 'Baek', 'Heo', 'Nam', 'Shim', 'Noh', 'Ha']
+    }
+  },
+  IR: { // Иран
+    male: {
+      first: ['Mohammad', 'Ali', 'Reza', 'Hossein', 'Amir', 'Mehdi', 'Mostafa', 'Ahmad', 'Saeed', 'Hamid', 'Majid', 'Javad', 'Masoud', 'Ehsan', 'Arash', 'Babak', 'Behnam', 'Dariush', 'Farhad', 'Kamran', 'Nima', 'Omid', 'Payam', 'Shahin', 'Siavash', 'Vahid', 'Yasin', 'Kourosh', 'Pouya', 'Saman'],
+      last: ['Ahmadi', 'Hosseini', 'Mohammadi', 'Rezaei', 'Karimi', 'Hashemi', 'Mousavi', 'Moradi', 'Jafari', 'Kazemi', 'Rahimi', 'Akbari', 'Taheri', 'Shirazi', 'Farsi', 'Tehrani', 'Esfahani', 'Mashhadi', 'Tabatabaei', 'Sadeghi', 'Bahrami', 'Ghorbani', 'Ebrahimi', 'Norouzi', 'Heydari', 'Zare', 'Seifi', 'Kamali', 'Soltani', 'Abbasi']
+    },
+    female: {
+      first: ['Fatemeh', 'Maryam', 'Zahra', 'Sara', 'Narges', 'Leila', 'Mina', 'Parisa', 'Shirin', 'Nazanin', 'Bahar', 'Golnar', 'Hoda', 'Mahsa', 'Niloufar', 'Roxana', 'Setareh', 'Tara', 'Yasmin', 'Azadeh', 'Elham', 'Farzaneh', 'Ghazal', 'Hasti', 'Kimia', 'Ladan', 'Mona', 'Nasrin', 'Pegah', 'Sahar'],
+      last: ['Ahmadi', 'Hosseini', 'Mohammadi', 'Rezaei', 'Karimi', 'Hashemi', 'Mousavi', 'Moradi', 'Jafari', 'Kazemi', 'Rahimi', 'Akbari', 'Taheri', 'Shirazi', 'Farsi', 'Tehrani', 'Esfahani', 'Mashhadi', 'Tabatabaei', 'Sadeghi', 'Bahrami', 'Ghorbani', 'Ebrahimi', 'Norouzi', 'Heydari', 'Zare', 'Seifi', 'Kamali', 'Soltani', 'Abbasi']
+    }
+  },
+  IL: { // Израиль
+    male: {
+      first: ['David', 'Yosef', 'Moshe', 'Yakov', 'Daniel', 'Noam', 'Idan', 'Itay', 'Omer', 'Ariel', 'Uri', 'Eitan', 'Alon', 'Avi', 'Barak', 'Chen', 'Dor', 'Eran', 'Gal', 'Gilad', 'Guy', 'Lior', 'Matan', 'Nadav', 'Nir', 'Ofir', 'Oren', 'Ron', 'Shai', 'Tal'],
+      last: ['Cohen', 'Levi', 'Mizrahi', 'Peretz', 'Biton', 'Dahan', 'Avraham', 'Friedman', 'Azulay', 'Malka', 'Amar', 'Katz', 'Ohayon', 'Hadad', 'Gabay', 'Yosef', 'Shapira', 'Ben-David', 'Moshe', 'Levy', 'Ashkenazi', 'Segal', 'Schwartz', 'Goldstein', 'Rosenberg', 'Berkowitz', 'Weiss', 'Klein', 'Gross', 'Stern']
+    },
+    female: {
+      first: ['Sarah', 'Rachel', 'Leah', 'Miriam', 'Yael', 'Noa', 'Shira', 'Tamar', 'Maya', 'Tal', 'Chen', 'Mor', 'Michal', 'Efrat', 'Hila', 'Inbar', 'Keren', 'Liora', 'Naama', 'Orly', 'Roni', 'Sapir', 'Tali', 'Yarden', 'Ayelet', 'Dana', 'Gal', 'Hadar', 'Irit', 'Liat'],
+      last: ['Cohen', 'Levi', 'Mizrahi', 'Peretz', 'Biton', 'Dahan', 'Avraham', 'Friedman', 'Azulay', 'Malka', 'Amar', 'Katz', 'Ohayon', 'Hadad', 'Gabay', 'Yosef', 'Shapira', 'Ben-David', 'Moshe', 'Levy', 'Ashkenazi', 'Segal', 'Schwartz', 'Goldstein', 'Rosenberg', 'Berkowitz', 'Weiss', 'Klein', 'Gross', 'Stern']
+    }
   }
+};
+
+// Маппинг страны на языковую группу для имён (fallback)
+const COUNTRY_NAME_FALLBACK: Record<string, string> = {
+  // Испаноязычные
+  VE: 'ES', UY: 'ES', PY: 'ES', BO: 'ES', CR: 'ES', PA: 'ES', GT: 'ES', HN: 'ES', SV: 'ES', NI: 'ES', DO: 'ES', CU: 'ES', PR: 'ES',
+  // Португалоязычные
+  PT: 'BR', AO: 'BR', MZ: 'BR',
+  // Англоязычные
+  GB: 'US', CA: 'US', AU: 'US', NZ: 'US', IE: 'US', ZA: 'US', NG: 'US', GH: 'US', KE: 'US', JM: 'US', TT: 'US',
+  // Франкоязычные
+  BE: 'FR', CH: 'FR', LU: 'FR', MC: 'FR', SN: 'FR', CI: 'FR', CM: 'FR', MA: 'FR', DZ: 'FR', TN: 'FR',
+  // Немецкоязычные
+  AT: 'DE', LI: 'DE',
+  // Славянские
+  BY: 'RU', CZ: 'PL', SK: 'PL', HR: 'PL', SI: 'PL', RS: 'PL', BA: 'PL', MK: 'PL', BG: 'PL',
+  // Скандинавские (используем DE как близкие)
+  SE: 'DE', NO: 'DE', DK: 'DE', FI: 'DE', IS: 'DE',
+  // Прибалтика
+  LT: 'PL', LV: 'PL', EE: 'PL',
+  // Балканы
+  RO: 'IT', GR: 'IT', AL: 'IT', HU: 'DE',
+  // Ближний Восток и Северная Африка (арабские)
+  EG: 'AR_ARAB', SA: 'AR_ARAB', AE: 'AR_ARAB', QA: 'AR_ARAB', KW: 'AR_ARAB', BH: 'AR_ARAB', OM: 'AR_ARAB', JO: 'AR_ARAB', LB: 'AR_ARAB', SY: 'AR_ARAB', IQ: 'AR_ARAB', YE: 'AR_ARAB', LY: 'AR_ARAB', PS: 'AR_ARAB',
+  // Турция и Центральная Азия
+  TR: 'TR', AZ: 'TR', TM: 'KZ', UZ: 'KZ', TJ: 'KZ', KG: 'KZ',
+  // Восточная Азия
+  CN: 'CN', JP: 'JP', KR: 'KR', TW: 'CN', HK: 'CN', MO: 'CN',
+  // Юго-Восточная Азия
+  MY: 'ID', SG: 'CN', MM: 'TH', KH: 'TH', LA: 'TH', BN: 'ID',
+  // Южная Азия
+  PK: 'IN', BD: 'IN', LK: 'IN', NP: 'IN', AF: 'IN',
+  // Африка
+  ET: 'US', TZ: 'US', UG: 'US', ZW: 'US', ZM: 'US', RW: 'US', MW: 'US',
+  // Иран, Израиль
+  IR: 'IR', IL: 'IL',
+  // Монголия
+  MN: 'RU',
+  // Армения, Грузия
+  AM: 'RU', GE: 'RU',
 };
 
 // Форматы телефонов по странам
 const PHONE_FORMATS: Record<string, { code: string, format: string, example: string }> = {
+  // Латинская Америка
   EC: { code: '+593', format: '9XXXXXXXX', example: '+593 9X XXX XXXX' },
   BR: { code: '+55', format: '9XXXXXXXX', example: '+55 XX 9XXXX XXXX' },
   MX: { code: '+52', format: '1XXXXXXXXX', example: '+52 1 XXX XXX XXXX' },
@@ -245,20 +347,137 @@ const PHONE_FORMATS: Record<string, { code: string, format: string, example: str
   AR: { code: '+54', format: '9XXXXXXXXX', example: '+54 9 XX XXXX XXXX' },
   CL: { code: '+56', format: '9XXXXXXXX', example: '+56 9 XXXX XXXX' },
   PE: { code: '+51', format: '9XXXXXXXX', example: '+51 9XX XXX XXX' },
+  VE: { code: '+58', format: '4XXXXXXXXX', example: '+58 4XX XXX XXXX' },
+  UY: { code: '+598', format: '9XXXXXXX', example: '+598 9X XXX XXX' },
+  PY: { code: '+595', format: '9XXXXXXXX', example: '+595 9XX XXX XXX' },
+  BO: { code: '+591', format: '7XXXXXXX', example: '+591 7XXX XXXX' },
+  CR: { code: '+506', format: '8XXXXXXX', example: '+506 8XXX XXXX' },
+  PA: { code: '+507', format: '6XXXXXXX', example: '+507 6XXX XXXX' },
+  GT: { code: '+502', format: '5XXXXXXX', example: '+502 5XXX XXXX' },
+  HN: { code: '+504', format: '9XXXXXXX', example: '+504 9XXX XXXX' },
+  SV: { code: '+503', format: '7XXXXXXX', example: '+503 7XXX XXXX' },
+  NI: { code: '+505', format: '8XXXXXXX', example: '+505 8XXX XXXX' },
+  DO: { code: '+1', format: '8XXXXXXXXX', example: '+1 809 XXX XXXX' },
+  CU: { code: '+53', format: '5XXXXXXX', example: '+53 5XXX XXXX' },
+  PR: { code: '+1', format: '7XXXXXXXXX', example: '+1 787 XXX XXXX' },
+  // Европа
   ES: { code: '+34', format: '6XXXXXXXX', example: '+34 6XX XX XX XX' },
   IT: { code: '+39', format: '3XXXXXXXX', example: '+39 3XX XXX XXXX' },
   FR: { code: '+33', format: '6XXXXXXXX', example: '+33 6 XX XX XX XX' },
   DE: { code: '+49', format: '15XXXXXXXX', example: '+49 15X XXXXXXXX' },
   PL: { code: '+48', format: '5XXXXXXXX', example: '+48 5XX XXX XXX' },
-  US: { code: '+1', format: 'XXXXXXXXXX', example: '+1 XXX XXX XXXX' },
+  GB: { code: '+44', format: '7XXXXXXXXX', example: '+44 7XXX XXX XXX' },
+  PT: { code: '+351', format: '9XXXXXXXX', example: '+351 9XX XXX XXX' },
+  NL: { code: '+31', format: '6XXXXXXXX', example: '+31 6 XXXX XXXX' },
+  BE: { code: '+32', format: '4XXXXXXXX', example: '+32 4XX XX XX XX' },
+  CH: { code: '+41', format: '7XXXXXXXX', example: '+41 7X XXX XX XX' },
+  AT: { code: '+43', format: '6XXXXXXXX', example: '+43 6XX XXX XXXX' },
+  SE: { code: '+46', format: '7XXXXXXXX', example: '+46 7X XXX XX XX' },
+  NO: { code: '+47', format: '4XXXXXXXX', example: '+47 4XX XX XXX' },
+  DK: { code: '+45', format: 'XXXXXXXX', example: '+45 XX XX XX XX' },
+  FI: { code: '+358', format: '4XXXXXXXX', example: '+358 4X XXX XXXX' },
+  CZ: { code: '+420', format: '7XXXXXXXX', example: '+420 7XX XXX XXX' },
+  SK: { code: '+421', format: '9XXXXXXXX', example: '+421 9XX XXX XXX' },
+  HU: { code: '+36', format: '3XXXXXXXX', example: '+36 30 XXX XXXX' },
+  RO: { code: '+40', format: '7XXXXXXXX', example: '+40 7XX XXX XXX' },
+  BG: { code: '+359', format: '8XXXXXXXX', example: '+359 8X XXX XXXX' },
+  GR: { code: '+30', format: '6XXXXXXXXX', example: '+30 6XX XXX XXXX' },
+  HR: { code: '+385', format: '9XXXXXXXX', example: '+385 9X XXX XXXX' },
+  RS: { code: '+381', format: '6XXXXXXXX', example: '+381 6X XXX XXXX' },
+  SI: { code: '+386', format: '4XXXXXXX', example: '+386 4X XXX XXX' },
+  BA: { code: '+387', format: '6XXXXXXX', example: '+387 6X XXX XXX' },
+  MK: { code: '+389', format: '7XXXXXXX', example: '+389 7X XXX XXX' },
+  AL: { code: '+355', format: '6XXXXXXXX', example: '+355 6X XXX XXXX' },
+  IE: { code: '+353', format: '8XXXXXXXX', example: '+353 8X XXX XXXX' },
+  LT: { code: '+370', format: '6XXXXXXXX', example: '+370 6XX XXXXX' },
+  LV: { code: '+371', format: '2XXXXXXX', example: '+371 2X XXX XXX' },
+  EE: { code: '+372', format: '5XXXXXXX', example: '+372 5XXX XXXX' },
+  BY: { code: '+375', format: '29XXXXXXX', example: '+375 29 XXX XX XX' },
+  LU: { code: '+352', format: '6XXXXXXXX', example: '+352 6XX XXX XXX' },
+  IS: { code: '+354', format: '8XXXXXX', example: '+354 8XX XXXX' },
+  MC: { code: '+377', format: '6XXXXXXXX', example: '+377 6 XX XX XX XX' },
+  LI: { code: '+423', format: '7XXXXXXX', example: '+423 7XX XXXX' },
+  // СНГ
   RU: { code: '+7', format: '9XXXXXXXXX', example: '+7 9XX XXX XX XX' },
-  UA: { code: '+380', format: '9XXXXXXXX', example: '+380 9X XXX XX XX' },
   KZ: { code: '+7', format: '7XXXXXXXXX', example: '+7 7XX XXX XX XX' },
+  UZ: { code: '+998', format: '9XXXXXXXX', example: '+998 9X XXX XX XX' },
+  TM: { code: '+993', format: '6XXXXXXX', example: '+993 6X XX XX XX' },
+  TJ: { code: '+992', format: '9XXXXXXXX', example: '+992 9XX XX XX XX' },
+  KG: { code: '+996', format: '7XXXXXXXX', example: '+996 7XX XXX XXX' },
+  AM: { code: '+374', format: '9XXXXXXX', example: '+374 9X XXX XXX' },
+  GE: { code: '+995', format: '5XXXXXXXX', example: '+995 5XX XXX XXX' },
+  AZ: { code: '+994', format: '5XXXXXXXX', example: '+994 5X XXX XX XX' },
+  MD: { code: '+373', format: '6XXXXXXXX', example: '+373 6XX XX XXX' },
+  // Азия
   IN: { code: '+91', format: '9XXXXXXXXX', example: '+91 9XXX XXX XXX' },
   TH: { code: '+66', format: '8XXXXXXXX', example: '+66 8X XXX XXXX' },
   ID: { code: '+62', format: '8XXXXXXXXX', example: '+62 8XX XXXX XXXX' },
   PH: { code: '+63', format: '9XXXXXXXXX', example: '+63 9XX XXX XXXX' },
   VN: { code: '+84', format: '9XXXXXXXX', example: '+84 9X XXX XX XX' },
+  CN: { code: '+86', format: '1XXXXXXXXXX', example: '+86 1XX XXXX XXXX' },
+  JP: { code: '+81', format: '9XXXXXXXX', example: '+81 90 XXXX XXXX' },
+  KR: { code: '+82', format: '1XXXXXXXXX', example: '+82 10 XXXX XXXX' },
+  MY: { code: '+60', format: '1XXXXXXXX', example: '+60 1X XXX XXXX' },
+  SG: { code: '+65', format: '9XXXXXXX', example: '+65 9XXX XXXX' },
+  TW: { code: '+886', format: '9XXXXXXXX', example: '+886 9XX XXX XXX' },
+  HK: { code: '+852', format: '9XXXXXXX', example: '+852 9XXX XXXX' },
+  PK: { code: '+92', format: '3XXXXXXXXX', example: '+92 3XX XXX XXXX' },
+  BD: { code: '+880', format: '1XXXXXXXXX', example: '+880 1XXX XXX XXX' },
+  LK: { code: '+94', format: '7XXXXXXXX', example: '+94 7X XXX XXXX' },
+  NP: { code: '+977', format: '98XXXXXXXX', example: '+977 98XX XXX XXX' },
+  MM: { code: '+95', format: '9XXXXXXXX', example: '+95 9XX XXX XXX' },
+  KH: { code: '+855', format: '9XXXXXXXX', example: '+855 9X XXX XXXX' },
+  LA: { code: '+856', format: '20XXXXXXX', example: '+856 20 XX XXX XXX' },
+  MN: { code: '+976', format: '9XXXXXXX', example: '+976 9XXX XXXX' },
+  AF: { code: '+93', format: '7XXXXXXXX', example: '+93 7XX XXX XXX' },
+  BN: { code: '+673', format: '8XXXXXX', example: '+673 8XX XXXX' },
+  // Ближний Восток
+  TR: { code: '+90', format: '5XXXXXXXXX', example: '+90 5XX XXX XX XX' },
+  SA: { code: '+966', format: '5XXXXXXXX', example: '+966 5X XXX XXXX' },
+  AE: { code: '+971', format: '5XXXXXXXX', example: '+971 5X XXX XXXX' },
+  EG: { code: '+20', format: '1XXXXXXXXX', example: '+20 1XX XXX XXXX' },
+  IL: { code: '+972', format: '5XXXXXXXX', example: '+972 5X XXX XXXX' },
+  IR: { code: '+98', format: '9XXXXXXXXX', example: '+98 9XX XXX XXXX' },
+  IQ: { code: '+964', format: '7XXXXXXXXX', example: '+964 7XX XXX XXXX' },
+  JO: { code: '+962', format: '7XXXXXXXX', example: '+962 7X XXX XXXX' },
+  LB: { code: '+961', format: '7XXXXXXX', example: '+961 7X XXX XXX' },
+  SY: { code: '+963', format: '9XXXXXXXX', example: '+963 9XX XXX XXX' },
+  KW: { code: '+965', format: '9XXXXXXX', example: '+965 9XXX XXXX' },
+  QA: { code: '+974', format: '5XXXXXXX', example: '+974 5XXX XXXX' },
+  BH: { code: '+973', format: '3XXXXXXX', example: '+973 3XXX XXXX' },
+  OM: { code: '+968', format: '9XXXXXXX', example: '+968 9XXX XXXX' },
+  YE: { code: '+967', format: '7XXXXXXXX', example: '+967 7XX XXX XXX' },
+  PS: { code: '+970', format: '5XXXXXXXX', example: '+970 5X XXX XXXX' },
+  // Африка
+  MA: { code: '+212', format: '6XXXXXXXX', example: '+212 6XX XX XX XX' },
+  DZ: { code: '+213', format: '5XXXXXXXX', example: '+213 5XX XX XX XX' },
+  TN: { code: '+216', format: '9XXXXXXX', example: '+216 9X XXX XXX' },
+  LY: { code: '+218', format: '9XXXXXXXX', example: '+218 9X XXX XXXX' },
+  ZA: { code: '+27', format: '8XXXXXXXX', example: '+27 8X XXX XXXX' },
+  NG: { code: '+234', format: '8XXXXXXXXX', example: '+234 8XX XXX XXXX' },
+  KE: { code: '+254', format: '7XXXXXXXX', example: '+254 7XX XXX XXX' },
+  GH: { code: '+233', format: '5XXXXXXXX', example: '+233 5X XXX XXXX' },
+  ET: { code: '+251', format: '9XXXXXXXX', example: '+251 9XX XXX XXX' },
+  TZ: { code: '+255', format: '7XXXXXXXX', example: '+255 7XX XXX XXX' },
+  UG: { code: '+256', format: '7XXXXXXXX', example: '+256 7XX XXX XXX' },
+  SN: { code: '+221', format: '7XXXXXXXX', example: '+221 7X XXX XX XX' },
+  CI: { code: '+225', format: '07XXXXXXXX', example: '+225 07 XX XX XX XX' },
+  CM: { code: '+237', format: '6XXXXXXXX', example: '+237 6XX XX XX XX' },
+  AO: { code: '+244', format: '9XXXXXXXX', example: '+244 9XX XXX XXX' },
+  MZ: { code: '+258', format: '8XXXXXXXX', example: '+258 8X XXX XXXX' },
+  ZW: { code: '+263', format: '7XXXXXXXX', example: '+263 7X XXX XXXX' },
+  ZM: { code: '+260', format: '9XXXXXXXX', example: '+260 9X XXX XXXX' },
+  RW: { code: '+250', format: '7XXXXXXXX', example: '+250 7XX XXX XXX' },
+  MW: { code: '+265', format: '9XXXXXXXX', example: '+265 9XX XX XX XX' },
+  // Океания
+  AU: { code: '+61', format: '4XXXXXXXX', example: '+61 4XX XXX XXX' },
+  NZ: { code: '+64', format: '2XXXXXXXX', example: '+64 2X XXX XXXX' },
+  // Северная Америка
+  US: { code: '+1', format: 'XXXXXXXXXX', example: '+1 XXX XXX XXXX' },
+  CA: { code: '+1', format: 'XXXXXXXXXX', example: '+1 XXX XXX XXXX' },
+  // Карибы
+  JM: { code: '+1', format: '8XXXXXXXXX', example: '+1 876 XXX XXXX' },
+  TT: { code: '+1', format: '8XXXXXXXXX', example: '+1 868 XXX XXXX' },
 };
 
 // Email домены по странам
@@ -277,7 +496,6 @@ const EMAIL_DOMAINS: Record<string, string[]> = {
   PL: ['gmail.com', 'wp.pl', 'onet.pl', 'interia.pl', 'o2.pl'],
   US: ['gmail.com', 'yahoo.com', 'outlook.com', 'icloud.com', 'aol.com'],
   RU: ['gmail.com', 'mail.ru', 'yandex.ru', 'rambler.ru', 'bk.ru'],
-  UA: ['gmail.com', 'ukr.net', 'i.ua', 'meta.ua', 'bigmir.net'],
   KZ: ['gmail.com', 'mail.ru', 'yandex.kz', 'inbox.ru'],
   IN: ['gmail.com', 'yahoo.co.in', 'rediffmail.com', 'outlook.com'],
   TH: ['gmail.com', 'hotmail.com', 'yahoo.co.th', 'outlook.com'],
@@ -286,30 +504,214 @@ const EMAIL_DOMAINS: Record<string, string[]> = {
   VN: ['gmail.com', 'yahoo.com.vn', 'hotmail.com', 'outlook.com'],
 };
 
-// Список стран для выбора
+// Список стран для выбора (все страны мира кроме Украины)
 const COUNTRIES = [
-  { code: 'EC', name: 'Эквадор', flag: '🇪🇨' },
-  { code: 'BR', name: 'Бразилия', flag: '🇧🇷' },
-  { code: 'MX', name: 'Мексика', flag: '🇲🇽' },
-  { code: 'CO', name: 'Колумбия', flag: '🇨🇴' },
-  { code: 'AR', name: 'Аргентина', flag: '🇦🇷' },
-  { code: 'CL', name: 'Чили', flag: '🇨🇱' },
-  { code: 'PE', name: 'Перу', flag: '🇵🇪' },
-  { code: 'ES', name: 'Испания', flag: '🇪🇸' },
-  { code: 'IT', name: 'Италия', flag: '🇮🇹' },
+  // Европа
+  { code: 'AL', name: 'Албания', flag: '🇦🇱' },
+  { code: 'AD', name: 'Андорра', flag: '🇦🇩' },
+  { code: 'AT', name: 'Австрия', flag: '🇦🇹' },
+  { code: 'BY', name: 'Беларусь', flag: '🇧🇾' },
+  { code: 'BE', name: 'Бельгия', flag: '🇧🇪' },
+  { code: 'BA', name: 'Босния и Герцеговина', flag: '🇧🇦' },
+  { code: 'BG', name: 'Болгария', flag: '🇧🇬' },
+  { code: 'HR', name: 'Хорватия', flag: '🇭🇷' },
+  { code: 'CY', name: 'Кипр', flag: '🇨🇾' },
+  { code: 'CZ', name: 'Чехия', flag: '🇨🇿' },
+  { code: 'DK', name: 'Дания', flag: '🇩🇰' },
+  { code: 'EE', name: 'Эстония', flag: '🇪🇪' },
+  { code: 'FI', name: 'Финляндия', flag: '🇫🇮' },
   { code: 'FR', name: 'Франция', flag: '🇫🇷' },
   { code: 'DE', name: 'Германия', flag: '🇩🇪' },
+  { code: 'GR', name: 'Греция', flag: '🇬🇷' },
+  { code: 'HU', name: 'Венгрия', flag: '🇭🇺' },
+  { code: 'IS', name: 'Исландия', flag: '🇮🇸' },
+  { code: 'IE', name: 'Ирландия', flag: '🇮🇪' },
+  { code: 'IT', name: 'Италия', flag: '🇮🇹' },
+  { code: 'LV', name: 'Латвия', flag: '🇱🇻' },
+  { code: 'LI', name: 'Лихтенштейн', flag: '🇱🇮' },
+  { code: 'LT', name: 'Литва', flag: '🇱🇹' },
+  { code: 'LU', name: 'Люксембург', flag: '🇱🇺' },
+  { code: 'MT', name: 'Мальта', flag: '🇲🇹' },
+  { code: 'MD', name: 'Молдова', flag: '🇲🇩' },
+  { code: 'MC', name: 'Монако', flag: '🇲🇨' },
+  { code: 'ME', name: 'Черногория', flag: '🇲🇪' },
+  { code: 'NL', name: 'Нидерланды', flag: '🇳🇱' },
+  { code: 'MK', name: 'Северная Македония', flag: '🇲🇰' },
+  { code: 'NO', name: 'Норвегия', flag: '🇳🇴' },
   { code: 'PL', name: 'Польша', flag: '🇵🇱' },
-  { code: 'US', name: 'США', flag: '🇺🇸' },
+  { code: 'PT', name: 'Португалия', flag: '🇵🇹' },
+  { code: 'RO', name: 'Румыния', flag: '🇷🇴' },
   { code: 'RU', name: 'Россия', flag: '🇷🇺' },
-  { code: 'UA', name: 'Украина', flag: '🇺🇦' },
-  { code: 'KZ', name: 'Казахстан', flag: '🇰🇿' },
+  { code: 'SM', name: 'Сан-Марино', flag: '🇸🇲' },
+  { code: 'RS', name: 'Сербия', flag: '🇷🇸' },
+  { code: 'SK', name: 'Словакия', flag: '🇸🇰' },
+  { code: 'SI', name: 'Словения', flag: '🇸🇮' },
+  { code: 'ES', name: 'Испания', flag: '🇪🇸' },
+  { code: 'SE', name: 'Швеция', flag: '🇸🇪' },
+  { code: 'CH', name: 'Швейцария', flag: '🇨🇭' },
+  { code: 'GB', name: 'Великобритания', flag: '🇬🇧' },
+  { code: 'VA', name: 'Ватикан', flag: '🇻🇦' },
+  // Азия
+  { code: 'AF', name: 'Афганистан', flag: '🇦🇫' },
+  { code: 'AM', name: 'Армения', flag: '🇦🇲' },
+  { code: 'AZ', name: 'Азербайджан', flag: '🇦🇿' },
+  { code: 'BH', name: 'Бахрейн', flag: '🇧🇭' },
+  { code: 'BD', name: 'Бангладеш', flag: '🇧🇩' },
+  { code: 'BT', name: 'Бутан', flag: '🇧🇹' },
+  { code: 'BN', name: 'Бруней', flag: '🇧🇳' },
+  { code: 'KH', name: 'Камбоджа', flag: '🇰🇭' },
+  { code: 'CN', name: 'Китай', flag: '🇨🇳' },
+  { code: 'GE', name: 'Грузия', flag: '🇬🇪' },
+  { code: 'HK', name: 'Гонконг', flag: '🇭🇰' },
   { code: 'IN', name: 'Индия', flag: '🇮🇳' },
-  { code: 'TH', name: 'Таиланд', flag: '🇹🇭' },
   { code: 'ID', name: 'Индонезия', flag: '🇮🇩' },
+  { code: 'IR', name: 'Иран', flag: '🇮🇷' },
+  { code: 'IQ', name: 'Ирак', flag: '🇮🇶' },
+  { code: 'IL', name: 'Израиль', flag: '🇮🇱' },
+  { code: 'JP', name: 'Япония', flag: '🇯🇵' },
+  { code: 'JO', name: 'Иордания', flag: '🇯🇴' },
+  { code: 'KZ', name: 'Казахстан', flag: '🇰🇿' },
+  { code: 'KW', name: 'Кувейт', flag: '🇰🇼' },
+  { code: 'KG', name: 'Кыргызстан', flag: '🇰🇬' },
+  { code: 'LA', name: 'Лаос', flag: '🇱🇦' },
+  { code: 'LB', name: 'Ливан', flag: '🇱🇧' },
+  { code: 'MO', name: 'Макао', flag: '🇲🇴' },
+  { code: 'MY', name: 'Малайзия', flag: '🇲🇾' },
+  { code: 'MV', name: 'Мальдивы', flag: '🇲🇻' },
+  { code: 'MN', name: 'Монголия', flag: '🇲🇳' },
+  { code: 'MM', name: 'Мьянма', flag: '🇲🇲' },
+  { code: 'NP', name: 'Непал', flag: '🇳🇵' },
+  { code: 'KP', name: 'Северная Корея', flag: '🇰🇵' },
+  { code: 'OM', name: 'Оман', flag: '🇴🇲' },
+  { code: 'PK', name: 'Пакистан', flag: '🇵🇰' },
+  { code: 'PS', name: 'Палестина', flag: '🇵🇸' },
   { code: 'PH', name: 'Филиппины', flag: '🇵🇭' },
+  { code: 'QA', name: 'Катар', flag: '🇶🇦' },
+  { code: 'SA', name: 'Саудовская Аравия', flag: '🇸🇦' },
+  { code: 'SG', name: 'Сингапур', flag: '🇸🇬' },
+  { code: 'KR', name: 'Южная Корея', flag: '🇰🇷' },
+  { code: 'LK', name: 'Шри-Ланка', flag: '🇱🇰' },
+  { code: 'SY', name: 'Сирия', flag: '🇸🇾' },
+  { code: 'TW', name: 'Тайвань', flag: '🇹🇼' },
+  { code: 'TJ', name: 'Таджикистан', flag: '🇹🇯' },
+  { code: 'TH', name: 'Таиланд', flag: '🇹🇭' },
+  { code: 'TL', name: 'Восточный Тимор', flag: '🇹🇱' },
+  { code: 'TR', name: 'Турция', flag: '🇹🇷' },
+  { code: 'TM', name: 'Туркменистан', flag: '🇹🇲' },
+  { code: 'AE', name: 'ОАЭ', flag: '🇦🇪' },
+  { code: 'UZ', name: 'Узбекистан', flag: '🇺🇿' },
   { code: 'VN', name: 'Вьетнам', flag: '🇻🇳' },
-];
+  { code: 'YE', name: 'Йемен', flag: '🇾🇪' },
+  // Африка
+  { code: 'DZ', name: 'Алжир', flag: '🇩🇿' },
+  { code: 'AO', name: 'Ангола', flag: '🇦🇴' },
+  { code: 'BJ', name: 'Бенин', flag: '🇧🇯' },
+  { code: 'BW', name: 'Ботсвана', flag: '🇧🇼' },
+  { code: 'BF', name: 'Буркина-Фасо', flag: '🇧🇫' },
+  { code: 'BI', name: 'Бурунди', flag: '🇧🇮' },
+  { code: 'CM', name: 'Камерун', flag: '🇨🇲' },
+  { code: 'CV', name: 'Кабо-Верде', flag: '🇨🇻' },
+  { code: 'CF', name: 'ЦАР', flag: '🇨🇫' },
+  { code: 'TD', name: 'Чад', flag: '🇹🇩' },
+  { code: 'KM', name: 'Коморы', flag: '🇰🇲' },
+  { code: 'CD', name: 'ДР Конго', flag: '🇨🇩' },
+  { code: 'CG', name: 'Конго', flag: '🇨🇬' },
+  { code: 'CI', name: 'Кот-д\'Ивуар', flag: '🇨🇮' },
+  { code: 'DJ', name: 'Джибути', flag: '🇩🇯' },
+  { code: 'EG', name: 'Египет', flag: '🇪🇬' },
+  { code: 'GQ', name: 'Экваториальная Гвинея', flag: '🇬🇶' },
+  { code: 'ER', name: 'Эритрея', flag: '🇪🇷' },
+  { code: 'SZ', name: 'Эсватини', flag: '🇸🇿' },
+  { code: 'ET', name: 'Эфиопия', flag: '🇪🇹' },
+  { code: 'GA', name: 'Габон', flag: '🇬🇦' },
+  { code: 'GM', name: 'Гамбия', flag: '🇬🇲' },
+  { code: 'GH', name: 'Гана', flag: '🇬🇭' },
+  { code: 'GN', name: 'Гвинея', flag: '🇬🇳' },
+  { code: 'GW', name: 'Гвинея-Бисау', flag: '🇬🇼' },
+  { code: 'KE', name: 'Кения', flag: '🇰🇪' },
+  { code: 'LS', name: 'Лесото', flag: '🇱🇸' },
+  { code: 'LR', name: 'Либерия', flag: '🇱🇷' },
+  { code: 'LY', name: 'Ливия', flag: '🇱🇾' },
+  { code: 'MG', name: 'Мадагаскар', flag: '🇲🇬' },
+  { code: 'MW', name: 'Малави', flag: '🇲🇼' },
+  { code: 'ML', name: 'Мали', flag: '🇲🇱' },
+  { code: 'MR', name: 'Мавритания', flag: '🇲🇷' },
+  { code: 'MU', name: 'Маврикий', flag: '🇲🇺' },
+  { code: 'MA', name: 'Марокко', flag: '🇲🇦' },
+  { code: 'MZ', name: 'Мозамбик', flag: '🇲🇿' },
+  { code: 'NA', name: 'Намибия', flag: '🇳🇦' },
+  { code: 'NE', name: 'Нигер', flag: '🇳🇪' },
+  { code: 'NG', name: 'Нигерия', flag: '🇳🇬' },
+  { code: 'RW', name: 'Руанда', flag: '🇷🇼' },
+  { code: 'ST', name: 'Сан-Томе и Принсипи', flag: '🇸🇹' },
+  { code: 'SN', name: 'Сенегал', flag: '🇸🇳' },
+  { code: 'SC', name: 'Сейшелы', flag: '🇸🇨' },
+  { code: 'SL', name: 'Сьерра-Леоне', flag: '🇸🇱' },
+  { code: 'SO', name: 'Сомали', flag: '🇸🇴' },
+  { code: 'ZA', name: 'ЮАР', flag: '🇿🇦' },
+  { code: 'SS', name: 'Южный Судан', flag: '🇸🇸' },
+  { code: 'SD', name: 'Судан', flag: '🇸🇩' },
+  { code: 'TZ', name: 'Танзания', flag: '🇹🇿' },
+  { code: 'TG', name: 'Того', flag: '🇹🇬' },
+  { code: 'TN', name: 'Тунис', flag: '🇹🇳' },
+  { code: 'UG', name: 'Уганда', flag: '🇺🇬' },
+  { code: 'ZM', name: 'Замбия', flag: '🇿🇲' },
+  { code: 'ZW', name: 'Зимбабве', flag: '🇿🇼' },
+  // Северная Америка
+  { code: 'CA', name: 'Канада', flag: '🇨🇦' },
+  { code: 'US', name: 'США', flag: '🇺🇸' },
+  // Центральная Америка и Карибы
+  { code: 'AG', name: 'Антигуа и Барбуда', flag: '🇦🇬' },
+  { code: 'BS', name: 'Багамы', flag: '🇧🇸' },
+  { code: 'BB', name: 'Барбадос', flag: '🇧🇧' },
+  { code: 'BZ', name: 'Белиз', flag: '🇧🇿' },
+  { code: 'CR', name: 'Коста-Рика', flag: '🇨🇷' },
+  { code: 'CU', name: 'Куба', flag: '🇨🇺' },
+  { code: 'DM', name: 'Доминика', flag: '🇩🇲' },
+  { code: 'DO', name: 'Доминиканская Республика', flag: '🇩🇴' },
+  { code: 'SV', name: 'Сальвадор', flag: '🇸🇻' },
+  { code: 'GD', name: 'Гренада', flag: '🇬🇩' },
+  { code: 'GT', name: 'Гватемала', flag: '🇬🇹' },
+  { code: 'HT', name: 'Гаити', flag: '🇭🇹' },
+  { code: 'HN', name: 'Гондурас', flag: '🇭🇳' },
+  { code: 'JM', name: 'Ямайка', flag: '🇯🇲' },
+  { code: 'MX', name: 'Мексика', flag: '🇲🇽' },
+  { code: 'NI', name: 'Никарагуа', flag: '🇳🇮' },
+  { code: 'PA', name: 'Панама', flag: '🇵🇦' },
+  { code: 'PR', name: 'Пуэрто-Рико', flag: '🇵🇷' },
+  { code: 'KN', name: 'Сент-Китс и Невис', flag: '🇰🇳' },
+  { code: 'LC', name: 'Сент-Люсия', flag: '🇱🇨' },
+  { code: 'VC', name: 'Сент-Винсент и Гренадины', flag: '🇻🇨' },
+  { code: 'TT', name: 'Тринидад и Тобаго', flag: '🇹🇹' },
+  // Южная Америка
+  { code: 'AR', name: 'Аргентина', flag: '🇦🇷' },
+  { code: 'BO', name: 'Боливия', flag: '🇧🇴' },
+  { code: 'BR', name: 'Бразилия', flag: '🇧🇷' },
+  { code: 'CL', name: 'Чили', flag: '🇨🇱' },
+  { code: 'CO', name: 'Колумбия', flag: '🇨🇴' },
+  { code: 'EC', name: 'Эквадор', flag: '🇪🇨' },
+  { code: 'GY', name: 'Гайана', flag: '🇬🇾' },
+  { code: 'PY', name: 'Парагвай', flag: '🇵🇾' },
+  { code: 'PE', name: 'Перу', flag: '🇵🇪' },
+  { code: 'SR', name: 'Суринам', flag: '🇸🇷' },
+  { code: 'UY', name: 'Уругвай', flag: '🇺🇾' },
+  { code: 'VE', name: 'Венесуэла', flag: '🇻🇪' },
+  // Океания
+  { code: 'AU', name: 'Австралия', flag: '🇦🇺' },
+  { code: 'FJ', name: 'Фиджи', flag: '🇫🇯' },
+  { code: 'KI', name: 'Кирибати', flag: '🇰🇮' },
+  { code: 'MH', name: 'Маршалловы Острова', flag: '🇲🇭' },
+  { code: 'FM', name: 'Микронезия', flag: '🇫🇲' },
+  { code: 'NR', name: 'Науру', flag: '🇳🇷' },
+  { code: 'NZ', name: 'Новая Зеландия', flag: '🇳🇿' },
+  { code: 'PW', name: 'Палау', flag: '🇵🇼' },
+  { code: 'PG', name: 'Папуа — Новая Гвинея', flag: '🇵🇬' },
+  { code: 'WS', name: 'Самоа', flag: '🇼🇸' },
+  { code: 'SB', name: 'Соломоновы Острова', flag: '🇸🇧' },
+  { code: 'TO', name: 'Тонга', flag: '🇹🇴' },
+  { code: 'TV', name: 'Тувалу', flag: '🇹🇻' },
+  { code: 'VU', name: 'Вануату', flag: '🇻🇺' },
+].sort((a, b) => a.name.localeCompare(b.name, 'ru'));
 
 function DataGenerator() {
   const [country, setCountry] = useState('EC');
@@ -321,7 +723,12 @@ function DataGenerator() {
   const random = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 
   const generateName = useCallback((countryCode: string, genderChoice: Gender): string => {
-    const data = NAMES_DATABASE[countryCode];
+    // Используем fallback если нет данных для страны
+    let data = NAMES_DATABASE[countryCode];
+    if (!data) {
+      const fallbackCode = COUNTRY_NAME_FALLBACK[countryCode];
+      data = fallbackCode ? NAMES_DATABASE[fallbackCode] : NAMES_DATABASE['US'];
+    }
     if (!data) return 'John Doe';
     
     const actualGender = genderChoice === 'random' 
@@ -334,7 +741,11 @@ function DataGenerator() {
 
   const generatePhone = useCallback((countryCode: string): string => {
     const format = PHONE_FORMATS[countryCode];
-    if (!format) return '+1 555 123 4567';
+    if (!format) {
+      // Генерируем универсальный номер если формат не найден
+      const digits = Array.from({ length: 10 }, () => Math.floor(Math.random() * 10)).join('');
+      return `+${Math.floor(Math.random() * 900) + 1} ${digits}`;
+    }
     
     let number = format.format;
     for (let i = 0; i < number.length; i++) {
@@ -347,8 +758,13 @@ function DataGenerator() {
   }, []);
 
   const generateEmail = useCallback((countryCode: string, genderChoice: Gender): string => {
-    const data = NAMES_DATABASE[countryCode];
-    const domains = EMAIL_DOMAINS[countryCode] || ['gmail.com'];
+    // Используем fallback если нет данных для страны
+    let data = NAMES_DATABASE[countryCode];
+    if (!data) {
+      const fallbackCode = COUNTRY_NAME_FALLBACK[countryCode];
+      data = fallbackCode ? NAMES_DATABASE[fallbackCode] : NAMES_DATABASE['US'];
+    }
+    const domains = EMAIL_DOMAINS[countryCode] || ['gmail.com', 'yahoo.com', 'outlook.com'];
     
     if (!data) return 'user@gmail.com';
     
@@ -357,8 +773,8 @@ function DataGenerator() {
       : genderChoice;
     
     const names = data[actualGender];
-    const firstName = random(names.first).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
-    const lastName = random(names.last).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z]/g, '');
+    const firstName = random(names.first).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+    const lastName = random(names.last).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
     const num = Math.floor(Math.random() * 999);
     const domain = random(domains);
     
@@ -458,8 +874,8 @@ function DataGenerator() {
       </div>
 
       {/* Settings */}
-      <div className="glass-card p-5 mb-6 flex-shrink-0">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="glass-card p-4 sm:p-5 mb-6 flex-shrink-0">
+        <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-4 lg:gap-6">
           {/* Country */}
           <div>
             <label className="block text-sm font-medium text-dark-300 mb-2">
@@ -484,39 +900,39 @@ function DataGenerator() {
             <label className="block text-sm font-medium text-dark-300 mb-2">
               Тип данных
             </label>
-            <div className="flex gap-2">
+            <div className="flex gap-1.5 sm:gap-2">
               <button
                 onClick={() => setDataType('name')}
-                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
+                className={`flex-1 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
                   dataType === 'name'
                     ? 'bg-primary-500 text-white'
                     : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
                 }`}
               >
-                <UserCircle className="w-4 h-4" />
-                Имя
+                <UserCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span>Имя</span>
               </button>
               <button
                 onClick={() => setDataType('phone')}
-                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
+                className={`flex-1 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
                   dataType === 'phone'
                     ? 'bg-primary-500 text-white'
                     : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
                 }`}
               >
-                <Phone className="w-4 h-4" />
-                Телефон
+                <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span>Телефон</span>
               </button>
               <button
                 onClick={() => setDataType('email')}
-                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 ${
+                className={`flex-1 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
                   dataType === 'email'
                     ? 'bg-primary-500 text-white'
                     : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
                 }`}
               >
-                <Mail className="w-4 h-4" />
-                Email
+                <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span>Email</span>
               </button>
             </div>
           </div>
@@ -528,10 +944,10 @@ function DataGenerator() {
                 <User className="w-4 h-4 inline mr-2" />
                 Пол
               </label>
-              <div className="flex gap-2">
+              <div className="flex gap-1.5 sm:gap-2">
                 <button
                   onClick={() => setGender('male')}
-                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex-1 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                     gender === 'male'
                       ? 'bg-blue-500 text-white'
                       : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
@@ -541,7 +957,7 @@ function DataGenerator() {
                 </button>
                 <button
                   onClick={() => setGender('female')}
-                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex-1 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                     gender === 'female'
                       ? 'bg-pink-500 text-white'
                       : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
@@ -551,7 +967,7 @@ function DataGenerator() {
                 </button>
                 <button
                   onClick={() => setGender('random')}
-                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  className={`flex-1 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                     gender === 'random'
                       ? 'bg-purple-500 text-white'
                       : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
@@ -564,7 +980,7 @@ function DataGenerator() {
           )}
 
           {/* Count */}
-          <div>
+          <div className={dataType === 'phone' ? 'sm:col-span-2 lg:col-span-1' : ''}>
             <label className="block text-sm font-medium text-dark-300 mb-2">
               Количество: {count}
             </label>
@@ -584,8 +1000,8 @@ function DataGenerator() {
         </div>
 
         {/* Generate button */}
-        <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm text-dark-400">
+        <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="text-sm text-dark-400 hidden sm:block">
             {currentCountry && (
               <span>
                 {currentCountry.flag} {currentCountry.name}
@@ -599,7 +1015,7 @@ function DataGenerator() {
           </div>
           <button
             onClick={generate}
-            className="btn-primary flex items-center gap-2"
+            className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
           >
             <RefreshCw className="w-4 h-4" />
             Сгенерировать

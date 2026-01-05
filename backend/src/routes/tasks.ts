@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db, { getNextTaskNumber } from '../database';
 import { authenticateToken } from '../middleware/auth';
 import { Task, TaskWithUsers, Department, departmentHeadRole, UserRole } from '../types';
-import { notifyTaskAssigned, notifyStatusChanged, notifySubtaskCompleted, notifyTaskRevision } from './notifications';
+import { notifyTaskAssigned, notifyStatusChanged, notifySubtaskCompleted, notifyTaskRevision, notifyTaskReassigned } from './notifications';
 
 const router = Router();
 
@@ -372,6 +372,9 @@ router.put('/:id', authenticateToken, (req: Request, res: Response): void => {
       return;
     }
 
+    // Сохраняем старого исполнителя для проверки изменения
+    const oldExecutorId = existing.executor_id;
+
     // Редактировать может только заказчик
     if (existing.customer_id !== req.user?.userId && req.user?.role !== 'admin') {
       res.status(403).json({ error: 'Только заказчик или админ может редактировать задачу' });
@@ -423,6 +426,12 @@ router.put('/:id', authenticateToken, (req: Request, res: Response): void => {
       LEFT JOIN offers o ON t.offer_id = o.id
       WHERE t.id = ?
     `).get(id) as TaskWithUsers;
+
+    // Если исполнитель изменился - уведомляем нового исполнителя
+    if (executor_id && executor_id !== oldExecutorId) {
+      const currentUser = db.prepare('SELECT full_name FROM users WHERE id = ?').get(req.user?.userId) as { full_name: string } | undefined;
+      notifyTaskReassigned(task, currentUser?.full_name || 'Пользователь', executor_id);
+    }
 
     res.json(task);
   } catch (error) {

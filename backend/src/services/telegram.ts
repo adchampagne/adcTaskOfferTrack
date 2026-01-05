@@ -35,6 +35,13 @@ interface TelegramApiResponse {
 // Отправить сообщение в Telegram
 export async function sendTelegramMessage(chatId: string, text: string, parseMode: 'HTML' | 'Markdown' = 'HTML'): Promise<boolean> {
   try {
+    console.log(`📱 [Telegram API] Отправка сообщения в chat_id: ${chatId}`);
+    
+    if (!TELEGRAM_BOT_TOKEN) {
+      console.error('❌ [Telegram API] TELEGRAM_BOT_TOKEN не установлен!');
+      return false;
+    }
+    
     const response = await fetch(`${TELEGRAM_API_URL}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -47,12 +54,13 @@ export async function sendTelegramMessage(chatId: string, text: string, parseMod
 
     const result = await response.json() as TelegramApiResponse;
     if (!result.ok) {
-      console.error('Telegram send error:', result);
+      console.error('❌ [Telegram API] Ошибка отправки:', result.description || result);
       return false;
     }
+    console.log(`✅ [Telegram API] Сообщение успешно отправлено в chat_id: ${chatId}`);
     return true;
   } catch (error) {
-    console.error('Telegram API error:', error);
+    console.error('❌ [Telegram API] Ошибка:', error);
     return false;
   }
 }
@@ -60,11 +68,22 @@ export async function sendTelegramMessage(chatId: string, text: string, parseMod
 // Отправить уведомление пользователю по его ID в системе
 export async function sendNotificationToUser(userId: string, title: string, message: string, taskUrl?: string): Promise<boolean> {
   try {
-    const user = db.prepare('SELECT telegram_chat_id FROM users WHERE id = ?').get(userId) as { telegram_chat_id: string | null } | undefined;
+    console.log(`📤 [Telegram] Попытка отправить уведомление пользователю: ${userId}`);
+    console.log(`📤 [Telegram] Заголовок: ${title}`);
     
-    if (!user?.telegram_chat_id) {
-      return false; // У пользователя не привязан Telegram
+    const user = db.prepare('SELECT telegram_chat_id, full_name FROM users WHERE id = ?').get(userId) as { telegram_chat_id: string | null; full_name: string } | undefined;
+    
+    if (!user) {
+      console.log(`❌ [Telegram] Пользователь ${userId} не найден в базе`);
+      return false;
     }
+    
+    if (!user.telegram_chat_id) {
+      console.log(`⚠️ [Telegram] У пользователя ${user.full_name} (${userId}) не привязан Telegram`);
+      return false;
+    }
+    
+    console.log(`✅ [Telegram] Найден chat_id: ${user.telegram_chat_id} для пользователя ${user.full_name}`);
 
     let text = `<b>🔔 ${escapeHtml(title)}</b>\n\n${escapeHtml(message)}`;
     
@@ -72,9 +91,11 @@ export async function sendNotificationToUser(userId: string, title: string, mess
       text += `\n\n<a href="${taskUrl}">Открыть в системе →</a>`;
     }
 
-    return await sendTelegramMessage(user.telegram_chat_id, text);
+    const result = await sendTelegramMessage(user.telegram_chat_id, text);
+    console.log(`📨 [Telegram] Результат отправки для ${user.full_name}: ${result ? 'успешно' : 'ошибка'}`);
+    return result;
   } catch (error) {
-    console.error('Send notification error:', error);
+    console.error('❌ [Telegram] Send notification error:', error);
     return false;
   }
 }
