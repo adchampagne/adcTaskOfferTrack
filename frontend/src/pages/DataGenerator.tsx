@@ -875,7 +875,8 @@ function DataGenerator() {
 
       {/* Settings */}
       <div className="glass-card p-4 sm:p-5 mb-6 flex-shrink-0">
-        <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-4 lg:gap-6">
+        {/* Первый ряд: Гео + Тип данных */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
           {/* Country */}
           <div>
             <label className="block text-sm font-medium text-dark-300 mb-2">
@@ -900,43 +901,46 @@ function DataGenerator() {
             <label className="block text-sm font-medium text-dark-300 mb-2">
               Тип данных
             </label>
-            <div className="flex gap-1.5 sm:gap-2">
+            <div className="flex gap-2">
               <button
                 onClick={() => setDataType('name')}
-                className={`flex-1 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
+                className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
                   dataType === 'name'
                     ? 'bg-primary-500 text-white'
                     : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
                 }`}
               >
-                <UserCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <UserCircle className="w-4 h-4 flex-shrink-0" />
                 <span>Имя</span>
               </button>
               <button
                 onClick={() => setDataType('phone')}
-                className={`flex-1 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
+                className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
                   dataType === 'phone'
                     ? 'bg-primary-500 text-white'
                     : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
                 }`}
               >
-                <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <Phone className="w-4 h-4 flex-shrink-0" />
                 <span>Телефон</span>
               </button>
               <button
                 onClick={() => setDataType('email')}
-                className={`flex-1 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5 ${
+                className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
                   dataType === 'email'
                     ? 'bg-primary-500 text-white'
                     : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
                 }`}
               >
-                <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <Mail className="w-4 h-4 flex-shrink-0" />
                 <span>Email</span>
               </button>
             </div>
           </div>
+        </div>
 
+        {/* Второй ряд: Пол (если нужен) + Количество + Кнопка */}
+        <div className={`grid gap-4 ${(dataType === 'name' || dataType === 'email') ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2'}`}>
           {/* Gender (only for name and email) */}
           {(dataType === 'name' || dataType === 'email') && (
             <div>
@@ -944,10 +948,10 @@ function DataGenerator() {
                 <User className="w-4 h-4 inline mr-2" />
                 Пол
               </label>
-              <div className="flex gap-1.5 sm:gap-2">
+              <div className="flex gap-2">
                 <button
                   onClick={() => setGender('male')}
-                  className={`flex-1 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                  className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                     gender === 'male'
                       ? 'bg-blue-500 text-white'
                       : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
@@ -957,7 +961,7 @@ function DataGenerator() {
                 </button>
                 <button
                   onClick={() => setGender('female')}
-                  className={`flex-1 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                  className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                     gender === 'female'
                       ? 'bg-pink-500 text-white'
                       : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
@@ -967,7 +971,7 @@ function DataGenerator() {
                 </button>
                 <button
                   onClick={() => setGender('random')}
-                  className={`flex-1 px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                  className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
                     gender === 'random'
                       ? 'bg-purple-500 text-white'
                       : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
@@ -980,47 +984,52 @@ function DataGenerator() {
           )}
 
           {/* Count */}
-          <div className={dataType === 'phone' ? 'sm:col-span-2 lg:col-span-1' : ''}>
+          <div>
             <label className="block text-sm font-medium text-dark-300 mb-2">
               Количество: {count}
             </label>
-            <input
-              type="range"
-              min="1"
-              max="50"
-              value={count}
-              onChange={(e) => setCount(parseInt(e.target.value))}
-              className="w-full h-2 bg-dark-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
-            />
-            <div className="flex justify-between text-xs text-dark-500 mt-1">
-              <span>1</span>
-              <span>50</span>
+            <div className="pt-1">
+              <input
+                type="range"
+                min="1"
+                max="50"
+                value={count}
+                onChange={(e) => setCount(parseInt(e.target.value))}
+                className="w-full h-2 bg-dark-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+              />
+              <div className="flex justify-between text-xs text-dark-500 mt-1">
+                <span>1</span>
+                <span>50</span>
+              </div>
             </div>
+          </div>
+
+          {/* Generate button */}
+          <div className="flex flex-col justify-end">
+            <label className="block text-sm font-medium text-dark-300 mb-2 opacity-0 hidden sm:block">
+              Действие
+            </label>
+            <button
+              onClick={generate}
+              className="btn-primary flex items-center justify-center gap-2 w-full py-2.5"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Сгенерировать
+            </button>
           </div>
         </div>
 
-        {/* Generate button */}
-        <div className="mt-4 sm:mt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="text-sm text-dark-400 hidden sm:block">
-            {currentCountry && (
-              <span>
-                {currentCountry.flag} {currentCountry.name}
-                {dataType === 'phone' && PHONE_FORMATS[country] && (
-                  <span className="ml-2 text-dark-500">
-                    Формат: {PHONE_FORMATS[country].example}
-                  </span>
-                )}
+        {/* Инфо о формате телефона */}
+        {dataType === 'phone' && currentCountry && PHONE_FORMATS[country] && (
+          <div className="mt-4 pt-4 border-t border-dark-700">
+            <span className="text-sm text-dark-400">
+              {currentCountry.flag} {currentCountry.name}
+              <span className="ml-2 text-dark-500">
+                Формат: {PHONE_FORMATS[country].example}
               </span>
-            )}
+            </span>
           </div>
-          <button
-            onClick={generate}
-            className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Сгенерировать
-          </button>
-        </div>
+        )}
       </div>
 
       {/* Results */}
