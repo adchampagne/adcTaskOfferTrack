@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { 
   Users, 
   Phone, 
@@ -8,11 +8,15 @@ import {
   RefreshCw,
   Globe,
   User,
-  UserCircle
+  UserCircle,
+  MapPin,
+  Languages,
+  Banknote,
+  Info
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-type DataType = 'name' | 'phone' | 'email';
+type DataType = 'name' | 'phone' | 'email' | 'address';
 type Gender = 'male' | 'female' | 'random';
 
 interface GeneratedItem {
@@ -21,6 +25,231 @@ interface GeneratedItem {
   value: string;
   copied: boolean;
 }
+
+// Информация о странах: языки и валюты
+const COUNTRY_INFO: Record<string, { languages: string[], currency: { code: string, name: string, symbol: string } }> = {
+  // Латинская Америка
+  EC: { languages: ['Испанский'], currency: { code: 'USD', name: 'Доллар США', symbol: '$' } },
+  BR: { languages: ['Португальский'], currency: { code: 'BRL', name: 'Бразильский реал', symbol: 'R$' } },
+  MX: { languages: ['Испанский'], currency: { code: 'MXN', name: 'Мексиканское песо', symbol: '$' } },
+  CO: { languages: ['Испанский'], currency: { code: 'COP', name: 'Колумбийское песо', symbol: '$' } },
+  AR: { languages: ['Испанский'], currency: { code: 'ARS', name: 'Аргентинское песо', symbol: '$' } },
+  CL: { languages: ['Испанский'], currency: { code: 'CLP', name: 'Чилийское песо', symbol: '$' } },
+  PE: { languages: ['Испанский', 'Кечуа', 'Аймара'], currency: { code: 'PEN', name: 'Перуанский соль', symbol: 'S/' } },
+  VE: { languages: ['Испанский'], currency: { code: 'VES', name: 'Венесуэльский боливар', symbol: 'Bs' } },
+  // Европа
+  ES: { languages: ['Испанский', 'Каталанский', 'Баскский', 'Галисийский'], currency: { code: 'EUR', name: 'Евро', symbol: '€' } },
+  IT: { languages: ['Итальянский'], currency: { code: 'EUR', name: 'Евро', symbol: '€' } },
+  FR: { languages: ['Французский'], currency: { code: 'EUR', name: 'Евро', symbol: '€' } },
+  DE: { languages: ['Немецкий'], currency: { code: 'EUR', name: 'Евро', symbol: '€' } },
+  PL: { languages: ['Польский'], currency: { code: 'PLN', name: 'Польский злотый', symbol: 'zł' } },
+  GB: { languages: ['Английский', 'Валлийский', 'Шотландский гэльский'], currency: { code: 'GBP', name: 'Фунт стерлингов', symbol: '£' } },
+  PT: { languages: ['Португальский'], currency: { code: 'EUR', name: 'Евро', symbol: '€' } },
+  NL: { languages: ['Нидерландский', 'Фризский'], currency: { code: 'EUR', name: 'Евро', symbol: '€' } },
+  BE: { languages: ['Нидерландский', 'Французский', 'Немецкий'], currency: { code: 'EUR', name: 'Евро', symbol: '€' } },
+  CH: { languages: ['Немецкий', 'Французский', 'Итальянский', 'Романшский'], currency: { code: 'CHF', name: 'Швейцарский франк', symbol: 'CHF' } },
+  AT: { languages: ['Немецкий'], currency: { code: 'EUR', name: 'Евро', symbol: '€' } },
+  SE: { languages: ['Шведский'], currency: { code: 'SEK', name: 'Шведская крона', symbol: 'kr' } },
+  NO: { languages: ['Норвежский'], currency: { code: 'NOK', name: 'Норвежская крона', symbol: 'kr' } },
+  DK: { languages: ['Датский'], currency: { code: 'DKK', name: 'Датская крона', symbol: 'kr' } },
+  FI: { languages: ['Финский', 'Шведский'], currency: { code: 'EUR', name: 'Евро', symbol: '€' } },
+  CZ: { languages: ['Чешский'], currency: { code: 'CZK', name: 'Чешская крона', symbol: 'Kč' } },
+  SK: { languages: ['Словацкий'], currency: { code: 'EUR', name: 'Евро', symbol: '€' } },
+  HU: { languages: ['Венгерский'], currency: { code: 'HUF', name: 'Венгерский форинт', symbol: 'Ft' } },
+  RO: { languages: ['Румынский'], currency: { code: 'RON', name: 'Румынский лей', symbol: 'lei' } },
+  BG: { languages: ['Болгарский'], currency: { code: 'BGN', name: 'Болгарский лев', symbol: 'лв' } },
+  GR: { languages: ['Греческий'], currency: { code: 'EUR', name: 'Евро', symbol: '€' } },
+  HR: { languages: ['Хорватский'], currency: { code: 'EUR', name: 'Евро', symbol: '€' } },
+  RS: { languages: ['Сербский'], currency: { code: 'RSD', name: 'Сербский динар', symbol: 'дин' } },
+  SI: { languages: ['Словенский'], currency: { code: 'EUR', name: 'Евро', symbol: '€' } },
+  IE: { languages: ['Английский', 'Ирландский'], currency: { code: 'EUR', name: 'Евро', symbol: '€' } },
+  LT: { languages: ['Литовский'], currency: { code: 'EUR', name: 'Евро', symbol: '€' } },
+  LV: { languages: ['Латышский'], currency: { code: 'EUR', name: 'Евро', symbol: '€' } },
+  EE: { languages: ['Эстонский'], currency: { code: 'EUR', name: 'Евро', symbol: '€' } },
+  BY: { languages: ['Белорусский', 'Русский'], currency: { code: 'BYN', name: 'Белорусский рубль', symbol: 'Br' } },
+  // СНГ и Азия
+  RU: { languages: ['Русский'], currency: { code: 'RUB', name: 'Российский рубль', symbol: '₽' } },
+  KZ: { languages: ['Казахский', 'Русский'], currency: { code: 'KZT', name: 'Казахстанский тенге', symbol: '₸' } },
+  UZ: { languages: ['Узбекский', 'Русский'], currency: { code: 'UZS', name: 'Узбекский сум', symbol: 'сўм' } },
+  KG: { languages: ['Киргизский', 'Русский'], currency: { code: 'KGS', name: 'Киргизский сом', symbol: 'с' } },
+  TJ: { languages: ['Таджикский', 'Русский'], currency: { code: 'TJS', name: 'Таджикский сомони', symbol: 'SM' } },
+  AM: { languages: ['Армянский'], currency: { code: 'AMD', name: 'Армянский драм', symbol: '֏' } },
+  GE: { languages: ['Грузинский'], currency: { code: 'GEL', name: 'Грузинский лари', symbol: '₾' } },
+  AZ: { languages: ['Азербайджанский'], currency: { code: 'AZN', name: 'Азербайджанский манат', symbol: '₼' } },
+  // Азия
+  IN: { languages: ['Хинди', 'Английский'], currency: { code: 'INR', name: 'Индийская рупия', symbol: '₹' } },
+  TH: { languages: ['Тайский'], currency: { code: 'THB', name: 'Тайский бат', symbol: '฿' } },
+  ID: { languages: ['Индонезийский'], currency: { code: 'IDR', name: 'Индонезийская рупия', symbol: 'Rp' } },
+  PH: { languages: ['Филиппинский', 'Английский'], currency: { code: 'PHP', name: 'Филиппинское песо', symbol: '₱' } },
+  VN: { languages: ['Вьетнамский'], currency: { code: 'VND', name: 'Вьетнамский донг', symbol: '₫' } },
+  CN: { languages: ['Китайский (мандарин)'], currency: { code: 'CNY', name: 'Китайский юань', symbol: '¥' } },
+  JP: { languages: ['Японский'], currency: { code: 'JPY', name: 'Японская иена', symbol: '¥' } },
+  KR: { languages: ['Корейский'], currency: { code: 'KRW', name: 'Южнокорейская вона', symbol: '₩' } },
+  MY: { languages: ['Малайский', 'Английский', 'Китайский', 'Тамильский'], currency: { code: 'MYR', name: 'Малайзийский ринггит', symbol: 'RM' } },
+  SG: { languages: ['Английский', 'Китайский', 'Малайский', 'Тамильский'], currency: { code: 'SGD', name: 'Сингапурский доллар', symbol: 'S$' } },
+  TW: { languages: ['Китайский (мандарин)'], currency: { code: 'TWD', name: 'Новый тайваньский доллар', symbol: 'NT$' } },
+  HK: { languages: ['Китайский (кантонский)', 'Английский'], currency: { code: 'HKD', name: 'Гонконгский доллар', symbol: 'HK$' } },
+  PK: { languages: ['Урду', 'Английский'], currency: { code: 'PKR', name: 'Пакистанская рупия', symbol: '₨' } },
+  BD: { languages: ['Бенгальский'], currency: { code: 'BDT', name: 'Бангладешская така', symbol: '৳' } },
+  // Ближний Восток
+  TR: { languages: ['Турецкий'], currency: { code: 'TRY', name: 'Турецкая лира', symbol: '₺' } },
+  SA: { languages: ['Арабский'], currency: { code: 'SAR', name: 'Саудовский риял', symbol: 'ر.س' } },
+  AE: { languages: ['Арабский', 'Английский'], currency: { code: 'AED', name: 'Дирхам ОАЭ', symbol: 'د.إ' } },
+  EG: { languages: ['Арабский'], currency: { code: 'EGP', name: 'Египетский фунт', symbol: 'E£' } },
+  IL: { languages: ['Иврит', 'Арабский'], currency: { code: 'ILS', name: 'Израильский шекель', symbol: '₪' } },
+  IR: { languages: ['Персидский'], currency: { code: 'IRR', name: 'Иранский риал', symbol: '﷼' } },
+  IQ: { languages: ['Арабский', 'Курдский'], currency: { code: 'IQD', name: 'Иракский динар', symbol: 'ع.د' } },
+  // Африка
+  ZA: { languages: ['Зулу', 'Коса', 'Африкаанс', 'Английский'], currency: { code: 'ZAR', name: 'Южноафриканский рэнд', symbol: 'R' } },
+  NG: { languages: ['Английский', 'Хауса', 'Йоруба', 'Игбо'], currency: { code: 'NGN', name: 'Нигерийская найра', symbol: '₦' } },
+  KE: { languages: ['Суахили', 'Английский'], currency: { code: 'KES', name: 'Кенийский шиллинг', symbol: 'KSh' } },
+  MA: { languages: ['Арабский', 'Берберский', 'Французский'], currency: { code: 'MAD', name: 'Марокканский дирхам', symbol: 'د.م.' } },
+  // Северная Америка
+  US: { languages: ['Английский', 'Испанский'], currency: { code: 'USD', name: 'Доллар США', symbol: '$' } },
+  CA: { languages: ['Английский', 'Французский'], currency: { code: 'CAD', name: 'Канадский доллар', symbol: 'C$' } },
+  // Океания
+  AU: { languages: ['Английский'], currency: { code: 'AUD', name: 'Австралийский доллар', symbol: 'A$' } },
+  NZ: { languages: ['Английский', 'Маори'], currency: { code: 'NZD', name: 'Новозеландский доллар', symbol: 'NZ$' } },
+};
+
+// База адресов по странам (все страны мира)
+const ADDRESS_DATABASE: Record<string, { 
+  streets: string[], 
+  cities: string[], 
+  regions?: string[],
+  postalFormat: string 
+}> = {
+  // === ЛАТИНСКАЯ АМЕРИКА ===
+  EC: { streets: ['Av. Amazonas', 'Calle Guayaquil', 'Av. 10 de Agosto', 'Calle Sucre', 'Av. República', 'Calle Bolívar', 'Av. 6 de Diciembre', 'Calle Espejo', 'Av. Colón', 'Calle Venezuela'], cities: ['Quito', 'Guayaquil', 'Cuenca', 'Santo Domingo', 'Machala', 'Durán', 'Manta', 'Portoviejo', 'Loja', 'Ambato'], postalFormat: 'XXXXXX' },
+  BR: { streets: ['Rua das Flores', 'Av. Paulista', 'Rua Augusta', 'Av. Brasil', 'Rua São Paulo', 'Av. Copacabana', 'Rua XV de Novembro', 'Av. Atlântica', 'Rua da Consolação', 'Av. Rio Branco'], cities: ['São Paulo', 'Rio de Janeiro', 'Brasília', 'Salvador', 'Fortaleza', 'Belo Horizonte', 'Manaus', 'Curitiba', 'Recife', 'Porto Alegre'], postalFormat: 'XXXXX-XXX' },
+  MX: { streets: ['Av. Reforma', 'Calle Juárez', 'Av. Insurgentes', 'Calle Hidalgo', 'Av. Revolución', 'Calle Morelos', 'Av. Universidad', 'Calle Madero', 'Av. Chapultepec', 'Calle Allende'], cities: ['Ciudad de México', 'Guadalajara', 'Monterrey', 'Puebla', 'Tijuana', 'León', 'Juárez', 'Zapopan', 'Mérida', 'Cancún'], postalFormat: 'XXXXX' },
+  CO: { streets: ['Carrera 7', 'Calle 80', 'Avenida El Dorado', 'Carrera 15', 'Calle 100', 'Avenida Boyacá', 'Carrera 30', 'Calle 26', 'Avenida Caracas', 'Carrera 68'], cities: ['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena', 'Cúcuta', 'Bucaramanga', 'Pereira', 'Santa Marta', 'Ibagué'], postalFormat: 'XXXXXX' },
+  AR: { streets: ['Av. 9 de Julio', 'Calle Florida', 'Av. Corrientes', 'Calle Lavalle', 'Av. Santa Fe', 'Calle Rivadavia', 'Av. de Mayo', 'Calle Callao', 'Av. Libertador', 'Calle Córdoba'], cities: ['Buenos Aires', 'Córdoba', 'Rosario', 'Mendoza', 'Tucumán', 'La Plata', 'Mar del Plata', 'Salta', 'Santa Fe', 'San Juan'], postalFormat: 'AXXXX' },
+  CL: { streets: ['Av. Libertador', 'Calle Ahumada', 'Av. Providencia', 'Calle Estado', 'Av. Apoquindo', 'Calle Huérfanos', 'Av. Alameda', 'Calle Monjitas', 'Av. Las Condes', 'Calle Bandera'], cities: ['Santiago', 'Valparaíso', 'Concepción', 'La Serena', 'Antofagasta', 'Temuco', 'Rancagua', 'Talca', 'Arica', 'Chillán'], postalFormat: 'XXXXXXX' },
+  PE: { streets: ['Av. Arequipa', 'Jr. de la Unión', 'Av. Larco', 'Jr. Camaná', 'Av. Tacna', 'Jr. Cusco', 'Av. Javier Prado', 'Jr. Puno', 'Av. Brasil', 'Jr. Lampa'], cities: ['Lima', 'Arequipa', 'Trujillo', 'Chiclayo', 'Piura', 'Iquitos', 'Cusco', 'Huancayo', 'Tacna', 'Chimbote'], postalFormat: 'XXXXX' },
+  VE: { streets: ['Av. Libertador', 'Calle Bolívar', 'Av. Universidad', 'Calle Miranda', 'Av. Urdaneta', 'Calle Sucre', 'Av. Francisco de Miranda', 'Calle Carabobo', 'Av. Principal', 'Calle Este'], cities: ['Caracas', 'Maracaibo', 'Valencia', 'Barquisimeto', 'Maracay', 'Ciudad Guayana', 'Barcelona', 'Maturín', 'Petare', 'Turmero'], postalFormat: 'XXXX' },
+  UY: { streets: ['Av. 18 de Julio', 'Calle Sarandí', 'Av. Italia', 'Calle Colonia', 'Av. Brasil', 'Calle Reconquista', 'Av. Rivera', 'Calle Ciudadela', 'Av. Agraciada', 'Calle Bartolomé Mitre'], cities: ['Montevideo', 'Salto', 'Paysandú', 'Las Piedras', 'Rivera', 'Maldonado', 'Tacuarembó', 'Melo', 'Mercedes', 'Artigas'], postalFormat: 'XXXXX' },
+  PY: { streets: ['Av. Mariscal López', 'Calle Palma', 'Av. España', 'Calle Estrella', 'Av. Eusebio Ayala', 'Calle Independencia', 'Av. Perú', 'Calle Oliva', 'Av. Artigas', 'Calle Chile'], cities: ['Asunción', 'Ciudad del Este', 'San Lorenzo', 'Luque', 'Capiatá', 'Lambaré', 'Fernando de la Mora', 'Limpio', 'Ñemby', 'Encarnación'], postalFormat: 'XXXX' },
+  BO: { streets: ['Av. 16 de Julio', 'Calle Comercio', 'Av. Camacho', 'Calle Potosí', 'Av. Montes', 'Calle Junín', 'Av. 6 de Agosto', 'Calle Loayza', 'Av. Arce', 'Calle Colón'], cities: ['La Paz', 'Santa Cruz', 'Cochabamba', 'Sucre', 'Oruro', 'Tarija', 'Potosí', 'Sacaba', 'Montero', 'Trinidad'], postalFormat: 'XXXX' },
+  CR: { streets: ['Av. Central', 'Calle 0', 'Av. Segunda', 'Calle Primera', 'Paseo Colón', 'Calle Tercera', 'Av. 10', 'Calle 15', 'Av. Escazú', 'Calle Real'], cities: ['San José', 'Alajuela', 'Cartago', 'Heredia', 'Limón', 'Puntarenas', 'Liberia', 'Paraíso', 'San Isidro', 'Desamparados'], postalFormat: 'XXXXX' },
+  PA: { streets: ['Vía España', 'Calle 50', 'Av. Balboa', 'Calle Uruguay', 'Av. Central', 'Calle Eusebio Morales', 'Vía Argentina', 'Calle Colombia', 'Av. Ricardo Arango', 'Calle Aquilino de la Guardia'], cities: ['Ciudad de Panamá', 'San Miguelito', 'Tocumen', 'David', 'Arraiján', 'Colón', 'Las Cumbres', 'La Chorrera', 'Pacora', 'Santiago'], postalFormat: 'XXXX' },
+  GT: { streets: ['Av. La Reforma', '6a Avenida', 'Av. Las Américas', '7a Calle', 'Av. Petapa', '18 Calle', 'Av. Bolívar', '12 Calle', 'Av. Hincapié', '4a Calle'], cities: ['Ciudad de Guatemala', 'Mixco', 'Villa Nueva', 'Petapa', 'San Juan Sacatepéquez', 'Quetzaltenango', 'Escuintla', 'Chinautla', 'Chimaltenango', 'Amatitlán'], postalFormat: 'XXXXX' },
+  HN: { streets: ['Bulevar Morazán', 'Av. La Paz', 'Calle Real', 'Av. Cervantes', 'Bulevar Suyapa', 'Calle Principal', 'Av. Juan Pablo II', 'Calle Peatonal', 'Bulevar Centro América', 'Av. Los Próceres'], cities: ['Tegucigalpa', 'San Pedro Sula', 'Choloma', 'La Ceiba', 'El Progreso', 'Choluteca', 'Comayagua', 'Puerto Cortés', 'La Lima', 'Danlí'], postalFormat: 'XXXXX' },
+  SV: { streets: ['Bulevar de los Héroes', 'Av. Roosevelt', 'Calle Arce', 'Av. España', 'Bulevar Constitución', 'Calle Rubén Darío', 'Av. Monseñor Romero', 'Calle Delgado', 'Bulevar del Ejército', 'Av. Olímpica'], cities: ['San Salvador', 'Santa Ana', 'San Miguel', 'Mejicanos', 'Santa Tecla', 'Apopa', 'Soyapango', 'Delgado', 'Ilopango', 'Ahuachapán'], postalFormat: 'XXXX' },
+  NI: { streets: ['Av. Bolívar', 'Calle Principal', 'Av. Universitaria', 'Carretera Norte', 'Av. Jean Paul Genie', 'Calle 27 de Mayo', 'Av. Xolotlán', 'Carretera Sur', 'Av. Simón Bolívar', 'Calle Colón'], cities: ['Managua', 'León', 'Masaya', 'Matagalpa', 'Chinandega', 'Granada', 'Estelí', 'Tipitapa', 'Jinotega', 'Ciudad Sandino'], postalFormat: 'XXXXX' },
+  DO: { streets: ['Av. Winston Churchill', 'Calle El Conde', 'Av. 27 de Febrero', 'Calle Duarte', 'Av. Abraham Lincoln', 'Calle Arzobispo Meriño', 'Av. John F. Kennedy', 'Calle Las Damas', 'Av. Independencia', 'Calle Isabel la Católica'], cities: ['Santo Domingo', 'Santiago', 'Santo Domingo Este', 'Santo Domingo Norte', 'San Pedro de Macorís', 'La Romana', 'San Cristóbal', 'Puerto Plata', 'San Francisco de Macorís', 'Higüey'], postalFormat: 'XXXXX' },
+  CU: { streets: ['Calle Obispo', 'Av. de los Presidentes', 'Calle Neptuno', 'Malecón', 'Calle San Rafael', 'Av. Paseo', 'Calle Galiano', 'Av. de Italia', 'Calle Prado', 'Av. Salvador Allende'], cities: ['La Habana', 'Santiago de Cuba', 'Camagüey', 'Holguín', 'Santa Clara', 'Guantánamo', 'Bayamo', 'Las Tunas', 'Cienfuegos', 'Pinar del Río'], postalFormat: 'XXXXX' },
+  PR: { streets: ['Av. Ashford', 'Calle Fortaleza', 'Av. Ponce de León', 'Calle San Sebastián', 'Av. Roosevelt', 'Calle Luna', 'Av. De Diego', 'Calle Cristo', 'Av. Fernández Juncos', 'Calle San Francisco'], cities: ['San Juan', 'Bayamón', 'Carolina', 'Ponce', 'Caguas', 'Guaynabo', 'Mayagüez', 'Trujillo Alto', 'Arecibo', 'Fajardo'], postalFormat: 'XXXXX' },
+  // === ЕВРОПА ===
+  ES: { streets: ['Calle Mayor', 'Av. de la Constitución', 'Calle Real', 'Paseo de Gracia', 'Gran Vía', 'Calle del Carmen', 'Av. de España', 'Calle San Juan', 'Paseo del Prado', 'Calle Nueva'], cities: ['Madrid', 'Barcelona', 'Valencia', 'Sevilla', 'Zaragoza', 'Málaga', 'Murcia', 'Palma', 'Las Palmas', 'Bilbao'], postalFormat: 'XXXXX' },
+  IT: { streets: ['Via Roma', 'Corso Italia', 'Via Garibaldi', 'Via Dante', 'Piazza del Duomo', 'Via Mazzini', 'Corso Vittorio Emanuele', 'Via Nazionale', 'Via XX Settembre', 'Via Cavour'], cities: ['Roma', 'Milano', 'Napoli', 'Torino', 'Palermo', 'Genova', 'Bologna', 'Firenze', 'Bari', 'Catania'], postalFormat: 'XXXXX' },
+  FR: { streets: ['Rue de la Paix', 'Avenue des Champs-Élysées', 'Boulevard Saint-Germain', 'Rue du Faubourg', 'Avenue Victor Hugo', 'Rue de Rivoli', 'Boulevard Haussmann', 'Rue de la République', 'Avenue de la Liberté', 'Rue Nationale'], cities: ['Paris', 'Marseille', 'Lyon', 'Toulouse', 'Nice', 'Nantes', 'Strasbourg', 'Montpellier', 'Bordeaux', 'Lille'], postalFormat: 'XXXXX' },
+  DE: { streets: ['Hauptstraße', 'Bahnhofstraße', 'Schulstraße', 'Gartenstraße', 'Dorfstraße', 'Bergstraße', 'Lindenstraße', 'Kirchstraße', 'Waldstraße', 'Ringstraße'], cities: ['Berlin', 'Hamburg', 'München', 'Köln', 'Frankfurt', 'Stuttgart', 'Düsseldorf', 'Leipzig', 'Dortmund', 'Essen'], postalFormat: 'XXXXX' },
+  GB: { streets: ['High Street', 'Church Lane', 'Station Road', 'London Road', 'Victoria Street', 'King Street', 'Queen Street', 'Park Road', 'Mill Lane', 'Green Lane'], cities: ['London', 'Birmingham', 'Manchester', 'Leeds', 'Glasgow', 'Liverpool', 'Newcastle', 'Sheffield', 'Bristol', 'Edinburgh'], postalFormat: 'AA9 9AA' },
+  PL: { streets: ['ul. Główna', 'ul. Warszawska', 'ul. Krakowska', 'ul. Lipowa', 'ul. Ogrodowa', 'ul. Polna', 'ul. Leśna', 'ul. Słoneczna', 'ul. Sportowa', 'ul. Szkolna'], cities: ['Warszawa', 'Kraków', 'Łódź', 'Wrocław', 'Poznań', 'Gdańsk', 'Szczecin', 'Bydgoszcz', 'Lublin', 'Białystok'], postalFormat: 'XX-XXX' },
+  PT: { streets: ['Rua Augusta', 'Av. da Liberdade', 'Rua do Ouro', 'Av. dos Aliados', 'Rua de Santa Catarina', 'Av. da República', 'Rua Garrett', 'Av. Fontes Pereira de Melo', 'Rua do Carmo', 'Av. Almirante Reis'], cities: ['Lisboa', 'Porto', 'Amadora', 'Braga', 'Setúbal', 'Coimbra', 'Queluz', 'Funchal', 'Cacém', 'Vila Nova de Gaia'], postalFormat: 'XXXX-XXX' },
+  NL: { streets: ['Kalverstraat', 'Damrak', 'Leidsestraat', 'Nieuwendijk', 'Rokin', 'Utrechtsestraat', 'Haarlemmerstraat', 'Vondelstraat', 'Spuistraat', 'Prinsengracht'], cities: ['Amsterdam', 'Rotterdam', 'Den Haag', 'Utrecht', 'Eindhoven', 'Tilburg', 'Groningen', 'Almere', 'Breda', 'Nijmegen'], postalFormat: 'XXXX AA' },
+  BE: { streets: ['Rue Neuve', 'Avenue Louise', 'Rue de la Loi', 'Grand Place', 'Rue Royale', 'Avenue de Tervueren', 'Rue du Midi', 'Boulevard Anspach', 'Rue des Fripiers', 'Avenue de la Toison d\'Or'], cities: ['Bruxelles', 'Antwerpen', 'Gent', 'Charleroi', 'Liège', 'Brugge', 'Namur', 'Leuven', 'Mons', 'Aalst'], postalFormat: 'XXXX' },
+  CH: { streets: ['Bahnhofstrasse', 'Rue du Rhône', 'Via Nassa', 'Marktgasse', 'Freie Strasse', 'Rue du Marché', 'Kramgasse', 'Piazza Grande', 'Spitalgasse', 'Rue de Rive'], cities: ['Zürich', 'Genève', 'Basel', 'Bern', 'Lausanne', 'Winterthur', 'Luzern', 'St. Gallen', 'Lugano', 'Biel'], postalFormat: 'XXXX' },
+  AT: { streets: ['Kärntner Straße', 'Mariahilfer Straße', 'Graben', 'Ringstraße', 'Landstraße', 'Favoritenstraße', 'Hernalser Hauptstraße', 'Taborstraße', 'Neubaugasse', 'Währinger Straße'], cities: ['Wien', 'Graz', 'Linz', 'Salzburg', 'Innsbruck', 'Klagenfurt', 'Villach', 'Wels', 'Sankt Pölten', 'Dornbirn'], postalFormat: 'XXXX' },
+  SE: { streets: ['Drottninggatan', 'Kungsgatan', 'Sveavägen', 'Hamngatan', 'Storgatan', 'Vasagatan', 'Birger Jarlsgatan', 'Götgatan', 'Odengatan', 'Hornsgatan'], cities: ['Stockholm', 'Göteborg', 'Malmö', 'Uppsala', 'Västerås', 'Örebro', 'Linköping', 'Helsingborg', 'Jönköping', 'Norrköping'], postalFormat: 'XXX XX' },
+  NO: { streets: ['Karl Johans gate', 'Torggata', 'Storgata', 'Grensen', 'Prinsens gate', 'Markveien', 'Bogstadveien', 'Majorstuen', 'Frognerveien', 'Thereses gate'], cities: ['Oslo', 'Bergen', 'Trondheim', 'Stavanger', 'Drammen', 'Fredrikstad', 'Kristiansand', 'Sandnes', 'Tromsø', 'Sarpsborg'], postalFormat: 'XXXX' },
+  DK: { streets: ['Strøget', 'Nørrebrogade', 'Vesterbrogade', 'Østerbrogade', 'Amagerbrogade', 'Frederiksberggade', 'Købmagergade', 'Gothersgade', 'Bredgade', 'Nyhavn'], cities: ['København', 'Aarhus', 'Odense', 'Aalborg', 'Frederiksberg', 'Esbjerg', 'Gentofte', 'Gladsaxe', 'Randers', 'Kolding'], postalFormat: 'XXXX' },
+  FI: { streets: ['Aleksanterinkatu', 'Mannerheimintie', 'Esplanadi', 'Hämeentie', 'Unioninkatu', 'Kaivokatu', 'Fredrikinkatu', 'Bulevardi', 'Runeberginkatu', 'Lönnrotinkatu'], cities: ['Helsinki', 'Espoo', 'Tampere', 'Vantaa', 'Oulu', 'Turku', 'Jyväskylä', 'Lahti', 'Kuopio', 'Pori'], postalFormat: 'XXXXX' },
+  CZ: { streets: ['Václavské náměstí', 'Na Příkopě', 'Národní třída', 'Karlova', 'Celetná', 'Vodičkova', 'Jindřišská', 'Spálená', 'Dlouhá', 'Pařížská'], cities: ['Praha', 'Brno', 'Ostrava', 'Plzeň', 'Liberec', 'Olomouc', 'České Budějovice', 'Hradec Králové', 'Ústí nad Labem', 'Pardubice'], postalFormat: 'XXX XX' },
+  SK: { streets: ['Obchodná', 'Štúrova', 'Mickiewiczova', 'Hlavná', 'Mlynské nivy', 'Bajkalská', 'Račianska', 'Ružinovská', 'Tomášikova', 'Vajnorská'], cities: ['Bratislava', 'Košice', 'Prešov', 'Žilina', 'Nitra', 'Banská Bystrica', 'Trnava', 'Martin', 'Trenčín', 'Poprad'], postalFormat: 'XXX XX' },
+  HU: { streets: ['Váci utca', 'Andrássy út', 'Rákóczi út', 'Nagykörút', 'Kossuth Lajos utca', 'Bajcsy-Zsilinszky út', 'Üllői út', 'Múzeum körút', 'Teréz körút', 'Erzsébet körút'], cities: ['Budapest', 'Debrecen', 'Szeged', 'Miskolc', 'Pécs', 'Győr', 'Nyíregyháza', 'Kecskemét', 'Székesfehérvár', 'Szombathely'], postalFormat: 'XXXX' },
+  RO: { streets: ['Calea Victoriei', 'Bulevardul Magheru', 'Strada Lipscani', 'Bulevardul Unirii', 'Calea Dorobanților', 'Șoseaua Kiseleff', 'Bulevardul Dacia', 'Strada Ion Câmpineanu', 'Calea Moșilor', 'Bulevardul Carol I'], cities: ['București', 'Cluj-Napoca', 'Timișoara', 'Iași', 'Constanța', 'Craiova', 'Brașov', 'Galați', 'Ploiești', 'Oradea'], postalFormat: 'XXXXXX' },
+  BG: { streets: ['бул. Витоша', 'ул. Граф Игнатиев', 'бул. Цар Освободител', 'ул. Славянска', 'бул. Мария Луиза', 'ул. Раковски', 'бул. Васил Левски', 'ул. Цар Шишман', 'бул. Евлоги Георгиев', 'ул. Пиротска'], cities: ['София', 'Пловдив', 'Варна', 'Бургас', 'Русе', 'Стара Загора', 'Плевен', 'Сливен', 'Добрич', 'Шумен'], postalFormat: 'XXXX' },
+  GR: { streets: ['Ερμού', 'Σταδίου', 'Πανεπιστημίου', 'Ακαδημίας', 'Αθηνάς', 'Πατησίων', 'Βασιλίσσης Σοφίας', 'Αλεξάνδρας', 'Συγγρού', 'Κηφισίας'], cities: ['Αθήνα', 'Θεσσαλονίκη', 'Πάτρα', 'Ηράκλειο', 'Λάρισα', 'Βόλος', 'Ιωάννινα', 'Τρίκαλα', 'Χαλκίδα', 'Σέρρες'], postalFormat: 'XXX XX' },
+  HR: { streets: ['Ilica', 'Ulica bana Jelačića', 'Maksimirska cesta', 'Vlaška ulica', 'Savska cesta', 'Vukovarska ulica', 'Heinzelova ulica', 'Ozaljska ulica', 'Ilirski trg', 'Draškovićeva ulica'], cities: ['Zagreb', 'Split', 'Rijeka', 'Osijek', 'Zadar', 'Pula', 'Slavonski Brod', 'Karlovac', 'Varaždin', 'Šibenik'], postalFormat: 'XXXXX' },
+  RS: { streets: ['Knez Mihailova', 'Terazije', 'Balkanska ulica', 'Makedonska ulica', 'Bulevar kralja Aleksandra', 'Nemanjina ulica', 'Resavska ulica', 'Krunska ulica', 'Takovska ulica', 'Cara Dušana'], cities: ['Beograd', 'Novi Sad', 'Niš', 'Kragujevac', 'Subotica', 'Zrenjanin', 'Pančevo', 'Čačak', 'Kraljevo', 'Novi Pazar'], postalFormat: 'XXXXX' },
+  SI: { streets: ['Čopova ulica', 'Prešernov trg', 'Slovenska cesta', 'Dunajska cesta', 'Trubarjeva cesta', 'Celovška cesta', 'Šmartinska cesta', 'Tržaška cesta', 'Litijska cesta', 'Barjanska cesta'], cities: ['Ljubljana', 'Maribor', 'Celje', 'Kranj', 'Velenje', 'Koper', 'Novo Mesto', 'Ptuj', 'Trbovlje', 'Kamnik'], postalFormat: 'XXXX' },
+  BA: { streets: ['Ferhadija', 'Maršala Tita', 'Zmaja od Bosne', 'Titova ulica', 'Obala Kulina bana', 'Mula Mustafe Bašeskije', 'Branilaca Sarajeva', 'Hamdije Kreševljakovića', 'Skenderija', 'Čobanija'], cities: ['Sarajevo', 'Banja Luka', 'Tuzla', 'Zenica', 'Mostar', 'Bijeljina', 'Brčko', 'Bihać', 'Prijedor', 'Trebinje'], postalFormat: 'XXXXX' },
+  MK: { streets: ['Македонија', 'Илинденска', 'Партизанска', 'Скопска', 'Гоце Делчев', 'Климент Охридски', 'Борис Трајковски', 'Васил Ѓоргов', 'Кузман Јосифовски', 'Димитрие Чуповски'], cities: ['Скопје', 'Битола', 'Куманово', 'Прилеп', 'Тетово', 'Велес', 'Охрид', 'Гостивар', 'Штип', 'Струмица'], postalFormat: 'XXXX' },
+  AL: { streets: ['Rruga e Durrësit', 'Bulevardi Zogu I', 'Rruga Myslym Shyri', 'Bulevardi Dëshmorët e Kombit', 'Rruga e Kavajës', 'Bulevardi Bajram Curri', 'Rruga e Elbasanit', 'Bulevardi Zhan d\'Ark', 'Rruga Sami Frashëri', 'Bulevardi Gjergj Fishta'], cities: ['Tiranë', 'Durrës', 'Vlorë', 'Elbasan', 'Shkodër', 'Fier', 'Korçë', 'Berat', 'Lushnjë', 'Pogradec'], postalFormat: 'XXXX' },
+  IE: { streets: ['O\'Connell Street', 'Grafton Street', 'Dame Street', 'Henry Street', 'Nassau Street', 'Dawson Street', 'Baggot Street', 'Pearse Street', 'Talbot Street', 'Abbey Street'], cities: ['Dublin', 'Cork', 'Limerick', 'Galway', 'Waterford', 'Drogheda', 'Dundalk', 'Bray', 'Navan', 'Kilkenny'], postalFormat: 'A9X X9XX' },
+  LT: { streets: ['Gedimino prospektas', 'Pilies gatvė', 'Didžioji gatvė', 'Vilniaus gatvė', 'Vokiečių gatvė', 'Šv. Jono gatvė', 'Universiteto gatvė', 'Maironio gatvė', 'Aušros Vartų gatvė', 'Bokšto gatvė'], cities: ['Vilnius', 'Kaunas', 'Klaipėda', 'Šiauliai', 'Panevėžys', 'Alytus', 'Marijampolė', 'Mažeikiai', 'Jonava', 'Utena'], postalFormat: 'LT-XXXXX' },
+  LV: { streets: ['Brīvības iela', 'Kaļķu iela', 'Vaļņu iela', 'Elizabetes iela', 'Čaka iela', 'Blaumaņa iela', 'Tērbatas iela', 'Dzirnavu iela', 'Barona iela', 'Stabu iela'], cities: ['Rīga', 'Daugavpils', 'Liepāja', 'Jelgava', 'Jūrmala', 'Ventspils', 'Rēzekne', 'Valmiera', 'Jēkabpils', 'Ogre'], postalFormat: 'LV-XXXX' },
+  EE: { streets: ['Viru tänav', 'Pärnu maantee', 'Narva maantee', 'Tartu maantee', 'Liivalaia tänav', 'Gonsiori tänav', 'Endla tänav', 'Toompuiestee', 'Paldiski maantee', 'Peterburi tee'], cities: ['Tallinn', 'Tartu', 'Narva', 'Pärnu', 'Kohtla-Järve', 'Viljandi', 'Maardu', 'Rakvere', 'Sillamäe', 'Kuressaare'], postalFormat: 'XXXXX' },
+  BY: { streets: ['проспект Независимости', 'улица Ленина', 'улица Немига', 'улица Карла Маркса', 'проспект Победителей', 'улица Интернациональная', 'улица Советская', 'улица Комсомольская', 'проспект Машерова', 'улица Кирова'], cities: ['Минск', 'Гомель', 'Могилёв', 'Витебск', 'Гродно', 'Брест', 'Бобруйск', 'Барановичи', 'Борисов', 'Пинск'], postalFormat: 'XXXXXX' },
+  IS: { streets: ['Laugavegur', 'Skólavörðustígur', 'Bankastræti', 'Austurstræti', 'Hverfisgata', 'Frakkastígur', 'Bergstaðastræti', 'Grettisgata', 'Njálsgata', 'Barónsstígur'], cities: ['Reykjavík', 'Kópavogur', 'Hafnarfjörður', 'Akureyri', 'Reykjanesbær', 'Garðabær', 'Mosfellsbær', 'Akranes', 'Selfoss', 'Seltjarnarnes'], postalFormat: 'XXX' },
+  // === СНГ И ЦЕНТРАЛЬНАЯ АЗИЯ ===
+  RU: { streets: ['ул. Ленина', 'ул. Пушкина', 'ул. Гагарина', 'просп. Мира', 'ул. Советская', 'ул. Кирова', 'ул. Победы', 'ул. Московская', 'ул. Садовая', 'ул. Октябрьская'], cities: ['Москва', 'Санкт-Петербург', 'Новосибирск', 'Екатеринбург', 'Казань', 'Нижний Новгород', 'Челябинск', 'Самара', 'Омск', 'Ростов-на-Дону'], postalFormat: 'XXXXXX' },
+  KZ: { streets: ['проспект Республики', 'улица Абая', 'проспект Назарбаева', 'улица Толе би', 'улица Сатпаева', 'проспект Достык', 'улица Жибек жолы', 'проспект Аль-Фараби', 'улица Кунаева', 'проспект Тауелсиздик'], cities: ['Алматы', 'Астана', 'Шымкент', 'Караганда', 'Актобе', 'Тараз', 'Павлодар', 'Усть-Каменогорск', 'Семей', 'Атырау'], postalFormat: 'XXXXXX' },
+  UZ: { streets: ['улица Навои', 'проспект Амира Темура', 'улица Бухоро', 'проспект Мустакиллик', 'улица Шота Руставели', 'улица Ислама Каримова', 'проспект Узбекистанский', 'улица Нукус', 'улица Тараса Шевченко', 'улица Беруни'], cities: ['Ташкент', 'Самарканд', 'Наманган', 'Андижан', 'Нукус', 'Бухара', 'Карши', 'Фергана', 'Коканд', 'Маргилан'], postalFormat: 'XXXXXX' },
+  TM: { streets: ['проспект Туркменбаши', 'улица Атамурата Ниязова', 'проспект Махтумкули', 'улица Гёроглы', 'проспект Битарап Туркменистан', 'улица Сейди', 'улица Азади', 'проспект Гурбансолтан эдже', 'улица Огузхан', 'улица Кемине'], cities: ['Ашхабад', 'Туркменабат', 'Дашогуз', 'Мары', 'Балканабад', 'Байрамали', 'Туркменбашы', 'Теджен', 'Абадан', 'Атамурат'], postalFormat: 'XXXXXX' },
+  TJ: { streets: ['проспект Рудаки', 'улица Айни', 'проспект Исмоили Сомони', 'улица Мирзо Турсунзода', 'улица Шотемур', 'проспект Сино', 'улица Негмат Карабаев', 'улица Лохути', 'улица Назаршоев', 'улица Борбад'], cities: ['Душанбе', 'Худжанд', 'Бохтар', 'Куляб', 'Истаравшан', 'Турсунзаде', 'Исфара', 'Канибадам', 'Пенджикент', 'Вахдат'], postalFormat: 'XXXXXX' },
+  KG: { streets: ['проспект Чуй', 'улица Киевская', 'улица Московская', 'проспект Манаса', 'улица Токтогула', 'улица Абдрахманова', 'улица Боконбаева', 'улица Исанова', 'проспект Жибек Жолу', 'улица Ибраимова'], cities: ['Бишкек', 'Ош', 'Джалал-Абад', 'Каракол', 'Токмок', 'Узген', 'Балыкчы', 'Нарын', 'Талас', 'Кара-Балта'], postalFormat: 'XXXXXX' },
+  AM: { streets: ['проспект Маштоца', 'улица Абовяна', 'проспект Тиграна Меца', 'улица Туманяна', 'проспект Саят-Новы', 'улица Пушкина', 'улица Московян', 'улица Арама', 'проспект Баграмяна', 'улица Налбандяна'], cities: ['Ереван', 'Гюмри', 'Ванадзор', 'Вагаршапат', 'Абовян', 'Капан', 'Раздан', 'Армавир', 'Чаренцаван', 'Гавар'], postalFormat: 'XXXX' },
+  GE: { streets: ['проспект Руставели', 'улица Пекина', 'улица Марджанишвили', 'проспект Агмашенебели', 'улица Костава', 'улица Чавчавадзе', 'улица Церетели', 'улица Кетеван Цамебули', 'улица Важа-Пшавела', 'улица Казбеги'], cities: ['Тбилиси', 'Батуми', 'Кутаиси', 'Рустави', 'Зугдиди', 'Гори', 'Поти', 'Самтредиа', 'Хашури', 'Сенаки'], postalFormat: 'XXXX' },
+  AZ: { streets: ['проспект Азадлыг', 'улица Низами', 'проспект Нефтчиляр', 'улица Истиглалият', 'улица Самеда Вургуна', 'проспект Гейдара Алиева', 'улица Узеира Гаджибекова', 'улица Рашида Бейбутова', 'улица Физули', 'улица 28 Мая'], cities: ['Баку', 'Гянджа', 'Сумгаит', 'Мингечевир', 'Хырдалан', 'Ширван', 'Нахчыван', 'Шеки', 'Евлах', 'Ленкорань'], postalFormat: 'AZXXXX' },
+  MD: { streets: ['бульвар Штефан чел Маре', 'улица Пушкина', 'улица Бэнулеску-Бодони', 'улица Колумна', 'улица Когэлничану', 'улица Букурешть', 'улица Митрополит Варлаам', 'улица Влайку Пыркэлаб', 'улица Чуфля', 'улица Армянская'], cities: ['Кишинёв', 'Бельцы', 'Тирасполь', 'Бендеры', 'Рыбница', 'Кагул', 'Унгены', 'Сорока', 'Орхей', 'Комрат'], postalFormat: 'MD-XXXX' },
+  // === АЗИЯ ===
+  JP: { streets: ['本町', '中央通り', '駅前通り', '桜通り', '大通り', '栄町', '緑町', '新町', '旭町', '東町'], cities: ['東京', '横浜', '大阪', '名古屋', '札幌', '福岡', '神戸', '川崎', '京都', '埼玉'], postalFormat: 'XXX-XXXX' },
+  CN: { streets: ['人民路', '中山路', '解放路', '建设路', '和平路', '长江路', '黄河路', '东风路', '胜利路', '新华路'], cities: ['北京', '上海', '广州', '深圳', '成都', '杭州', '武汉', '西安', '南京', '重庆'], postalFormat: 'XXXXXX' },
+  KR: { streets: ['대로', '중앙로', '역전로', '시장로', '공원로', '학교로', '문화로', '산업로', '해변로', '강변로'], cities: ['서울', '부산', '인천', '대구', '대전', '광주', '울산', '수원', '창원', '고양'], postalFormat: 'XXXXX' },
+  IN: { streets: ['MG Road', 'Gandhi Nagar', 'Nehru Street', 'Station Road', 'Main Road', 'Market Road', 'Temple Street', 'Park Avenue', 'Lake View Road', 'Hill Road'], cities: ['Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai', 'Kolkata', 'Ahmedabad', 'Pune', 'Surat', 'Jaipur'], postalFormat: 'XXXXXX' },
+  TH: { streets: ['ถนนสุขุมวิท', 'ถนนพระราม 1', 'ถนนสีลม', 'ถนนรัชดาภิเษก', 'ถนนพหลโยธิน', 'ถนนวิภาวดี', 'ถนนลาดพร้าว', 'ถนนรามคำแหง', 'ถนนเพชรบุรี', 'ถนนสาทร'], cities: ['กรุงเทพ', 'เชียงใหม่', 'ภูเก็ต', 'พัทยา', 'หาดใหญ่', 'นครราชสีมา', 'ขอนแก่น', 'อุดรธานี', 'เชียงราย', 'สุราษฎร์ธานี'], postalFormat: 'XXXXX' },
+  ID: { streets: ['Jalan Sudirman', 'Jalan Thamrin', 'Jalan Gatot Subroto', 'Jalan Asia Afrika', 'Jalan Diponegoro', 'Jalan Ahmad Yani', 'Jalan Merdeka', 'Jalan Pahlawan', 'Jalan Raya', 'Jalan Veteran'], cities: ['Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Semarang', 'Makassar', 'Palembang', 'Tangerang', 'Depok', 'Bekasi'], postalFormat: 'XXXXX' },
+  PH: { streets: ['Ayala Avenue', 'EDSA', 'Roxas Boulevard', 'Ortigas Avenue', 'Quezon Avenue', 'España Boulevard', 'Taft Avenue', 'Shaw Boulevard', 'Aurora Boulevard', 'Makati Avenue'], cities: ['Manila', 'Quezon City', 'Caloocan', 'Davao City', 'Cebu City', 'Zamboanga City', 'Taguig', 'Pasig', 'Antipolo', 'Cagayan de Oro'], postalFormat: 'XXXX' },
+  VN: { streets: ['Đường Nguyễn Huệ', 'Đường Lê Lợi', 'Đường Đồng Khởi', 'Đường Trần Hưng Đạo', 'Đường Hai Bà Trưng', 'Đường Lý Tự Trọng', 'Đường Nam Kỳ Khởi Nghĩa', 'Đường Pasteur', 'Đường Cách Mạng Tháng 8', 'Đường Võ Văn Tần'], cities: ['Hồ Chí Minh', 'Hà Nội', 'Đà Nẵng', 'Hải Phòng', 'Cần Thơ', 'Biên Hòa', 'Nha Trang', 'Huế', 'Buôn Ma Thuột', 'Thủ Đức'], postalFormat: 'XXXXXX' },
+  MY: { streets: ['Jalan Bukit Bintang', 'Jalan Sultan Ismail', 'Jalan Ampang', 'Jalan Tun Razak', 'Jalan Raja Chulan', 'Jalan Imbi', 'Jalan Pudu', 'Jalan Tuanku Abdul Rahman', 'Jalan Petaling', 'Jalan Masjid India'], cities: ['Kuala Lumpur', 'George Town', 'Ipoh', 'Shah Alam', 'Petaling Jaya', 'Johor Bahru', 'Melaka', 'Kota Kinabalu', 'Kuching', 'Seremban'], postalFormat: 'XXXXX' },
+  SG: { streets: ['Orchard Road', 'Raffles Place', 'Marina Boulevard', 'Shenton Way', 'Robinson Road', 'Cecil Street', 'Anson Road', 'Tanjong Pagar Road', 'Scotts Road', 'Bukit Timah Road'], cities: ['Singapore'], postalFormat: 'XXXXXX' },
+  PK: { streets: ['Mall Road', 'Shahrah-e-Faisal', 'II Chundrigar Road', 'Jinnah Avenue', 'Constitution Avenue', 'University Road', 'Ferozpur Road', 'GT Road', 'Murree Road', 'Kashmir Road'], cities: ['Karachi', 'Lahore', 'Faisalabad', 'Rawalpindi', 'Gujranwala', 'Peshawar', 'Multan', 'Hyderabad', 'Islamabad', 'Quetta'], postalFormat: 'XXXXX' },
+  BD: { streets: ['Gulshan Avenue', 'Mirpur Road', 'Dhanmondi Road', 'Banani Road', 'Mohakhali Road', 'Uttara Road', 'Tejgaon Road', 'Motijheel Road', 'Elephant Road', 'New Eskaton Road'], cities: ['Dhaka', 'Chittagong', 'Khulna', 'Rajshahi', 'Sylhet', 'Rangpur', 'Comilla', 'Gazipur', 'Narayanganj', 'Mymensingh'], postalFormat: 'XXXX' },
+  // === БЛИЖНИЙ ВОСТОК ===
+  TR: { streets: ['Atatürk Caddesi', 'Cumhuriyet Caddesi', 'İstiklal Caddesi', 'Gazi Caddesi', 'Fevzi Çakmak Caddesi', 'Fatih Caddesi', 'Mimar Sinan Caddesi', 'Barbaros Caddesi', 'Hürriyet Caddesi', 'Zafer Caddesi'], cities: ['İstanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya', 'Adana', 'Konya', 'Gaziantep', 'Mersin', 'Diyarbakır'], postalFormat: 'XXXXX' },
+  SA: { streets: ['King Fahd Road', 'Olaya Street', 'Tahlia Street', 'Prince Mohammed bin Abdulaziz', 'King Abdullah Road', 'Prince Sultan Road', 'Al Madinah Road', 'Palestine Street', 'Makkah Road', 'Al Imam Road'], cities: ['Riyadh', 'Jeddah', 'Makkah', 'Madinah', 'Dammam', 'Khobar', 'Taif', 'Tabuk', 'Buraidah', 'Khamis Mushait'], postalFormat: 'XXXXX' },
+  AE: { streets: ['Sheikh Zayed Road', 'Jumeirah Beach Road', 'Al Maktoum Road', 'Al Wasl Road', 'Al Khail Road', 'Emirates Road', 'Corniche Road', 'Hamdan Street', 'Tourist Club Area', 'Defence Road'], cities: ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah', 'Fujairah', 'Umm Al Quwain', 'Al Ain', 'Khor Fakkan', 'Kalba'], postalFormat: 'XXXXX' },
+  EG: { streets: ['شارع التحرير', 'شارع طلعت حرب', 'شارع قصر النيل', 'كورنيش النيل', 'شارع الهرم', 'شارع فيصل', 'شارع جامعة الدول العربية', 'شارع 26 يوليو', 'شارع الجيزة', 'شارع صلاح سالم'], cities: ['القاهرة', 'الإسكندرية', 'الجيزة', 'شبرا الخيمة', 'بورسعيد', 'السويس', 'الأقصر', 'أسوان', 'المنصورة', 'طنطا'], postalFormat: 'XXXXX' },
+  IL: { streets: ['Rothschild Boulevard', 'Dizengoff Street', 'Allenby Street', 'Ibn Gabirol Street', 'Ben Yehuda Street', 'King George Street', 'Jaffa Road', 'Herzl Boulevard', 'Weizmann Street', 'Begin Road'], cities: ['Tel Aviv', 'Jerusalem', 'Haifa', 'Rishon LeZion', 'Petah Tikva', 'Ashdod', 'Netanya', 'Beersheba', 'Bnei Brak', 'Holon'], postalFormat: 'XXXXXXX' },
+  IR: { streets: ['خیابان انقلاب', 'خیابان ولیعصر', 'خیابان آزادی', 'خیابان شریعتی', 'خیابان کریمخان', 'خیابان طالقانی', 'خیابان فردوسی', 'خیابان حافظ', 'خیابان مطهری', 'خیابان سعادت آباد'], cities: ['تهران', 'مشهد', 'اصفهان', 'کرج', 'شیراز', 'تبریز', 'قم', 'اهواز', 'کرمانشاه', 'ارومیه'], postalFormat: 'XXXXXXXXXX' },
+  IQ: { streets: ['شارع الرشيد', 'شارع السعدون', 'شارع فلسطين', 'شارع 14 رمضان', 'شارع الكرادة', 'شارع الجامعة', 'شارع المنصور', 'شارع الكاظمية', 'شارع بغداد', 'شارع الموصل'], cities: ['بغداد', 'البصرة', 'الموصل', 'أربيل', 'النجف', 'كربلاء', 'السليمانية', 'كركوك', 'الحلة', 'الناصرية'], postalFormat: 'XXXXX' },
+  JO: { streets: ['شارع الرينبو', 'شارع المدينة', 'شارع عبدالله غوشة', 'شارع الجامعة', 'شارع وصفي التل', 'شارع الملكة رانيا', 'شارع الملك عبدالله', 'شارع المطار', 'شارع الاستقلال', 'شارع زهران'], cities: ['عمان', 'الزرقاء', 'إربد', 'الرصيفة', 'العقبة', 'السلط', 'المفرق', 'جرش', 'معان', 'الطفيلة'], postalFormat: 'XXXXX' },
+  LB: { streets: ['شارع الحمرا', 'شارع بلس', 'شارع فردان', 'شارع جميزة', 'شارع مار الياس', 'كورنيش المزرعة', 'شارع بربور', 'شارع الأشرفية', 'شارع سليم سلام', 'شارع وردية'], cities: ['بيروت', 'طرابلس', 'صيدا', 'صور', 'جونيه', 'زحلة', 'بعلبك', 'النبطية', 'عاليه', 'جبيل'], postalFormat: 'XXXX XXXX' },
+  KW: { streets: ['شارع الخليج العربي', 'شارع فهد السالم', 'شارع السور', 'شارع الشهداء', 'شارع عبدالله المبارك', 'شارع جابر المبارك', 'شارع الغزالي', 'شارع أحمد الجابر', 'شارع مبارك الكبير', 'شارع محمد بن قاسم'], cities: ['الكويت', 'الجهراء', 'الأحمدي', 'حولي', 'الفروانية', 'مبارك الكبير', 'السالمية', 'الفحيحيل', 'الرقعي', 'صباح السالم'], postalFormat: 'XXXXX' },
+  QA: { streets: ['Corniche Street', 'Al Sadd Street', 'Al Mirqab Street', 'Musheireb Street', 'Grand Hamad Street', 'Al Rayyan Road', 'Salwa Road', 'Al Wakra Road', 'Industrial Area Street', 'C Ring Road'], cities: ['Doha', 'Al Rayyan', 'Al Wakrah', 'Al Khor', 'Umm Salal', 'Al Daayen', 'Mesaieed', 'Madinat ash Shamal', 'Al Sheehaniya', 'Dukhan'], postalFormat: 'XXXXX' },
+  // === АФРИКА ===
+  ZA: { streets: ['Long Street', 'Adderley Street', 'St George\'s Mall', 'Kloof Street', 'Loop Street', 'Bree Street', 'Wale Street', 'Church Street', 'Commissioner Street', 'Fox Street'], cities: ['Johannesburg', 'Cape Town', 'Durban', 'Pretoria', 'Port Elizabeth', 'Bloemfontein', 'East London', 'Pietermaritzburg', 'Kimberley', 'Polokwane'], postalFormat: 'XXXX' },
+  NG: { streets: ['Broad Street', 'Marina Road', 'Victoria Island', 'Ikoyi Road', 'Allen Avenue', 'Adeola Odeku', 'Awolowo Road', 'Herbert Macaulay', 'Opebi Road', 'Toyin Street'], cities: ['Lagos', 'Kano', 'Ibadan', 'Abuja', 'Port Harcourt', 'Benin City', 'Maiduguri', 'Zaria', 'Aba', 'Jos'], postalFormat: 'XXXXXX' },
+  KE: { streets: ['Kenyatta Avenue', 'Moi Avenue', 'Kimathi Street', 'Haile Selassie Avenue', 'Uhuru Highway', 'Mama Ngina Street', 'Tom Mboya Street', 'River Road', 'Muindi Mbingu Street', 'Standard Street'], cities: ['Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Thika', 'Malindi', 'Kitale', 'Garissa', 'Nyeri'], postalFormat: 'XXXXX' },
+  MA: { streets: ['Avenue Mohammed V', 'Boulevard Hassan II', 'Rue de Paris', 'Avenue des FAR', 'Boulevard Anfa', 'Rue Allal Ben Abdellah', 'Avenue Moulay Rachid', 'Boulevard Zerktouni', 'Rue Tarik Ibn Ziad', 'Avenue Al Massira'], cities: ['Casablanca', 'Rabat', 'Fès', 'Marrakech', 'Agadir', 'Tanger', 'Meknès', 'Oujda', 'Kenitra', 'Tétouan'], postalFormat: 'XXXXX' },
+  DZ: { streets: ['شارع ديدوش مراد', 'شارع العربي بن مهيدي', 'شارع الأمير عبد القادر', 'شارع كريم بلقاسم', 'شارع مصطفى بن بولعيد', 'شارع باب عزون', 'شارع الجزائر', 'شارع باتنة', 'شارع قسنطينة', 'شارع وهران'], cities: ['الجزائر', 'وهران', 'قسنطينة', 'عنابة', 'باتنة', 'البليدة', 'سطيف', 'الشلف', 'بسكرة', 'تلمسان'], postalFormat: 'XXXXX' },
+  TN: { streets: ['شارع الحبيب بورقيبة', 'شارع محمد الخامس', 'شارع فرنسا', 'شارع الجمهورية', 'شارع القاهرة', 'شارع باريس', 'شارع 7 نوفمبر', 'شارع الحرية', 'شارع الاستقلال', 'شارع قرطاج'], cities: ['تونس', 'صفاقس', 'سوسة', 'القيروان', 'بنزرت', 'قابس', 'أريانة', 'القصرين', 'المنستير', 'نابل'], postalFormat: 'XXXX' },
+  GH: { streets: ['Oxford Street', 'High Street', 'Independence Avenue', 'Liberation Road', 'Ring Road', 'Achimota Road', 'Spintex Road', 'Kwame Nkrumah Avenue', 'Castle Road', 'Barnes Road'], cities: ['Accra', 'Kumasi', 'Tamale', 'Takoradi', 'Ashaiman', 'Tema', 'Cape Coast', 'Obuasi', 'Teshie', 'Madina'], postalFormat: 'XXXXXXXX' },
+  // === СЕВЕРНАЯ АМЕРИКА ===
+  US: { streets: ['Main Street', 'Oak Avenue', 'Maple Drive', 'Washington Boulevard', 'Park Avenue', 'Broadway', 'Elm Street', 'Cedar Lane', 'Pine Road', 'Lake Street'], cities: ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia', 'San Antonio', 'San Diego', 'Dallas', 'San Jose'], regions: ['NY', 'CA', 'TX', 'FL', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI'], postalFormat: 'XXXXX' },
+  CA: { streets: ['Main Street', 'King Street', 'Queen Street', 'Yonge Street', 'Bloor Street', 'Bay Street', 'Dundas Street', 'College Street', 'Church Street', 'Parliament Street'], cities: ['Toronto', 'Montreal', 'Vancouver', 'Calgary', 'Edmonton', 'Ottawa', 'Winnipeg', 'Quebec City', 'Hamilton', 'Kitchener'], regions: ['ON', 'QC', 'BC', 'AB', 'MB', 'SK', 'NS', 'NB', 'NL', 'PE'], postalFormat: 'A9A 9A9' },
+  // === ОКЕАНИЯ ===
+  AU: { streets: ['George Street', 'King Street', 'Queen Street', 'Elizabeth Street', 'William Street', 'Collins Street', 'Flinders Street', 'Bourke Street', 'Pitt Street', 'Oxford Street'], cities: ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Canberra', 'Newcastle', 'Wollongong', 'Sunshine Coast'], postalFormat: 'XXXX' },
+  NZ: { streets: ['Queen Street', 'Lambton Quay', 'Colombo Street', 'George Street', 'Cashel Street', 'Victoria Street', 'Cuba Street', 'Manners Street', 'Willis Street', 'Courtenay Place'], cities: ['Auckland', 'Wellington', 'Christchurch', 'Hamilton', 'Tauranga', 'Napier-Hastings', 'Dunedin', 'Palmerston North', 'Nelson', 'Rotorua'], postalFormat: 'XXXX' },
+  FJ: { streets: ['Victoria Parade', 'Cumming Street', 'Thomson Street', 'Renwick Road', 'Waimanu Road', 'Grantham Road', 'Edinburgh Drive', 'Rodwell Road', 'Ellery Street', 'Loftus Street'], cities: ['Suva', 'Lautoka', 'Nadi', 'Labasa', 'Ba', 'Levuka', 'Savusavu', 'Sigatoka', 'Nausori', 'Rakiraki'], postalFormat: 'XXXXX' },
+};
+
+// Fallback для стран без специфичных адресов
+const ADDRESS_FALLBACK: Record<string, string> = {
+  // Латинская Америка - используем ES (испанский формат)
+  VE: 'ES', UY: 'ES', PY: 'ES', BO: 'ES', CR: 'ES', PA: 'ES', GT: 'ES', HN: 'ES', SV: 'ES', NI: 'ES', DO: 'ES', CU: 'ES', PR: 'ES',
+  // Португалоязычные - BR
+  AO: 'BR', MZ: 'BR', CV: 'BR', ST: 'BR',
+  // Англоязычные - GB/US
+  JM: 'US', TT: 'US', BB: 'US', BS: 'US', GY: 'US', BZ: 'US', LR: 'US', SL: 'US', GM: 'US', GH: 'GB',
+  // Франкоязычные - FR
+  SN: 'FR', CI: 'FR', CM: 'FR', CG: 'FR', CD: 'FR', GA: 'FR', BJ: 'FR', TG: 'FR', BF: 'FR', NE: 'FR', ML: 'FR', GN: 'FR', MG: 'FR', RW: 'FR', BI: 'FR', DJ: 'FR', KM: 'FR', MU: 'FR', SC: 'FR', LU: 'FR', MC: 'FR',
+  // Арабоязычные - EG
+  LY: 'EG', SD: 'EG', SO: 'EG', MR: 'EG', YE: 'EG', SY: 'EG', PS: 'EG', BH: 'EG', OM: 'EG',
+  // Восточная Азия
+  TW: 'CN', HK: 'CN', MO: 'CN', MN: 'RU',
+  // ЮВА
+  MM: 'TH', KH: 'TH', LA: 'TH', BN: 'MY', TL: 'ID',
+  // Южная Азия
+  LK: 'IN', NP: 'IN', BT: 'IN', MV: 'IN', AF: 'PK',
+  // Африка
+  ET: 'KE', TZ: 'KE', UG: 'KE', ZM: 'ZA', ZW: 'ZA', BW: 'ZA', NA: 'ZA', LS: 'ZA', SZ: 'ZA', MW: 'KE', ER: 'EG', SS: 'EG',
+  // Европа
+  AD: 'ES', LI: 'CH', SM: 'IT', VA: 'IT', MT: 'IT', CY: 'GR', ME: 'RS',
+};
 
 // База данных имён по странам и полу
 const NAMES_DATABASE: Record<string, { male: { first: string[], last: string[] }, female: { first: string[], last: string[] } }> = {
@@ -788,6 +1017,57 @@ function DataGenerator() {
     return random(formats);
   }, []);
 
+  const generateAddress = useCallback((countryCode: string): string => {
+    // Получаем данные для страны, с fallback на похожую страну или US
+    let addressData = ADDRESS_DATABASE[countryCode];
+    let effectiveCountry = countryCode;
+    
+    if (!addressData) {
+      const fallbackCode = ADDRESS_FALLBACK[countryCode];
+      if (fallbackCode && ADDRESS_DATABASE[fallbackCode]) {
+        addressData = ADDRESS_DATABASE[fallbackCode];
+        effectiveCountry = fallbackCode;
+      } else {
+        addressData = ADDRESS_DATABASE['US'];
+        effectiveCountry = 'US';
+      }
+    }
+    
+    if (!addressData) return '123 Main Street, New York, NY 10001';
+    
+    const street = random(addressData.streets);
+    const city = random(addressData.cities);
+    const houseNum = Math.floor(Math.random() * 999) + 1;
+    
+    // Генерируем почтовый индекс по формату
+    let postal = addressData.postalFormat;
+    for (let i = 0; i < postal.length; i++) {
+      if (postal[i] === 'X') {
+        postal = postal.slice(0, i) + Math.floor(Math.random() * 10) + postal.slice(i + 1);
+      } else if (postal[i] === 'A') {
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        postal = postal.slice(0, i) + letters[Math.floor(Math.random() * letters.length)] + postal.slice(i + 1);
+      }
+    }
+    
+    // Определяем регион для форматирования
+    const cis = ['RU', 'KZ', 'BY', 'UZ', 'TM', 'TJ', 'KG', 'AM', 'GE', 'AZ', 'MD'];
+    const eastAsia = ['JP', 'CN', 'KR', 'TW', 'HK', 'MO'];
+    const angloFormat = ['US', 'CA', 'AU', 'GB', 'NZ', 'IE', 'ZA'];
+    
+    // Формат адреса зависит от страны
+    if (angloFormat.includes(effectiveCountry)) {
+      const region = addressData.regions ? `, ${random(addressData.regions)}` : '';
+      return `${houseNum} ${street}, ${city}${region} ${postal}`;
+    } else if (cis.includes(effectiveCountry)) {
+      return `${city}, ${street}, д. ${houseNum}, ${postal}`;
+    } else if (eastAsia.includes(effectiveCountry)) {
+      return `${postal} ${city} ${street} ${houseNum}`;
+    } else {
+      return `${street} ${houseNum}, ${city}, ${postal}`;
+    }
+  }, []);
+
   const generate = useCallback(() => {
     const items: GeneratedItem[] = [];
     
@@ -804,6 +1084,9 @@ function DataGenerator() {
         case 'email':
           value = generateEmail(country, gender);
           break;
+        case 'address':
+          value = generateAddress(country);
+          break;
       }
       
       items.push({
@@ -815,7 +1098,7 @@ function DataGenerator() {
     }
     
     setGenerated(items);
-  }, [country, dataType, gender, count, generateName, generatePhone, generateEmail]);
+  }, [country, dataType, gender, count, generateName, generatePhone, generateEmail, generateAddress]);
 
   const copyToClipboard = useCallback(async (id: string, value: string) => {
     try {
@@ -847,6 +1130,14 @@ function DataGenerator() {
   }, [generated]);
 
   const currentCountry = COUNTRIES.find(c => c.code === country);
+  
+  // Информация о выбранной стране
+  const countryInfo = useMemo(() => {
+    return COUNTRY_INFO[country] || { 
+      languages: ['—'], 
+      currency: { code: '—', name: '—', symbol: '' } 
+    };
+  }, [country]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -869,7 +1160,7 @@ function DataGenerator() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-dark-100">Генератор данных</h1>
-          <p className="text-sm text-dark-400">Создание случайных имён, телефонов и email для разных гео</p>
+          <p className="text-sm text-dark-400">Создание случайных имён, телефонов, email и адресов для разных гео</p>
         </div>
       </div>
 
@@ -901,39 +1192,50 @@ function DataGenerator() {
             <label className="block text-sm font-medium text-dark-300 mb-2">
               Тип данных
             </label>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <button
                 onClick={() => setDataType('name')}
-                className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                className={`flex-1 min-w-[70px] px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap ${
                   dataType === 'name'
                     ? 'bg-primary-500 text-white'
                     : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
                 }`}
               >
                 <UserCircle className="w-4 h-4 flex-shrink-0" />
-                <span>Имя</span>
+                <span className="hidden sm:inline">Имя</span>
               </button>
               <button
                 onClick={() => setDataType('phone')}
-                className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                className={`flex-1 min-w-[70px] px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap ${
                   dataType === 'phone'
                     ? 'bg-primary-500 text-white'
                     : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
                 }`}
               >
                 <Phone className="w-4 h-4 flex-shrink-0" />
-                <span>Телефон</span>
+                <span className="hidden sm:inline">Телефон</span>
               </button>
               <button
                 onClick={() => setDataType('email')}
-                className={`flex-1 px-3 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                className={`flex-1 min-w-[70px] px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap ${
                   dataType === 'email'
                     ? 'bg-primary-500 text-white'
                     : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
                 }`}
               >
                 <Mail className="w-4 h-4 flex-shrink-0" />
-                <span>Email</span>
+                <span className="hidden sm:inline">Email</span>
+              </button>
+              <button
+                onClick={() => setDataType('address')}
+                className={`flex-1 min-w-[70px] px-2 sm:px-3 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-1 sm:gap-1.5 whitespace-nowrap ${
+                  dataType === 'address'
+                    ? 'bg-primary-500 text-white'
+                    : 'bg-dark-700 text-dark-300 hover:bg-dark-600'
+                }`}
+              >
+                <MapPin className="w-4 h-4 flex-shrink-0" />
+                <span className="hidden sm:inline">Адрес</span>
               </button>
             </div>
           </div>
@@ -1019,15 +1321,54 @@ function DataGenerator() {
           </div>
         </div>
 
-        {/* Инфо о формате телефона */}
-        {dataType === 'phone' && currentCountry && PHONE_FORMATS[country] && (
+        {/* Информация о стране */}
+        {currentCountry && (
           <div className="mt-4 pt-4 border-t border-dark-700">
-            <span className="text-sm text-dark-400">
-              {currentCountry.flag} {currentCountry.name}
-              <span className="ml-2 text-dark-500">
-                Формат: {PHONE_FORMATS[country].example}
+            <div className="flex items-start gap-2 mb-3">
+              <Info className="w-4 h-4 text-dark-500 mt-0.5 flex-shrink-0" />
+              <span className="text-sm font-medium text-dark-300">
+                {currentCountry.flag} {currentCountry.name}
               </span>
-            </span>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {/* Языки */}
+              <div className="flex items-center gap-2 bg-dark-700/50 rounded-lg px-3 py-2">
+                <Languages className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                <div className="min-w-0">
+                  <span className="text-xs text-dark-500 block">Язык</span>
+                  <span className="text-sm text-dark-200 truncate block" title={countryInfo.languages.join(', ')}>
+                    {countryInfo.languages.length > 2 
+                      ? `${countryInfo.languages.slice(0, 2).join(', ')} +${countryInfo.languages.length - 2}`
+                      : countryInfo.languages.join(', ')}
+                  </span>
+                </div>
+              </div>
+
+              {/* Валюта */}
+              <div className="flex items-center gap-2 bg-dark-700/50 rounded-lg px-3 py-2">
+                <Banknote className="w-4 h-4 text-green-400 flex-shrink-0" />
+                <div className="min-w-0">
+                  <span className="text-xs text-dark-500 block">Валюта</span>
+                  <span className="text-sm text-dark-200 truncate block">
+                    {countryInfo.currency.symbol} {countryInfo.currency.code}
+                  </span>
+                </div>
+              </div>
+
+              {/* Формат телефона (если выбран телефон) */}
+              {dataType === 'phone' && PHONE_FORMATS[country] && (
+                <div className="flex items-center gap-2 bg-dark-700/50 rounded-lg px-3 py-2">
+                  <Phone className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <span className="text-xs text-dark-500 block">Формат</span>
+                    <span className="text-sm text-dark-200 truncate block font-mono">
+                      {PHONE_FORMATS[country].example}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -1059,6 +1400,7 @@ function DataGenerator() {
                     {item.type === 'name' && <UserCircle className="w-4 h-4 text-purple-400" />}
                     {item.type === 'phone' && <Phone className="w-4 h-4 text-green-400" />}
                     {item.type === 'email' && <Mail className="w-4 h-4 text-blue-400" />}
+                    {item.type === 'address' && <MapPin className="w-4 h-4 text-orange-400" />}
                   </div>
                   
                   <span className="flex-1 text-dark-100 font-medium select-all">

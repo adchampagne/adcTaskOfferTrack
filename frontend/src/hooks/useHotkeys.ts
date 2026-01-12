@@ -20,7 +20,7 @@ export function useGlobalHotkeys(
 ) {
   const navigate = useNavigate();
   const sequenceRef = useRef<string>('');
-  const sequenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const sequenceTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Игнорируем, если фокус в input, textarea или contenteditable
