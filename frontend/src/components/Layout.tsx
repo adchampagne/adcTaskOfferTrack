@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -16,12 +16,16 @@ import {
   BookOpen,
   Settings,
   Wrench,
-  Trophy
+  Trophy,
+  Command,
+  Search
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { roleLabels } from '../types';
 import Notifications from './Notifications';
+import CommandPalette from './CommandPalette';
+import { useGlobalHotkeys } from '../hooks/useHotkeys';
 
 function Layout() {
   const { user, logout, hasRole } = useAuthStore();
@@ -29,6 +33,13 @@ function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  
+  // Глобальные горячие клавиши
+  const openCommandPalette = useCallback(() => setIsCommandPaletteOpen(true), []);
+  const openNewTask = useCallback(() => navigate('/tasks?new=1'), [navigate]);
+  
+  useGlobalHotkeys(openCommandPalette, openNewTask);
   
   // Загружаем настройки с сервера при монтировании
   useEffect(() => {
@@ -121,6 +132,19 @@ function Layout() {
         </div>
       </div>
 
+      {/* Quick Actions Button */}
+      <button
+        onClick={() => setIsCommandPaletteOpen(true)}
+        className="w-full flex items-center gap-3 px-4 py-3 mb-4 rounded-xl bg-dark-700/50 hover:bg-dark-700 border border-dark-600 transition-all group"
+      >
+        <Search className="w-4 h-4 text-dark-400 group-hover:text-dark-300" />
+        <span className="flex-1 text-left text-sm text-dark-400 group-hover:text-dark-300">Быстрый поиск...</span>
+        <kbd className="hidden lg:flex items-center gap-0.5 px-1.5 py-0.5 bg-dark-600 rounded text-xs text-dark-500">
+          <Command className="w-3 h-3" />
+          <span>K</span>
+        </kbd>
+      </button>
+
       {/* Navigation */}
       <nav className="flex-1 space-y-2 overflow-y-auto min-h-0">
         {navItems.map((item) => (
@@ -170,6 +194,12 @@ function Layout() {
 
   return (
     <div className="h-screen flex overflow-hidden">
+      {/* Command Palette */}
+      <CommandPalette 
+        isOpen={isCommandPaletteOpen} 
+        onClose={() => setIsCommandPaletteOpen(false)}
+      />
+
       {/* Mobile header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 glass-card rounded-none border-x-0 border-t-0">
         <div className="flex items-center justify-between p-4">
@@ -186,6 +216,14 @@ function Layout() {
             <h1 className="text-lg font-bold text-dark-100">Offer Tracker</h1>
           </div>
           <div className="flex items-center gap-2">
+            {/* Command Palette button - mobile */}
+            <button
+              onClick={() => setIsCommandPaletteOpen(true)}
+              className="p-2 text-dark-300 hover:text-dark-100 hover:bg-dark-700/50 rounded-xl transition-colors"
+              title="Быстрые действия (Ctrl+K)"
+            >
+              <Search className="w-5 h-5" />
+            </button>
             <Notifications />
             <button
               onClick={() => setIsMobileMenuOpen(true)}
