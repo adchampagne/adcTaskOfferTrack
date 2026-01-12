@@ -554,19 +554,7 @@ function HeadDashboard() {
     },
   });
 
-  if (checkLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!headCheck?.isHead) {
-    return <Navigate to="/" />;
-  }
-
-  // Группировка задач по дням
+  // Группировка задач по дням (должен быть ДО условных return)
   const groupedTasks = useMemo(() => {
     // Фильтрация
     const filtered = statusFilter === 'all' 
@@ -643,6 +631,19 @@ function HeadDashboard() {
     in_progress: tasks.filter(t => t.status === 'in_progress').length,
     completed: tasks.filter(t => t.status === 'completed').length,
   };
+
+  if (checkLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!headCheck?.isHead) {
+    return <Navigate to="/" />;
+  }
+
 
   const getStatusIcon = (status: TaskStatus) => {
     switch (status) {
