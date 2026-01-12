@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { Building2, Plus, ExternalLink, Edit2, Trash2, X } from 'lucide-react';
 import { partnersApi } from '../api';
 import { useAuthStore } from '../store/authStore';
@@ -109,8 +110,18 @@ function PartnerModal({
 function Partners() {
   const { canManagePartners, hasRole } = useAuthStore();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showModal, setShowModal] = useState(false);
   const [editingPartner, setEditingPartner] = useState<Partner | undefined>();
+
+  // Открытие модалки создания по URL параметру ?new=1
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      setShowModal(true);
+      setEditingPartner(undefined);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const { data: partners = [], isLoading } = useQuery({
     queryKey: ['partners'],

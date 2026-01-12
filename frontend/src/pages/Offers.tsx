@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { Package, Plus, ExternalLink, Edit2, Trash2, X, Filter, Globe, Search } from 'lucide-react';
 import { offersApi, partnersApi } from '../api';
 import { useAuthStore } from '../store/authStore';
@@ -375,6 +376,7 @@ function OfferCard({
 function Offers() {
   const { canManageOffers, canEditOffers, hasRole, canViewPartnerLinks } = useAuthStore();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showModal, setShowModal] = useState(false);
   const [editingOffer, setEditingOffer] = useState<Offer | undefined>();
   const [filterPartnerId, setFilterPartnerId] = useState<string>('');
@@ -382,6 +384,15 @@ function Offers() {
   const [filterTheme, setFilterTheme] = useState<string>('');
   const [filterPaymentType, setFilterPaymentType] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Открытие модалки создания по URL параметру ?new=1
+  useEffect(() => {
+    if (searchParams.get('new') === '1') {
+      setShowModal(true);
+      setEditingOffer(undefined);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const { data: partners = [] } = useQuery({
     queryKey: ['partners'],

@@ -2566,6 +2566,15 @@ function Tasks() {
   // Обработчик открытия задачи по URL-параметру
   React.useEffect(() => {
     const taskId = searchParams.get('task');
+    const isNew = searchParams.get('new');
+    
+    if (isNew === '1') {
+      setShowModal(true);
+      setEditingTask(undefined);
+      setSearchParams({}, { replace: true });
+      return;
+    }
+    
     if (taskId) {
       (async () => {
         try {
