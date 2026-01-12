@@ -4,6 +4,7 @@ import db, { getNextTaskNumber } from '../database';
 import { authenticateToken } from '../middleware/auth';
 import { Task, TaskWithUsers, Department, departmentHeadRole, UserRole } from '../types';
 import { notifyTaskAssigned, notifyStatusChanged, notifySubtaskCompleted, notifyTaskRevision, notifyTaskReassigned, notifyTaskClarification } from './notifications';
+import { checkAndGrantAchievements } from './achievements';
 
 const router = Router();
 
@@ -314,6 +315,11 @@ router.patch('/:id/status', authenticateToken, (req: Request, res: Response): vo
     
     // Отправляем уведомления об изменении статуса
     notifyStatusChanged(task, status, req.user?.userId || '', currentUser?.full_name || 'Пользователь');
+
+    // Если задача выполнена — проверяем достижения исполнителя
+    if (status === 'completed' && existing.executor_id) {
+      checkAndGrantAchievements(existing.executor_id);
+    }
 
     // Если это подзадача и она завершена — уведомляем заказчика родительской задачи
     if (existing.parent_task_id && status === 'completed') {

@@ -1,13 +1,14 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   BarChart3, Users, CheckCircle, Clock, AlertCircle, 
   Calendar, TrendingUp, X, ArrowUpRight, Send, Paperclip,
-  Download, MessageSquare, Trash2, Image, Video, FileArchive, File
+  Download, MessageSquare, Trash2, Image, Video, FileArchive, File,
+  ChevronDown, ChevronRight, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { headDashboardApi, filesApi, commentsApi } from '../api';
 import { Task, TaskStatus, TaskPriority, taskStatusLabels, taskPriorityLabels, taskTypeLabels, TaskFile } from '../types';
-import { format, isPast, isToday } from 'date-fns';
+import { format, isPast, isToday, isYesterday, isTomorrow, startOfDay, parseISO } from 'date-fns';
 import { ru } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { Navigate } from 'react-router-dom';
@@ -505,11 +506,15 @@ function TaskViewModal({
   );
 }
 
+type SortDirection = 'asc' | 'desc';
+
 function HeadDashboard() {
   const queryClient = useQueryClient();
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
 
   // Проверяем, является ли пользователь руководителем
   const { data: headCheck, isLoading: checkLoading } = useQuery({
@@ -564,6 +569,73 @@ function HeadDashboard() {
   const filteredTasks = statusFilter === 'all' 
     ? tasks 
     : tasks.filter(t => t.status === statusFilter);
+
+  // Группировка задач по дням
+  const groupedTasks = useMemo(() => {
+    // Сортировка по времени
+    const sorted = [...filteredTasks].sort((a, b) => {
+      const dateA = new Date(a.deadline).getTime();
+      const dateB = new Date(b.deadline).getTime();
+      return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+    });
+
+    // Группировка по дням
+    const groups: { [key: string]: { date: Date; label: string; tasks: Task[] } } = {};
+    
+    sorted.forEach(task => {
+      const taskDate = parseISO(task.deadline);
+      const dayKey = format(startOfDay(taskDate), 'yyyy-MM-dd');
+      
+      if (!groups[dayKey]) {
+        let label = format(taskDate, 'd MMMM yyyy', { locale: ru });
+        
+        if (isToday(taskDate)) {
+          label = 'Сегодня';
+        } else if (isYesterday(taskDate)) {
+          label = 'Вчера';
+        } else if (isTomorrow(taskDate)) {
+          label = 'Завтра';
+        }
+        
+        groups[dayKey] = {
+          date: startOfDay(taskDate),
+          label,
+          tasks: []
+        };
+      }
+      
+      groups[dayKey].tasks.push(task);
+    });
+
+    // Сортировка групп
+    return Object.entries(groups)
+      .sort(([keyA], [keyB]) => {
+        return sortDirection === 'asc' 
+          ? keyA.localeCompare(keyB) 
+          : keyB.localeCompare(keyA);
+      })
+      .map(([key, value]) => ({ dayKey: key, ...value }));
+  }, [filteredTasks, sortDirection]);
+
+  const toggleDayCollapse = (dayKey: string) => {
+    setCollapsedDays(prev => {
+      const next = new Set(prev);
+      if (next.has(dayKey)) {
+        next.delete(dayKey);
+      } else {
+        next.add(dayKey);
+      }
+      return next;
+    });
+  };
+
+  const collapseAll = () => {
+    setCollapsedDays(new Set(groupedTasks.map(g => g.dayKey)));
+  };
+
+  const expandAll = () => {
+    setCollapsedDays(new Set());
+  };
 
   const tasksByStatus = {
     pending: tasks.filter(t => t.status === 'pending').length,
@@ -727,13 +799,13 @@ function HeadDashboard() {
 
         {/* Tasks List */}
         <div className="glass-card p-6 animate-fade-in">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
             <h2 className="text-lg font-bold text-dark-100 flex items-center gap-2">
               <Calendar className="w-5 h-5 text-primary-400" />
               Задачи отдела
             </h2>
             
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {(['all', 'pending', 'in_progress', 'completed'] as const).map((status) => (
                 <button
                   key={status}
@@ -750,70 +822,176 @@ function HeadDashboard() {
             </div>
           </div>
 
+          {/* Контролы сортировки и сворачивания */}
+          <div className="flex flex-wrap items-center gap-2 mb-4 pb-4 border-b border-dark-700/50">
+            <button
+              onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dark-700/50 text-dark-300 hover:bg-dark-700 transition-colors text-sm"
+            >
+              {sortDirection === 'desc' ? (
+                <>
+                  <ArrowDown className="w-4 h-4" />
+                  Сначала новые
+                </>
+              ) : (
+                <>
+                  <ArrowUp className="w-4 h-4" />
+                  Сначала старые
+                </>
+              )}
+            </button>
+            
+            <div className="h-4 w-px bg-dark-700/50 mx-1" />
+            
+            <button
+              onClick={expandAll}
+              className="px-3 py-1.5 rounded-lg bg-dark-700/50 text-dark-300 hover:bg-dark-700 transition-colors text-sm"
+            >
+              Развернуть все
+            </button>
+            <button
+              onClick={collapseAll}
+              className="px-3 py-1.5 rounded-lg bg-dark-700/50 text-dark-300 hover:bg-dark-700 transition-colors text-sm"
+            >
+              Свернуть все
+            </button>
+          </div>
+
           {tasksLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="skeleton h-20 rounded-xl" />
               ))}
             </div>
-          ) : filteredTasks.length === 0 ? (
+          ) : groupedTasks.length === 0 ? (
             <p className="text-dark-400 text-center py-8">
               Нет задач
             </p>
           ) : (
-            <div className="space-y-3">
-              {filteredTasks.map((task) => {
-                const isOverdue = isPast(new Date(task.deadline)) && task.status !== 'completed' && task.status !== 'cancelled';
-                const isDueToday = isToday(new Date(task.deadline));
+            <div className="space-y-4">
+              {groupedTasks.map(({ dayKey, label, tasks: dayTasks, date }) => {
+                const isCollapsed = collapsedDays.has(dayKey);
+                const isTodayGroup = isToday(date);
+                const isPastGroup = isPast(date) && !isToday(date);
+                
+                // Считаем статистику по дню
+                const pendingCount = dayTasks.filter(t => t.status === 'pending').length;
+                const inProgressCount = dayTasks.filter(t => t.status === 'in_progress').length;
+                const completedCount = dayTasks.filter(t => t.status === 'completed').length;
                 
                 return (
-                  <div
-                    key={task.id}
-                    className={`p-4 rounded-xl border transition-all hover:border-primary-500/30 cursor-pointer ${
-                      isOverdue ? 'bg-red-500/5 border-red-500/20' : 
-                      isDueToday ? 'bg-amber-500/5 border-amber-500/20' : 
-                      'bg-dark-800/50 border-dark-700/50'
-                    }`}
-                    onClick={() => setViewingTask(task)}
-                  >
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          {task.task_number && (
-                            <span className="text-xs font-mono text-dark-500">#{task.task_number}</span>
-                          )}
-                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${getStatusColor(task.status)}`}>
-                            {getStatusIcon(task.status)}
-                            {taskStatusLabels[task.status]}
+                  <div key={dayKey} className="rounded-xl border border-dark-700/50 overflow-hidden">
+                    {/* Заголовок дня */}
+                    <button
+                      onClick={() => toggleDayCollapse(dayKey)}
+                      className={`w-full flex items-center justify-between p-4 transition-colors ${
+                        isTodayGroup 
+                          ? 'bg-primary-500/10 hover:bg-primary-500/15' 
+                          : isPastGroup 
+                            ? 'bg-dark-800/80 hover:bg-dark-800' 
+                            : 'bg-dark-800/50 hover:bg-dark-800/70'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {isCollapsed ? (
+                          <ChevronRight className="w-5 h-5 text-dark-400" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-dark-400" />
+                        )}
+                        <div className="flex items-center gap-2">
+                          <Calendar className={`w-4 h-4 ${isTodayGroup ? 'text-primary-400' : 'text-dark-500'}`} />
+                          <span className={`font-semibold ${isTodayGroup ? 'text-primary-400' : 'text-dark-200'}`}>
+                            {label}
+                          </span>
+                          <span className="text-sm text-dark-500">
+                            ({dayTasks.length} {dayTasks.length === 1 ? 'задача' : dayTasks.length < 5 ? 'задачи' : 'задач'})
                           </span>
                         </div>
-                        <h3 className="font-medium text-dark-100 truncate">{task.title}</h3>
-                        <p className="text-sm text-dark-400 mt-1 flex items-center gap-1">
-                          Исполнитель: {task.executor_name}
-                          {task.executor_username && task.executor_username !== 'admin' && (
-                            <a
-                              href={`https://t.me/${task.executor_username}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-400 hover:text-blue-300 transition-colors"
-                              onClick={(e) => e.stopPropagation()}
-                              title={`@${task.executor_username}`}
-                            >
-                              <Send className="w-3.5 h-3.5" />
-                            </a>
-                          )}
-                        </p>
                       </div>
                       
-                      <div className="text-right flex-shrink-0">
-                        <p className={`text-sm font-medium ${isOverdue ? 'text-red-400' : isDueToday ? 'text-amber-400' : 'text-dark-300'}`}>
-                          {format(new Date(task.deadline), 'd MMM', { locale: ru })}
-                        </p>
-                        <p className="text-xs text-dark-500">
-                          {format(new Date(task.deadline), 'HH:mm')}
-                        </p>
+                      {/* Мини-статистика по дню */}
+                      <div className="flex items-center gap-2">
+                        {pendingCount > 0 && (
+                          <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-500/10 text-amber-400">
+                            <Clock className="w-3 h-3" />
+                            {pendingCount}
+                          </span>
+                        )}
+                        {inProgressCount > 0 && (
+                          <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-500/10 text-blue-400">
+                            <AlertCircle className="w-3 h-3" />
+                            {inProgressCount}
+                          </span>
+                        )}
+                        {completedCount > 0 && (
+                          <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-500/10 text-green-400">
+                            <CheckCircle className="w-3 h-3" />
+                            {completedCount}
+                          </span>
+                        )}
                       </div>
-                    </div>
+                    </button>
+                    
+                    {/* Задачи дня */}
+                    {!isCollapsed && (
+                      <div className="divide-y divide-dark-700/30">
+                        {dayTasks.map((task) => {
+                          const isOverdue = isPast(new Date(task.deadline)) && task.status !== 'completed' && task.status !== 'cancelled';
+                          const isDueToday = isToday(new Date(task.deadline));
+                          
+                          return (
+                            <div
+                              key={task.id}
+                              className={`p-4 transition-all hover:bg-dark-700/30 cursor-pointer ${
+                                isOverdue ? 'bg-red-500/5' : 
+                                isDueToday ? 'bg-amber-500/5' : 
+                                'bg-dark-800/30'
+                              }`}
+                              onClick={() => setViewingTask(task)}
+                            >
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    {task.task_number && (
+                                      <span className="text-xs font-mono text-dark-500">#{task.task_number}</span>
+                                    )}
+                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${getStatusColor(task.status)}`}>
+                                      {getStatusIcon(task.status)}
+                                      {taskStatusLabels[task.status]}
+                                    </span>
+                                  </div>
+                                  <h3 className="font-medium text-dark-100 truncate">{task.title}</h3>
+                                  <p className="text-sm text-dark-400 mt-1 flex items-center gap-1">
+                                    Исполнитель: {task.executor_name}
+                                    {task.executor_username && task.executor_username !== 'admin' && (
+                                      <a
+                                        href={`https://t.me/${task.executor_username}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-400 hover:text-blue-300 transition-colors"
+                                        onClick={(e) => e.stopPropagation()}
+                                        title={`@${task.executor_username}`}
+                                      >
+                                        <Send className="w-3.5 h-3.5" />
+                                      </a>
+                                    )}
+                                  </p>
+                                </div>
+                                
+                                <div className="text-right flex-shrink-0">
+                                  <p className={`text-sm font-medium ${isOverdue ? 'text-red-400' : isDueToday ? 'text-amber-400' : 'text-dark-300'}`}>
+                                    {format(new Date(task.deadline), 'HH:mm')}
+                                  </p>
+                                  {isOverdue && (
+                                    <p className="text-xs text-red-400">просрочено</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}

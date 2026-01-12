@@ -716,5 +716,67 @@ export const analyticsApi = {
   },
 };
 
+// Achievements types
+export interface Achievement {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  icon: string;
+  category: string;
+  threshold: number;
+  sort_order: number;
+  earned: boolean;
+  earned_at: string | null;
+}
+
+export interface AchievementsResponse {
+  achievements: Record<string, Achievement[]>;
+  total: number;
+  earned: number;
+}
+
+export interface LeaderboardUser {
+  id: string;
+  username: string;
+  full_name: string;
+  role: string;
+  rank: number;
+  completed_tasks: number;
+  top_rated: number;
+  early_completed: number;
+  achievements_count: number;
+}
+
+export interface LeaderboardResponse {
+  department: { id: string; name: string; code: string } | null;
+  period: string;
+  leaderboard: LeaderboardUser[];
+}
+
+export const achievementsApi = {
+  getAll: async () => {
+    const { data } = await api.get<AchievementsResponse>('/achievements');
+    return data;
+  },
+
+  getUserAchievements: async (userId: string) => {
+    const { data } = await api.get<Achievement[]>(`/achievements/user/${userId}`);
+    return data;
+  },
+
+  check: async () => {
+    const { data } = await api.post<{ newAchievements: Achievement[]; message: string }>('/achievements/check');
+    return data;
+  },
+
+  getLeaderboard: async (departmentCode: string, period: 'week' | 'month' | 'all' = 'month') => {
+    const { data } = await api.get<LeaderboardResponse>(`/achievements/leaderboard/${departmentCode}`, {
+      params: { period }
+    });
+    return data;
+  },
+};
+
 export default api;
 

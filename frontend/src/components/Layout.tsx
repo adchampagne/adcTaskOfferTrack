@@ -15,7 +15,8 @@ import {
   TrendingUp,
   BookOpen,
   Settings,
-  Wrench
+  Wrench,
+  Trophy
 } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
@@ -84,6 +85,9 @@ function Layout() {
   if (hasRole('admin', 'buying_head', 'creo_head', 'dev_head', 'bizdev')) {
     navItems.push({ to: '/analytics', icon: TrendingUp, label: 'Аналитика' });
   }
+
+  // Достижения - доступны всем
+  navItems.push({ to: '/achievements', icon: Trophy, label: 'Достижения' });
 
   // База знаний (доступна всем, но контент фильтруется по отделу)
   navItems.push({ to: '/knowledge-base', icon: BookOpen, label: 'База знаний' });

@@ -17,6 +17,7 @@ import Analytics from './pages/Analytics';
 import Tools from './pages/Tools';
 import ImageConverter from './pages/ImageConverter';
 import DataGenerator from './pages/DataGenerator';
+import Achievements from './pages/Achievements';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -73,6 +74,7 @@ function App() {
         <Route path="tools/data-generator" element={<DataGenerator />} />
         <Route path="metadata-cleaner" element={<Navigate to="/tools/metadata-cleaner" />} />
         <Route path="analytics" element={<Analytics />} />
+        <Route path="achievements" element={<Achievements />} />
       </Route>
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>

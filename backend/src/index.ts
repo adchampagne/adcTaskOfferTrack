@@ -30,6 +30,7 @@ import knowledgeRoutes from './routes/knowledge';
 import commentsRoutes from './routes/comments';
 import metadataRoutes from './routes/metadata';
 import analyticsRoutes from './routes/analytics';
+import achievementsRoutes from './routes/achievements';
 import { startPolling } from './services/telegramPolling';
 
 const app = express();
@@ -56,6 +57,7 @@ app.use('/api/knowledge', knowledgeRoutes);
 app.use('/api/comments', commentsRoutes);
 app.use('/api/metadata', metadataRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/achievements', achievementsRoutes);
 
 // Health check
 app.get('/api/health', (_req, res) => {

@@ -157,6 +157,27 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, permission)
   );
+
+  -- Таблица достижений (справочник)
+  CREATE TABLE IF NOT EXISTS achievements (
+    id TEXT PRIMARY KEY,
+    code TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT NOT NULL,
+    icon TEXT NOT NULL,
+    category TEXT NOT NULL CHECK(category IN ('tasks', 'quality', 'speed', 'streak', 'special')),
+    threshold INTEGER DEFAULT 1,
+    sort_order INTEGER DEFAULT 0
+  );
+
+  -- Таблица полученных достижений пользователями
+  CREATE TABLE IF NOT EXISTS user_achievements (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    achievement_id TEXT NOT NULL REFERENCES achievements(id) ON DELETE CASCADE,
+    earned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, achievement_id)
+  );
 `);
 
 // Миграции
@@ -903,6 +924,85 @@ try {
     }
 
     console.log('✅ Руководства по работе с трекером созданы для всех отделов');
+  }
+
+  // Миграция: создание начальных достижений
+  const existingAchievements = db.prepare('SELECT COUNT(*) as count FROM achievements').get() as { count: number };
+  if (existingAchievements.count < 30) {
+    console.log('🔄 Миграция: создание/обновление достижений...');
+    
+    // Очищаем старые достижения (без потери полученных пользователями)
+    const earnedAchievements = db.prepare('SELECT DISTINCT achievement_id FROM user_achievements').all() as { achievement_id: string }[];
+    const earnedIds = earnedAchievements.map(a => a.achievement_id);
+    
+    // Удаляем только те достижения, которые никто не получил
+    db.prepare(`DELETE FROM achievements WHERE id NOT IN (${earnedIds.length > 0 ? earnedIds.map(() => '?').join(',') : "''"})`)
+      .run(...earnedIds);
+    
+    const achievements = [
+      // === По количеству задач ===
+      { code: 'tasks_5', name: 'Новичок', description: 'Выполнить 5 задач', icon: '🌱', category: 'tasks', threshold: 5, sort_order: 1 },
+      { code: 'tasks_25', name: 'Работяга', description: 'Выполнить 25 задач', icon: '💪', category: 'tasks', threshold: 25, sort_order: 2 },
+      { code: 'tasks_50', name: 'Машина', description: 'Выполнить 50 задач', icon: '🔥', category: 'tasks', threshold: 50, sort_order: 3 },
+      { code: 'tasks_100', name: 'Легенда', description: 'Выполнить 100 задач', icon: '👑', category: 'tasks', threshold: 100, sort_order: 4 },
+      { code: 'tasks_250', name: 'Титан', description: 'Выполнить 250 задач', icon: '🏆', category: 'tasks', threshold: 250, sort_order: 5 },
+      { code: 'tasks_500', name: 'Богатырь', description: 'Выполнить 500 задач', icon: '🌟', category: 'tasks', threshold: 500, sort_order: 6 },
+      { code: 'tasks_1000', name: 'Бессмертный', description: 'Выполнить 1000 задач', icon: '💎', category: 'tasks', threshold: 1000, sort_order: 7 },
+      
+      // === По качеству (рейтинг "Топ") ===
+      { code: 'quality_1', name: 'Первая звезда', description: 'Получить первый рейтинг "Топ"', icon: '⭐', category: 'quality', threshold: 1, sort_order: 1 },
+      { code: 'quality_10', name: 'Звёздный', description: '10 задач с рейтингом "Топ"', icon: '🌟', category: 'quality', threshold: 10, sort_order: 2 },
+      { code: 'quality_25', name: 'Бриллиант', description: '25 задач с рейтингом "Топ"', icon: '💎', category: 'quality', threshold: 25, sort_order: 3 },
+      { code: 'quality_50', name: 'Перфекционист', description: '50 задач с рейтингом "Топ"', icon: '🎖️', category: 'quality', threshold: 50, sort_order: 4 },
+      { code: 'quality_100', name: 'Безупречный', description: '100 задач с рейтингом "Топ"', icon: '👑', category: 'quality', threshold: 100, sort_order: 5 },
+      
+      // === По скорости (досрочно) ===
+      { code: 'speed_5', name: 'Спринтер', description: '5 задач досрочно', icon: '⚡', category: 'speed', threshold: 5, sort_order: 1 },
+      { code: 'speed_25', name: 'Ракета', description: '25 задач досрочно', icon: '🚀', category: 'speed', threshold: 25, sort_order: 2 },
+      { code: 'speed_50', name: 'Молния', description: '50 задач досрочно', icon: '💨', category: 'speed', threshold: 50, sort_order: 3 },
+      { code: 'speed_100', name: 'Формула-1', description: '100 задач досрочно', icon: '🏎️', category: 'speed', threshold: 100, sort_order: 4 },
+      
+      // === По стрику ===
+      { code: 'streak_7', name: 'Неделя огня', description: '7 дней подряд с выполненными задачами', icon: '📅', category: 'streak', threshold: 7, sort_order: 1 },
+      { code: 'streak_30', name: 'Месяц в ударе', description: '30 дней стрик', icon: '🔥', category: 'streak', threshold: 30, sort_order: 2 },
+      { code: 'streak_100', name: 'Неостановимый', description: '100 дней стрик', icon: '💪', category: 'streak', threshold: 100, sort_order: 3 },
+      { code: 'streak_365', name: 'Железная воля', description: '365 дней стрик', icon: '🏆', category: 'streak', threshold: 365, sort_order: 4 },
+      
+      // === Специальные ===
+      { code: 'first_task', name: 'Первый шаг', description: 'Выполнить первую задачу', icon: '🎯', category: 'special', threshold: 1, sort_order: 1 },
+      { code: 'veteran_year', name: 'Ветеран', description: '1 год в системе', icon: '🎂', category: 'special', threshold: 365, sort_order: 2 },
+      { code: 'veteran_2years', name: 'Старожил', description: '2 года в системе', icon: '🎊', category: 'special', threshold: 730, sort_order: 3 },
+      { code: 'early_bird', name: 'Ранняя пташка', description: '10 задач выполнено до 9:00', icon: '🌅', category: 'special', threshold: 10, sort_order: 4 },
+      { code: 'night_owl', name: 'Полуночник', description: '10 задач выполнено после 22:00', icon: '🌙', category: 'special', threshold: 10, sort_order: 5 },
+      { code: 'commentator', name: 'Комментатор', description: 'Оставить 50 комментариев', icon: '📝', category: 'special', threshold: 50, sort_order: 6 },
+      { code: 'team_player', name: 'Командный игрок', description: 'Участие в 10 подзадачах', icon: '🤝', category: 'special', threshold: 10, sort_order: 7 },
+      { code: 'mentor', name: 'Наставник', description: 'Поставить 5 оценок "Топ" как заказчик', icon: '🎓', category: 'special', threshold: 5, sort_order: 8 },
+      
+      // === Отделные ===
+      { code: 'creo_master', name: 'Мастер крео', description: '50 задач в отделе Крео', icon: '🎨', category: 'special', threshold: 50, sort_order: 10 },
+      { code: 'dev_guru', name: 'Гуру разработки', description: '50 задач в отделе Разработки', icon: '💻', category: 'special', threshold: 50, sort_order: 11 },
+      { code: 'buying_king', name: 'Король баинга', description: '50 задач в отделе Баинга', icon: '📈', category: 'special', threshold: 50, sort_order: 12 },
+      
+      // === Редкие/Секретные ===
+      { code: 'unicorn', name: 'Единорог', description: '10 задач "Топ" подряд', icon: '🦄', category: 'special', threshold: 10, sort_order: 20 },
+      { code: 'marathon', name: 'Марафонец', description: '20 задач за одну неделю', icon: '🏃', category: 'special', threshold: 20, sort_order: 21 },
+      { code: 'universal', name: 'Универсал', description: 'Задачи во всех типах', icon: '🎪', category: 'special', threshold: 5, sort_order: 22 },
+      { code: 'prophet', name: 'Провидец', description: '5 задач выполнены ровно в дедлайн', icon: '🔮', category: 'special', threshold: 5, sort_order: 23 },
+    ];
+
+    const insertAchievement = db.prepare(`
+      INSERT OR REPLACE INTO achievements (id, code, name, description, icon, category, threshold, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    for (const a of achievements) {
+      // Проверяем, есть ли уже такое достижение
+      const existing = db.prepare('SELECT id FROM achievements WHERE code = ?').get(a.code) as { id: string } | undefined;
+      const id = existing?.id || uuidv4();
+      insertAchievement.run(id, a.code, a.name, a.description, a.icon, a.category, a.threshold, a.sort_order);
+    }
+
+    console.log('✅ Достижения созданы/обновлены');
   }
 } catch (e) {
   console.error('Migration error:', e);
