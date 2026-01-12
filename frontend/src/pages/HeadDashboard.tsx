@@ -566,14 +566,15 @@ function HeadDashboard() {
     return <Navigate to="/" />;
   }
 
-  const filteredTasks = statusFilter === 'all' 
-    ? tasks 
-    : tasks.filter(t => t.status === statusFilter);
-
   // Группировка задач по дням
   const groupedTasks = useMemo(() => {
+    // Фильтрация
+    const filtered = statusFilter === 'all' 
+      ? tasks 
+      : tasks.filter(t => t.status === statusFilter);
+
     // Сортировка по времени
-    const sorted = [...filteredTasks].sort((a, b) => {
+    const sorted = [...filtered].sort((a, b) => {
       const dateA = new Date(a.deadline).getTime();
       const dateB = new Date(b.deadline).getTime();
       return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
@@ -615,7 +616,7 @@ function HeadDashboard() {
           : keyB.localeCompare(keyA);
       })
       .map(([key, value]) => ({ dayKey: key, ...value }));
-  }, [filteredTasks, sortDirection]);
+  }, [tasks, statusFilter, sortDirection]);
 
   const toggleDayCollapse = (dayKey: string) => {
     setCollapsedDays(prev => {
