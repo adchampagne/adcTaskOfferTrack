@@ -15,17 +15,34 @@ import {
   SlidersHorizontal,
   RotateCcw,
   Loader2,
-  ChevronRight
+  ChevronRight,
+  User,
+  Calendar,
+  Building2,
+  AtSign,
+  Edit3,
+  Save,
+  X
 } from 'lucide-react';
 import { telegramApi, authApi } from '../api';
 import { useSettingsStore, themes, backgroundOptions } from '../store/settingsStore';
+import { roleLabels } from '../types';
 
-type SettingsSection = 'telegram' | 'password' | 'personalization' | null;
+type SettingsSection = 'profile' | 'telegram' | 'personalization' | null;
 
 export default function Settings() {
   const [activeSection, setActiveSection] = useState<SettingsSection>(null);
 
   const settingItems = [
+    {
+      id: 'profile' as const,
+      icon: User,
+      title: 'Профиль',
+      description: 'Ваши данные и пароль',
+      color: 'text-emerald-400',
+      bgColor: 'bg-emerald-500/10',
+      hoverColor: 'hover:bg-emerald-500/20',
+    },
     {
       id: 'telegram' as const,
       icon: Send,
@@ -34,15 +51,6 @@ export default function Settings() {
       color: 'text-blue-400',
       bgColor: 'bg-blue-500/10',
       hoverColor: 'hover:bg-blue-500/20',
-    },
-    {
-      id: 'password' as const,
-      icon: Key,
-      title: 'Сменить пароль',
-      description: 'Обновите свой пароль',
-      color: 'text-primary-400',
-      bgColor: 'bg-primary-500/10',
-      hoverColor: 'hover:bg-primary-500/20',
     },
     {
       id: 'personalization' as const,
@@ -107,12 +115,363 @@ export default function Settings() {
             </div>
           )}
 
+          {activeSection === 'profile' && <ProfileSection />}
           {activeSection === 'telegram' && <TelegramSection />}
-          {activeSection === 'password' && <PasswordSection />}
           {activeSection === 'personalization' && <PersonalizationSection />}
         </div>
       </div>
     </div>
+  );
+}
+
+// === Profile Section ===
+function ProfileSection() {
+  const queryClient = useQueryClient();
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+
+  const { data: profile, isLoading } = useQuery({
+    queryKey: ['profile'],
+    queryFn: authApi.getProfile,
+  });
+
+  const updateNameMutation = useMutation({
+    mutationFn: authApi.updateProfile,
+    onSuccess: (updatedUser) => {
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      // Обновляем localStorage
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        user.full_name = updatedUser.full_name;
+        localStorage.setItem('user', JSON.stringify(user));
+      }
+      setIsEditingName(false);
+    },
+  });
+
+  const startEditing = () => {
+    setNewName(profile?.full_name || '');
+    setIsEditingName(true);
+  };
+
+  const saveName = () => {
+    if (newName.trim().length >= 2) {
+      updateNameMutation.mutate(newName.trim());
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="glass-card p-8 flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Информация о профиле */}
+      <div className="glass-card p-6">
+        <div className="flex items-center gap-3 pb-4 border-b border-dark-700 mb-6">
+          <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center">
+            <User className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-dark-100">Профиль</h3>
+            <p className="text-dark-400 text-sm">Ваши данные в системе</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {/* ФИО */}
+          <div className="flex items-center justify-between py-3 border-b border-dark-700/50">
+            <div className="flex items-center gap-3">
+              <User className="w-5 h-5 text-dark-400" />
+              <div>
+                <p className="text-dark-400 text-sm">ФИО</p>
+                {isEditingName ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <input
+                      type="text"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      className="px-3 py-1.5 bg-dark-900 border border-dark-600 rounded-lg text-white text-sm focus:border-emerald-500 outline-none"
+                      autoFocus
+                    />
+                    <button
+                      onClick={saveName}
+                      disabled={updateNameMutation.isPending || newName.trim().length < 2}
+                      className="p-1.5 text-emerald-400 hover:bg-emerald-500/20 rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {updateNameMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => setIsEditingName(false)}
+                      className="p-1.5 text-dark-400 hover:bg-dark-700 rounded-lg transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-dark-100 font-medium">{profile?.full_name}</p>
+                )}
+              </div>
+            </div>
+            {!isEditingName && (
+              <button
+                onClick={startEditing}
+                className="p-2 text-dark-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors"
+                title="Редактировать"
+              >
+                <Edit3 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Логин */}
+          <div className="flex items-center gap-3 py-3 border-b border-dark-700/50">
+            <AtSign className="w-5 h-5 text-dark-400" />
+            <div>
+              <p className="text-dark-400 text-sm">Логин</p>
+              <p className="text-dark-100 font-medium">{profile?.username}</p>
+            </div>
+          </div>
+
+          {/* Роль */}
+          <div className="flex items-center gap-3 py-3 border-b border-dark-700/50">
+            <Building2 className="w-5 h-5 text-dark-400" />
+            <div>
+              <p className="text-dark-400 text-sm">Роль</p>
+              <p className="text-dark-100 font-medium">
+                {profile?.role ? roleLabels[profile.role] : '—'}
+              </p>
+            </div>
+          </div>
+
+          {/* Отдел */}
+          {profile?.department && (
+            <div className="flex items-center gap-3 py-3 border-b border-dark-700/50">
+              <Building2 className="w-5 h-5 text-dark-400" />
+              <div>
+                <p className="text-dark-400 text-sm">Отдел</p>
+                <p className="text-dark-100 font-medium">{profile.department.name}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Telegram */}
+          {profile?.telegram_username && (
+            <div className="flex items-center gap-3 py-3 border-b border-dark-700/50">
+              <Send className="w-5 h-5 text-dark-400" />
+              <div>
+                <p className="text-dark-400 text-sm">Telegram</p>
+                <p className="text-blue-400 font-medium">@{profile.telegram_username}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Дата регистрации */}
+          <div className="flex items-center gap-3 py-3">
+            <Calendar className="w-5 h-5 text-dark-400" />
+            <div>
+              <p className="text-dark-400 text-sm">В системе с</p>
+              <p className="text-dark-100 font-medium">
+                {profile?.created_at ? formatDate(profile.created_at) : '—'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Смена пароля */}
+      <div className="glass-card p-6">
+        <button
+          onClick={() => setShowPasswordForm(!showPasswordForm)}
+          className="w-full flex items-center justify-between"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary-500/10 rounded-xl flex items-center justify-center">
+              <Key className="w-5 h-5 text-primary-400" />
+            </div>
+            <div className="text-left">
+              <h3 className="text-dark-100 font-medium">Сменить пароль</h3>
+              <p className="text-dark-400 text-sm">Обновите свой пароль</p>
+            </div>
+          </div>
+          <ChevronRight className={`w-5 h-5 text-dark-400 transition-transform ${showPasswordForm ? 'rotate-90' : ''}`} />
+        </button>
+
+        {showPasswordForm && (
+          <div className="mt-6 pt-6 border-t border-dark-700">
+            <PasswordForm />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// === Password Form (внутри профиля) ===
+function PasswordForm() {
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showOldPassword, setShowOldPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const changePasswordMutation = useMutation({
+    mutationFn: () => authApi.changePassword(oldPassword, newPassword),
+    onSuccess: () => {
+      setSuccess(true);
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      setError('');
+      setTimeout(() => setSuccess(false), 3000);
+    },
+    onError: (err: any) => {
+      setError(err.response?.data?.error || 'Ошибка при смене пароля');
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      setError('Заполните все поля');
+      return;
+    }
+
+    if (newPassword.length < 4) {
+      setError('Новый пароль должен быть не менее 4 символов');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError('Новый пароль и подтверждение не совпадают');
+      return;
+    }
+
+    if (oldPassword === newPassword) {
+      setError('Новый пароль должен отличаться от старого');
+      return;
+    }
+
+    changePasswordMutation.mutate();
+  };
+
+  if (success) {
+    return (
+      <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 flex items-center gap-3">
+        <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center">
+          <Check className="w-5 h-5 text-green-400" />
+        </div>
+        <div>
+          <p className="text-green-400 font-semibold">Пароль изменён!</p>
+          <p className="text-dark-400 text-sm">Используйте новый пароль при следующем входе</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+          <p className="text-red-400 text-sm">{error}</p>
+        </div>
+      )}
+
+      <div>
+        <label className="block text-sm font-medium text-dark-300 mb-2">
+          Текущий пароль
+        </label>
+        <div className="relative">
+          <input
+            type={showOldPassword ? 'text' : 'password'}
+            value={oldPassword}
+            onChange={(e) => setOldPassword(e.target.value)}
+            className="w-full px-4 py-2.5 pr-12 bg-dark-900 border border-dark-700 rounded-xl text-white placeholder-dark-500 focus:border-primary-500 outline-none transition-colors"
+            placeholder="Введите текущий пароль"
+          />
+          <button
+            type="button"
+            onClick={() => setShowOldPassword(!showOldPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-white transition-colors"
+          >
+            {showOldPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-dark-300 mb-2">
+          Новый пароль
+        </label>
+        <div className="relative">
+          <input
+            type={showNewPassword ? 'text' : 'password'}
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            className="w-full px-4 py-2.5 pr-12 bg-dark-900 border border-dark-700 rounded-xl text-white placeholder-dark-500 focus:border-primary-500 outline-none transition-colors"
+            placeholder="Минимум 4 символа"
+          />
+          <button
+            type="button"
+            onClick={() => setShowNewPassword(!showNewPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-white transition-colors"
+          >
+            {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-dark-300 mb-2">
+          Подтвердите новый пароль
+        </label>
+        <input
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          className="w-full px-4 py-2.5 bg-dark-900 border border-dark-700 rounded-xl text-white placeholder-dark-500 focus:border-primary-500 outline-none transition-colors"
+          placeholder="Повторите новый пароль"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={changePasswordMutation.isPending}
+        className="w-full py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {changePasswordMutation.isPending ? (
+          <Loader2 className="w-5 h-5 animate-spin" />
+        ) : (
+          <>
+            <Key className="w-4 h-4" />
+            Изменить пароль
+          </>
+        )}
+      </button>
+    </form>
   );
 }
 
@@ -290,165 +649,6 @@ function TelegramSection() {
             </button>
           </div>
         </div>
-      )}
-    </div>
-  );
-}
-
-// === Password Section ===
-function PasswordSection() {
-  const [oldPassword, setOldPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showOldPassword, setShowOldPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-
-  const changePasswordMutation = useMutation({
-    mutationFn: () => authApi.changePassword(oldPassword, newPassword),
-    onSuccess: () => {
-      setSuccess(true);
-      setOldPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      setError('');
-      setTimeout(() => setSuccess(false), 3000);
-    },
-    onError: (err: any) => {
-      setError(err.response?.data?.error || 'Ошибка при смене пароля');
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    if (!oldPassword || !newPassword || !confirmPassword) {
-      setError('Заполните все поля');
-      return;
-    }
-
-    if (newPassword.length < 4) {
-      setError('Новый пароль должен быть не менее 4 символов');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError('Новый пароль и подтверждение не совпадают');
-      return;
-    }
-
-    if (oldPassword === newPassword) {
-      setError('Новый пароль должен отличаться от старого');
-      return;
-    }
-
-    changePasswordMutation.mutate();
-  };
-
-  return (
-    <div className="glass-card p-6">
-      <div className="flex items-center gap-3 pb-4 border-b border-dark-700 mb-6">
-        <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center">
-          <Key className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <h3 className="text-lg font-bold text-dark-100">Смена пароля</h3>
-          <p className="text-dark-400 text-sm">Обновите свой пароль</p>
-        </div>
-      </div>
-
-      {success ? (
-        <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-6 text-center">
-          <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Check className="w-8 h-8 text-green-400" />
-          </div>
-          <p className="text-green-400 font-semibold text-lg">Пароль изменён!</p>
-          <p className="text-dark-400 text-sm mt-2">Используйте новый пароль при следующем входе</p>
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {error && (
-            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
-              <p className="text-red-400 text-sm">{error}</p>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-dark-300 mb-2">
-              Текущий пароль
-            </label>
-            <div className="relative">
-              <input
-                type={showOldPassword ? 'text' : 'password'}
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-                className="w-full px-4 py-3 pr-12 bg-dark-900 border border-dark-700 rounded-xl text-white placeholder-dark-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none transition-colors"
-                placeholder="Введите текущий пароль"
-              />
-              <button
-                type="button"
-                onClick={() => setShowOldPassword(!showOldPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-white transition-colors"
-              >
-                {showOldPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-dark-300 mb-2">
-              Новый пароль
-            </label>
-            <div className="relative">
-              <input
-                type={showNewPassword ? 'text' : 'password'}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-4 py-3 pr-12 bg-dark-900 border border-dark-700 rounded-xl text-white placeholder-dark-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none transition-colors"
-                placeholder="Введите новый пароль"
-              />
-              <button
-                type="button"
-                onClick={() => setShowNewPassword(!showNewPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-white transition-colors"
-              >
-                {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-            <p className="text-dark-500 text-xs mt-1">Минимум 4 символа</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-dark-300 mb-2">
-              Подтвердите новый пароль
-            </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-dark-900 border border-dark-700 rounded-xl text-white placeholder-dark-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 outline-none transition-colors"
-              placeholder="Повторите новый пароль"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={changePasswordMutation.isPending}
-            className="w-full py-3 bg-primary-500 hover:bg-primary-600 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {changePasswordMutation.isPending ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-            ) : (
-              <>
-                <Key className="w-4 h-4" />
-                Изменить пароль
-              </>
-            )}
-          </button>
-        </form>
       )}
     </div>
   );

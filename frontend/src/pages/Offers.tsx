@@ -380,6 +380,7 @@ function Offers() {
   const [filterPartnerId, setFilterPartnerId] = useState<string>('');
   const [filterGeo, setFilterGeo] = useState<string>('');
   const [filterTheme, setFilterTheme] = useState<string>('');
+  const [filterPaymentType, setFilterPaymentType] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   const { data: partners = [] } = useQuery({
@@ -484,6 +485,10 @@ function Offers() {
     filteredOffers = filteredOffers.filter(o => o.theme === filterTheme);
   }
 
+  if (filterPaymentType) {
+    filteredOffers = filteredOffers.filter(o => o.payment_type === filterPaymentType);
+  }
+
   return (
     <div className="flex flex-col flex-1 min-h-0 overflow-hidden gap-4 sm:gap-6">
       {/* Header */}
@@ -550,6 +555,16 @@ function Offers() {
                 {theme}
               </option>
             ))}
+          </select>
+
+          <select
+            value={filterPaymentType}
+            onChange={(e) => setFilterPaymentType(e.target.value)}
+            className="glass-input py-2 px-3 text-sm"
+          >
+            <option value="">Вся оплата</option>
+            <option value="COD">COD</option>
+            <option value="SS">SS</option>
           </select>
           {canManageOffers() && partners.length > 0 && (
             <button

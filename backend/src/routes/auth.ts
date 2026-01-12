@@ -143,6 +143,62 @@ router.get('/me', authenticateToken, (req: Request, res: Response): void => {
   }
 });
 
+// Получение профиля с отделом
+router.get('/me/profile', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    const userId = req.user?.userId;
+    
+    const user = db.prepare(`
+      SELECT id, username, full_name, role, telegram_username, created_at 
+      FROM users WHERE id = ?
+    `).get(userId) as (UserPublic & { telegram_username: string | null }) | undefined;
+
+    if (!user) {
+      res.status(404).json({ error: 'Пользователь не найден' });
+      return;
+    }
+
+    // Получаем отдел пользователя
+    const department = db.prepare(`
+      SELECT d.id, d.name, d.code
+      FROM departments d
+      JOIN user_departments ud ON d.id = ud.department_id
+      WHERE ud.user_id = ?
+    `).get(userId) as { id: string; name: string; code: string } | undefined;
+
+    res.json({
+      ...user,
+      department: department || null
+    });
+  } catch (error) {
+    console.error('Get profile error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Обновление своего профиля (ФИО)
+router.patch('/me/profile', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    const userId = req.user?.userId;
+    const { full_name } = req.body;
+
+    if (!full_name || full_name.trim().length < 2) {
+      res.status(400).json({ error: 'ФИО должно содержать минимум 2 символа' });
+      return;
+    }
+
+    db.prepare('UPDATE users SET full_name = ? WHERE id = ?').run(full_name.trim(), userId);
+
+    const user = db.prepare('SELECT id, username, full_name, role, created_at FROM users WHERE id = ?')
+      .get(userId) as UserPublic;
+
+    res.json(user);
+  } catch (error) {
+    console.error('Update profile error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 // Получение всех пользователей
 router.get('/users', authenticateToken, (req: Request, res: Response): void => {
   try {

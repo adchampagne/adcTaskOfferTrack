@@ -77,6 +77,19 @@ export const authApi = {
     return data;
   },
 
+  getProfile: async () => {
+    const { data } = await api.get<User & { 
+      telegram_username: string | null;
+      department: { id: string; name: string; code: string } | null;
+    }>('/auth/me/profile');
+    return data;
+  },
+
+  updateProfile: async (full_name: string) => {
+    const { data } = await api.patch<User>('/auth/me/profile', { full_name });
+    return data;
+  },
+
   getUsers: async () => {
     const { data } = await api.get<User[]>('/auth/users');
     return data;
