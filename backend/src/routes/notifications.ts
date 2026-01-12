@@ -72,6 +72,7 @@ export const NotificationTypes = {
   TASK_COMPLETED: 'task_completed',
   SUBTASK_COMPLETED: 'subtask_completed',
   TASK_REVISION: 'task_revision',
+  TASK_CLARIFICATION: 'task_clarification',
 } as const;
 
 // Получить уведомления текущего пользователя
@@ -412,6 +413,31 @@ export function notifyTaskRevision(
     task.executor_id,
     NotificationTypes.TASK_REVISION,
     `Задача ${taskNum} возвращена на доработку`,
+    message,
+    task.id
+  );
+}
+
+// Уведомление о возврате задачи на уточнение (заказчику)
+export function notifyTaskClarification(
+  task: Task,
+  executorName: string,
+  clarificationComment: string
+): void {
+  console.log(`🔔 [Notify] notifyTaskClarification для задачи ${task.task_number || task.id}`);
+  console.log(`🔔 [Notify] Уведомляем заказчика: ${task.customer_id}`);
+  
+  const taskNum = task.task_number ? `#${task.task_number}` : '';
+  const geoInfo = task.geo ? ` [${task.geo.toUpperCase()}]` : '';
+  
+  let message = `❓ Задача ${taskNum}${geoInfo}: ${task.title}\n\n`;
+  message += `👤 ${executorName} запросил уточнение\n\n`;
+  message += `💬 Комментарий:\n${clarificationComment}`;
+
+  createNotification(
+    task.customer_id,
+    NotificationTypes.TASK_CLARIFICATION,
+    `Задача ${taskNum} требует уточнения`,
     message,
     task.id
   );

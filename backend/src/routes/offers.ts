@@ -61,7 +61,7 @@ router.get('/:id', authenticateToken, (req: Request, res: Response): void => {
 // Создать оффер (админ, байер, бизДев, руководитель баинга ИЛИ с правом manage_offers)
 router.post('/', authenticateToken, requireRolesOrPermission(['admin', 'buyer', 'bizdev', 'buying_head'], 'manage_offers'), (req: Request, res: Response): void => {
   try {
-    const { partner_id, name, theme, geo, partner_link, landing_price, promo_link, payout } = req.body;
+    const { partner_id, name, theme, geo, payment_type, partner_link, landing_price, promo_link, payout } = req.body;
 
     if (!partner_id || !name || !theme || !geo) {
       res.status(400).json({ error: 'Партнёрка, название, тематика и GEO обязательны' });
@@ -77,9 +77,9 @@ router.post('/', authenticateToken, requireRolesOrPermission(['admin', 'buyer', 
     const id = uuidv4();
 
     db.prepare(`
-      INSERT INTO offers (id, partner_id, name, theme, geo, partner_link, landing_price, promo_link, payout, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, partner_id, name, theme, geo || null, partner_link || null, landing_price || null, promo_link || null, payout || null, req.user?.userId);
+      INSERT INTO offers (id, partner_id, name, theme, geo, payment_type, partner_link, landing_price, promo_link, payout, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, partner_id, name, theme, geo || null, payment_type || null, partner_link || null, landing_price || null, promo_link || null, payout || null, req.user?.userId);
 
     const offer = db.prepare(`
       SELECT o.*, p.name as partner_name
@@ -95,10 +95,10 @@ router.post('/', authenticateToken, requireRolesOrPermission(['admin', 'buyer', 
   }
 });
 
-// Обновить оффер (админ, байер, бизДев, руководитель баинга ИЛИ с правом manage_offers)
-router.put('/:id', authenticateToken, requireRolesOrPermission(['admin', 'buyer', 'bizdev', 'buying_head'], 'manage_offers'), (req: Request, res: Response): void => {
+// Обновить оффер (админ, бизДев, руководитель баинга ИЛИ с правом manage_offers)
+router.put('/:id', authenticateToken, requireRolesOrPermission(['admin', 'bizdev', 'buying_head'], 'manage_offers'), (req: Request, res: Response): void => {
   try {
-    const { partner_id, name, theme, geo, partner_link, landing_price, promo_link, payout } = req.body;
+    const { partner_id, name, theme, geo, payment_type, partner_link, landing_price, promo_link, payout } = req.body;
     const { id } = req.params;
 
     const existing = db.prepare('SELECT id FROM offers WHERE id = ?').get(id);
@@ -121,12 +121,13 @@ router.put('/:id', authenticateToken, requireRolesOrPermission(['admin', 'buyer'
           name = COALESCE(?, name),
           theme = COALESCE(?, theme),
           geo = ?,
+          payment_type = ?,
           partner_link = COALESCE(?, partner_link),
           landing_price = COALESCE(?, landing_price),
           promo_link = COALESCE(?, promo_link),
           payout = COALESCE(?, payout)
       WHERE id = ?
-    `).run(partner_id, name, theme, geo || null, partner_link, landing_price, promo_link, payout, id);
+    `).run(partner_id, name, theme, geo || null, payment_type || null, partner_link, landing_price, promo_link, payout, id);
 
     const offer = db.prepare(`
       SELECT o.*, p.name as partner_name

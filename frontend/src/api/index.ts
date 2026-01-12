@@ -205,6 +205,8 @@ export const offersApi = {
     partner_id: string;
     name: string;
     theme: string;
+    geo?: string;
+    payment_type?: string | null;
     partner_link?: string;
     landing_price?: string;
     promo_link?: string;
@@ -270,6 +272,11 @@ export const tasksApi = {
 
   returnToRevision: async (id: string, comment: string) => {
     const { data } = await api.patch<Task>(`/tasks/${id}/revision`, { comment });
+    return data;
+  },
+
+  requestClarification: async (id: string, comment: string) => {
+    const { data } = await api.patch<Task>(`/tasks/${id}/clarification`, { comment });
     return data;
   },
 

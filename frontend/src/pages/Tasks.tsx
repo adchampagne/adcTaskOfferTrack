@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   CheckSquare, Plus, X, Calendar, User, Clock, 
@@ -1098,6 +1098,93 @@ function RevisionModal({
   );
 }
 
+// Модальное окно запроса уточнения (исполнитель -> заказчик)
+function ClarificationModal({
+  task,
+  onClose,
+  onSubmit,
+  isLoading,
+}: {
+  task: Task;
+  onClose: () => void;
+  onSubmit: (comment: string) => void;
+  isLoading: boolean;
+}) {
+  const [comment, setComment] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!comment.trim()) {
+      toast.error('Укажите что требует уточнения');
+      return;
+    }
+    onSubmit(comment.trim());
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+      <div className="glass-card w-full max-w-md p-6 animate-scale-in">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-dark-100 flex items-center gap-2">
+            <HelpCircle className="w-5 h-5 text-blue-400" />
+            Запрос уточнения
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-dark-400 hover:text-dark-200 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <p className="text-dark-300 text-sm mb-4">
+          Задача: <span className="text-dark-100 font-medium">#{task.task_number} {task.title}</span>
+        </p>
+
+        <form onSubmit={handleSubmit}>
+          <div className="bg-dark-800/50 rounded-xl p-4 border border-dark-700 mb-4">
+            <h3 className="text-sm font-medium text-dark-300 mb-3 flex items-center gap-2">
+              <MessageSquare className="w-4 h-4" />
+              Что требует уточнения *
+            </h3>
+            <p className="text-xs text-dark-500 mb-3">
+              Опишите, какая информация вам нужна для выполнения задачи
+            </p>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Какая информация вам нужна..."
+              className="glass-input w-full resize-none"
+              rows={4}
+              autoFocus
+              required
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-secondary flex-1"
+              disabled={isLoading}
+            >
+              Отмена
+            </button>
+            <button
+              type="submit"
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-blue-500/20 text-blue-400 border border-blue-500/30 hover:bg-blue-500/30 transition-colors disabled:opacity-50"
+              disabled={isLoading || !comment.trim()}
+            >
+              <HelpCircle className="w-4 h-4" />
+              {isLoading ? 'Отправка...' : 'Запросить уточнение'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // Модальное окно создания подзадачи
 function SubtaskModal({
   parentTask,
@@ -1303,6 +1390,7 @@ function TaskViewModal({
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showSubtaskModal, setShowSubtaskModal] = useState(false);
   const [showRevisionModal, setShowRevisionModal] = useState(false);
+  const [showClarificationModal, setShowClarificationModal] = useState(false);
 
   // Проверяем, является ли пользователь руководителем
   const { data: headCheck } = useQuery({
@@ -1353,6 +1441,9 @@ function TaskViewModal({
   // Заказчик может вернуть выполненную задачу на доработку
   const canReturnToRevision = isMyCreatedTask && task.status === 'completed';
 
+  // Исполнитель может запросить уточнение у заказчика
+  const canRequestClarification = isMyTask && (task.status === 'pending' || task.status === 'in_progress');
+
   // Мутация для оценки задачи
   const rateMutation = useMutation({
     mutationFn: (rating: TaskRating) => tasksApi.rate(task.id, rating),
@@ -1378,6 +1469,21 @@ function TaskViewModal({
     onError: (error: unknown) => {
       const err = error as { response?: { data?: { error?: string } } };
       toast.error(err.response?.data?.error || 'Ошибка возврата на доработку');
+    },
+  });
+
+  // Мутация для запроса уточнения
+  const clarificationMutation = useMutation({
+    mutationFn: (comment: string) => tasksApi.requestClarification(task.id, comment),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['task-comments', task.id] });
+      setShowClarificationModal(false);
+      toast.success('Запрос на уточнение отправлен заказчику');
+    },
+    onError: (error: unknown) => {
+      const err = error as { response?: { data?: { error?: string } } };
+      toast.error(err.response?.data?.error || 'Ошибка отправки запроса');
     },
   });
 
@@ -2094,6 +2200,17 @@ function TaskViewModal({
                   <span className="hidden sm:inline">Отменить</span>
                 </button>
               </div>
+
+              {/* Кнопка запроса уточнения (для исполнителя) */}
+              {canRequestClarification && (
+                <button
+                  onClick={() => setShowClarificationModal(true)}
+                  className="w-full mt-3 flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 transition-colors text-sm"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                  Запросить уточнение
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -2117,6 +2234,16 @@ function TaskViewModal({
             onClose={() => setShowRevisionModal(false)}
             onSubmit={(comment) => revisionMutation.mutate(comment)}
             isLoading={revisionMutation.isPending}
+          />
+        )}
+
+        {/* Модальное окно запроса уточнения */}
+        {showClarificationModal && (
+          <ClarificationModal
+            task={task}
+            onClose={() => setShowClarificationModal(false)}
+            onSubmit={(comment) => clarificationMutation.mutate(comment)}
+            isLoading={clarificationMutation.isPending}
           />
         )}
 
@@ -2428,6 +2555,7 @@ function TaskCard({
 function Tasks() {
   const { user, hasRole } = useAuthStore();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showModal, setShowModal] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | undefined>();
   const [viewingTask, setViewingTask] = useState<Task | undefined>();
@@ -2435,6 +2563,24 @@ function Tasks() {
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'active' | 'all'>('active');
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   
+  // Обработчик открытия задачи по URL-параметру
+  React.useEffect(() => {
+    const taskId = searchParams.get('task');
+    if (taskId) {
+      (async () => {
+        try {
+          const task = await tasksApi.getById(taskId);
+          setViewingTask(task);
+          // Очищаем параметр из URL
+          setSearchParams({}, { replace: true });
+        } catch {
+          toast.error('Задача не найдена');
+          setSearchParams({}, { replace: true });
+        }
+      })();
+    }
+  }, [searchParams, setSearchParams]);
+
   // Обработчик события openTask (для открытия подзадач)
   React.useEffect(() => {
     const handleOpenTask = async (event: Event) => {

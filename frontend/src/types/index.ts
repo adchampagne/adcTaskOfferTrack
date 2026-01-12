@@ -1,5 +1,12 @@
 export type UserRole = 'admin' | 'buyer' | 'webdev' | 'creo_manager' | 'buying_head' | 'bizdev' | 'creo_head' | 'dev_head';
 
+export type PaymentType = 'COD' | 'SS';
+
+export const paymentTypeLabels: Record<PaymentType, string> = {
+  'COD': 'COD',
+  'SS': 'SS'
+};
+
 export interface User {
   id: string;
   username: string;
@@ -24,6 +31,7 @@ export interface Offer {
   name: string;
   theme: string;
   geo: string | null;
+  payment_type: PaymentType | null;
   partner_link: string | null;
   landing_price: string | null;
   promo_link: string | null;

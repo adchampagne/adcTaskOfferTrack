@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import db, { getNextTaskNumber } from '../database';
 import { authenticateToken } from '../middleware/auth';
 import { Task, TaskWithUsers, Department, departmentHeadRole, UserRole } from '../types';
-import { notifyTaskAssigned, notifyStatusChanged, notifySubtaskCompleted, notifyTaskRevision, notifyTaskReassigned } from './notifications';
+import { notifyTaskAssigned, notifyStatusChanged, notifySubtaskCompleted, notifyTaskRevision, notifyTaskReassigned, notifyTaskClarification } from './notifications';
 
 const router = Router();
 
@@ -585,6 +585,77 @@ router.patch('/:id/revision', authenticateToken, (req: Request, res: Response): 
     res.json(task);
   } catch (error) {
     console.error('Return to revision error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Вернуть задачу на уточнение заказчику (только исполнитель)
+router.patch('/:id/clarification', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    const { comment } = req.body;
+    const { id } = req.params;
+
+    if (!comment || !comment.trim()) {
+      res.status(400).json({ error: 'Комментарий обязателен при возврате на уточнение' });
+      return;
+    }
+
+    const existing = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as Task | undefined;
+    if (!existing) {
+      res.status(404).json({ error: 'Задача не найдена' });
+      return;
+    }
+
+    // Вернуть на уточнение может только исполнитель
+    if (existing.executor_id !== req.user?.userId) {
+      res.status(403).json({ error: 'Только исполнитель может вернуть задачу на уточнение' });
+      return;
+    }
+
+    // Можно вернуть только задачу в статусе "ожидает" или "в работе"
+    if (existing.status !== 'pending' && existing.status !== 'in_progress') {
+      res.status(400).json({ error: 'Можно вернуть на уточнение только задачу в статусе "Ожидает" или "В работе"' });
+      return;
+    }
+
+    // Меняем статус на "ожидает" 
+    db.prepare(`
+      UPDATE tasks 
+      SET status = 'pending'
+      WHERE id = ?
+    `).run(id);
+
+    // Добавляем комментарий от исполнителя
+    const commentId = uuidv4();
+    const clarificationComment = `❓ **Запрос на уточнение**\n\n${comment.trim()}`;
+    db.prepare(`
+      INSERT INTO task_comments (id, task_id, user_id, message)
+      VALUES (?, ?, ?, ?)
+    `).run(commentId, id, req.user?.userId, clarificationComment);
+
+    const task = db.prepare(`
+      SELECT t.*, 
+             c.full_name as customer_name, 
+             c.username as customer_username,
+             e.full_name as executor_name,
+             e.username as executor_username,
+             o.name as offer_name
+      FROM tasks t
+      LEFT JOIN users c ON t.customer_id = c.id
+      LEFT JOIN users e ON t.executor_id = e.id
+      LEFT JOIN offers o ON t.offer_id = o.id
+      WHERE t.id = ?
+    `).get(id) as TaskWithUsers;
+
+    // Получаем имя исполнителя
+    const currentUser = db.prepare('SELECT full_name FROM users WHERE id = ?').get(req.user?.userId) as { full_name: string } | undefined;
+
+    // Отправляем уведомление заказчику
+    notifyTaskClarification(task, currentUser?.full_name || 'Исполнитель', comment.trim());
+
+    res.json(task);
+  } catch (error) {
+    console.error('Return to clarification error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });

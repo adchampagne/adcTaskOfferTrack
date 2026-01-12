@@ -14,8 +14,10 @@ interface AuthState {
   logout: () => void;
   checkAuth: () => Promise<void>;
   canManageOffers: () => boolean;
+  canEditOffers: () => boolean;
   canManagePartners: () => boolean;
   canManageKnowledge: () => boolean;
+  canViewPartnerLinks: () => boolean;
   hasRole: (...roles: UserRole[]) => boolean;
   hasPermission: (permission: string) => boolean;
 }
@@ -77,6 +79,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return permissions.includes('manage_offers');
   },
 
+  canEditOffers: () => {
+    const { user, permissions } = get();
+    // Редактировать офферы могут только админы, руководители баинга и биздев
+    if (user?.role === 'admin' || user?.role === 'bizdev' || user?.role === 'buying_head') {
+      return true;
+    }
+    return permissions.includes('manage_offers');
+  },
+
   canManagePartners: () => {
     const { user, permissions } = get();
     if (user?.role === 'admin' || user?.role === 'buyer' || user?.role === 'bizdev') {
@@ -91,6 +102,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return true;
     }
     return permissions.includes('manage_knowledge');
+  },
+
+  canViewPartnerLinks: () => {
+    const { user } = get();
+    // Ссылки на ПП видят только админы, руководители отделов и биздев
+    const allowedRoles: UserRole[] = ['admin', 'buying_head', 'creo_head', 'dev_head', 'bizdev'];
+    return user ? allowedRoles.includes(user.role) : false;
   },
 
   hasRole: (...roles: UserRole[]) => {

@@ -233,6 +233,13 @@ try {
     console.log('✅ Миграция GEO для офферов завершена');
   }
 
+  // Миграция offers: payment_type колонка (COD или SS)
+  if (!offerColumnNames.includes('payment_type')) {
+    console.log('🔄 Миграция: добавление payment_type к офферам...');
+    db.exec("ALTER TABLE offers ADD COLUMN payment_type TEXT CHECK(payment_type IN ('COD', 'SS'))");
+    console.log('✅ Миграция payment_type для офферов завершена');
+  }
+
   // Миграция tasks: priority колонка
   if (!taskColumnNames.includes('priority')) {
     console.log('🔄 Миграция: добавление приоритета к задачам...');

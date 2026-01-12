@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Building2, Package, CheckSquare, Clock, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { partnersApi, offersApi, tasksApi } from '../api';
 import { useAuthStore } from '../store/authStore';
 import { taskStatusLabels, taskTypeLabels, Task } from '../types';
@@ -32,18 +33,21 @@ function StatCard({
   );
 }
 
-function TaskCard({ task }: { task: Task }) {
+function TaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
   const isOverdue = isPast(new Date(task.deadline)) && task.status !== 'completed';
   const isDueToday = isToday(new Date(task.deadline));
 
   return (
-    <div className={`p-3 sm:p-4 rounded-xl border transition-colors ${
-      isOverdue 
-        ? 'bg-red-500/5 border-red-500/20' 
-        : isDueToday 
-          ? 'bg-yellow-500/5 border-yellow-500/20'
-          : 'bg-dark-800/50 border-dark-700/50'
-    }`}>
+    <div 
+      onClick={onClick}
+      className={`p-3 sm:p-4 rounded-xl border transition-all cursor-pointer hover:scale-[1.02] hover:shadow-lg ${
+        isOverdue 
+          ? 'bg-red-500/5 border-red-500/20 hover:bg-red-500/10' 
+          : isDueToday 
+            ? 'bg-yellow-500/5 border-yellow-500/20 hover:bg-yellow-500/10'
+            : 'bg-dark-800/50 border-dark-700/50 hover:bg-dark-700/50'
+      }`}
+    >
       <div className="flex items-start justify-between gap-2 sm:gap-4">
         <div className="flex-1 min-w-0">
           <h4 className="font-medium text-dark-100 truncate text-sm sm:text-base">{task.title}</h4>
@@ -70,6 +74,7 @@ function TaskCard({ task }: { task: Task }) {
 
 function Dashboard() {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
 
   const { data: partners = [] } = useQuery({
     queryKey: ['partners'],
@@ -152,10 +157,17 @@ function Dashboard() {
           ) : (
             <div className="space-y-2 sm:space-y-3 max-h-80 sm:max-h-96 overflow-y-auto">
               {pendingTasks.slice(0, 5).map((task) => (
-                <TaskCard key={task.id} task={task} />
+                <TaskCard 
+                  key={task.id} 
+                  task={task} 
+                  onClick={() => navigate(`/tasks?task=${task.id}`)}
+                />
               ))}
               {pendingTasks.length > 5 && (
-                <p className="text-center text-dark-400 text-xs sm:text-sm pt-2">
+                <p 
+                  className="text-center text-dark-400 text-xs sm:text-sm pt-2 cursor-pointer hover:text-primary-400 transition-colors"
+                  onClick={() => navigate('/tasks')}
+                >
                   И ещё {pendingTasks.length - 5} задач...
                 </p>
               )}
@@ -177,7 +189,11 @@ function Dashboard() {
           ) : (
             <div className="space-y-2 sm:space-y-3 max-h-80 sm:max-h-96 overflow-y-auto">
               {overdueTasks.map((task) => (
-                <TaskCard key={task.id} task={task} />
+                <TaskCard 
+                  key={task.id} 
+                  task={task} 
+                  onClick={() => navigate(`/tasks?task=${task.id}`)}
+                />
               ))}
             </div>
           )}

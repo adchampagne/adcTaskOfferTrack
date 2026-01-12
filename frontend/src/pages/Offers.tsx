@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Package, Plus, ExternalLink, Edit2, Trash2, X, Filter, Globe, Search } from 'lucide-react';
 import { offersApi, partnersApi } from '../api';
 import { useAuthStore } from '../store/authStore';
-import { Offer, Partner, geoOptions } from '../types';
+import { Offer, Partner, geoOptions, PaymentType } from '../types';
 import GeoSelect from '../components/GeoSelect';
 import toast from 'react-hot-toast';
 
@@ -74,6 +74,7 @@ interface OfferFormData {
   name: string;
   theme: string;
   geo: string;
+  payment_type: PaymentType | '';
   partner_link: string;
   landing_price: string;
   promo_link: string;
@@ -96,6 +97,7 @@ function OfferModal({
     name: offer?.name || '',
     theme: offer?.theme || '',
     geo: offer?.geo || '',
+    payment_type: offer?.payment_type || '',
     partner_link: offer?.partner_link || '',
     landing_price: offer?.landing_price || '',
     promo_link: offer?.promo_link || '',
@@ -188,6 +190,21 @@ function OfferModal({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">
+                Вид оплаты
+              </label>
+              <select
+                value={formData.payment_type}
+                onChange={(e) => setFormData({ ...formData, payment_type: e.target.value as PaymentType | '' })}
+                className="glass-input w-full"
+              >
+                <option value="">Не указано</option>
+                <option value="COD">COD</option>
+                <option value="SS">SS</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-2">
                 Ставка/Апп
               </label>
               <input
@@ -258,14 +275,16 @@ function OfferCard({
   offer,
   onEdit,
   onDelete,
-  canManage,
+  canEdit,
   isAdmin,
+  canViewPPLinks,
 }: {
   offer: Offer;
   onEdit: () => void;
   onDelete: () => void;
-  canManage: boolean;
+  canEdit: boolean;
   isAdmin: boolean;
+  canViewPPLinks: boolean;
 }) {
   return (
     <div className="glass-card p-4 animate-fade-in">
@@ -274,14 +293,16 @@ function OfferCard({
           <h3 className="font-semibold text-dark-100 truncate">{offer.name}</h3>
           <p className="text-sm text-dark-400 truncate">{offer.partner_name}</p>
         </div>
-        {canManage && (
+        {(canEdit || isAdmin) && (
           <div className="flex items-center gap-1 flex-shrink-0">
-            <button
-              onClick={onEdit}
-              className="p-2 text-dark-400 hover:text-primary-400 hover:bg-dark-700/50 rounded-lg transition-colors"
-            >
-              <Edit2 className="w-4 h-4" />
-            </button>
+            {canEdit && (
+              <button
+                onClick={onEdit}
+                className="p-2 text-dark-400 hover:text-primary-400 hover:bg-dark-700/50 rounded-lg transition-colors"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+            )}
             {isAdmin && (
               <button
                 onClick={onDelete}
@@ -304,6 +325,15 @@ function OfferCard({
             {geoOptions.find(g => g.code === offer.geo)?.label || offer.geo.toUpperCase()}
           </span>
         )}
+        {offer.payment_type && (
+          <span className={`px-2 py-1 text-xs rounded-md border ${
+            offer.payment_type === 'COD' 
+              ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' 
+              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+          }`}>
+            {offer.payment_type}
+          </span>
+        )}
         {offer.payout && (
           <span className="text-green-400 font-mono text-sm">{offer.payout}</span>
         )}
@@ -312,16 +342,16 @@ function OfferCard({
         )}
       </div>
 
-      {(offer.partner_link || offer.promo_link) && (
-        <div className="mt-3 pt-3 border-t border-dark-700/50 flex gap-3">
-          {offer.partner_link && (
+      {((canViewPPLinks && offer.partner_link) || offer.promo_link) && (
+        <div className="mt-3 pt-3 border-t border-dark-700/50 flex gap-2 flex-wrap">
+          {canViewPPLinks && offer.partner_link && (
             <a
               href={offer.partner_link}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-primary-300 bg-primary-500/15 hover:bg-primary-500/25 border border-primary-500/30 rounded-lg transition-colors"
             >
-              <ExternalLink className="w-3 h-3" />
+              <ExternalLink className="w-3.5 h-3.5" />
               ПП
             </a>
           )}
@@ -330,9 +360,9 @@ function OfferCard({
               href={offer.promo_link}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-300 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 rounded-lg transition-colors"
             >
-              <ExternalLink className="w-3 h-3" />
+              <ExternalLink className="w-3.5 h-3.5" />
               Промо
             </a>
           )}
@@ -343,7 +373,7 @@ function OfferCard({
 }
 
 function Offers() {
-  const { canManageOffers, hasRole } = useAuthStore();
+  const { canManageOffers, canEditOffers, hasRole, canViewPartnerLinks } = useAuthStore();
   const queryClient = useQueryClient();
   const [showModal, setShowModal] = useState(false);
   const [editingOffer, setEditingOffer] = useState<Offer | undefined>();
@@ -376,7 +406,7 @@ function Offers() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: OfferFormData }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<Offer> }) =>
       offersApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['offers'] });
@@ -402,10 +432,23 @@ function Offers() {
   });
 
   const handleSave = (data: OfferFormData) => {
+    // Преобразуем пустую строку в null для payment_type
+    const payload = {
+      partner_id: data.partner_id,
+      name: data.name,
+      theme: data.theme,
+      geo: data.geo,
+      payment_type: data.payment_type || null,
+      partner_link: data.partner_link,
+      landing_price: data.landing_price,
+      promo_link: data.promo_link,
+      payout: data.payout,
+    };
+    
     if (editingOffer) {
-      updateMutation.mutate({ id: editingOffer.id, data });
+      updateMutation.mutate({ id: editingOffer.id, data: payload });
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(payload);
     }
   };
 
@@ -561,8 +604,9 @@ function Offers() {
                   offer={offer}
                   onEdit={() => setEditingOffer(offer)}
                   onDelete={() => handleDelete(offer)}
-                  canManage={canManageOffers()}
+                  canEdit={canEditOffers()}
                   isAdmin={hasRole('admin')}
+                  canViewPPLinks={canViewPartnerLinks()}
                 />
               </div>
             ))}
@@ -577,10 +621,11 @@ function Offers() {
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Партнёрка</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Тематика</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">GEO</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Оплата</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Ставка</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Цена</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Ссылки</th>
-                  {canManageOffers() && (
+                  {canEditOffers() && (
                     <th className="text-right py-3 px-4 text-sm font-medium text-dark-400">Действия</th>
                   )}
                 </tr>
@@ -613,6 +658,19 @@ function Offers() {
                       )}
                     </td>
                     <td className="py-4 px-4">
+                      {offer.payment_type ? (
+                        <span className={`px-2 py-1 text-xs rounded-md border ${
+                          offer.payment_type === 'COD' 
+                            ? 'bg-orange-500/10 text-orange-400 border-orange-500/20' 
+                            : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                        }`}>
+                          {offer.payment_type}
+                        </span>
+                      ) : (
+                        <span className="text-dark-500">—</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-4">
                       <span className="text-green-400 font-mono text-sm">
                         {offer.payout || '—'}
                       </span>
@@ -624,14 +682,14 @@ function Offers() {
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex gap-2">
-                        {offer.partner_link && (
+                        {canViewPartnerLinks() && offer.partner_link && (
                           <a
                             href={offer.partner_link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-primary-300 bg-primary-500/15 hover:bg-primary-500/25 border border-primary-500/30 rounded-lg transition-colors"
                           >
-                            <ExternalLink className="w-3 h-3" />
+                            <ExternalLink className="w-3.5 h-3.5" />
                             ПП
                           </a>
                         )}
@@ -640,18 +698,18 @@ function Offers() {
                             href={offer.promo_link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-blue-300 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/30 rounded-lg transition-colors"
                           >
-                            <ExternalLink className="w-3 h-3" />
+                            <ExternalLink className="w-3.5 h-3.5" />
                             Промо
                           </a>
                         )}
-                        {!offer.partner_link && !offer.promo_link && (
+                        {(!canViewPartnerLinks() || !offer.partner_link) && !offer.promo_link && (
                           <span className="text-dark-500 text-sm">—</span>
                         )}
                       </div>
                     </td>
-                    {canManageOffers() && (
+                    {canEditOffers() && (
                       <td className="py-4 px-4 text-right">
                         <div className="flex justify-end gap-1">
                           <button
