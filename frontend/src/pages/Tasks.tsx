@@ -2723,8 +2723,12 @@ function Tasks() {
   const statusMutation = useMutation({
     mutationFn: ({ id, status }: { id: string; status: TaskStatus }) =>
       tasksApi.updateStatus(id, status),
-    onSuccess: () => {
+    onSuccess: (updatedTask) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      // Обновляем viewingTask, если открыта та же задача
+      if (viewingTask && updatedTask && viewingTask.id === updatedTask.id) {
+        setViewingTask(updatedTask);
+      }
     },
     onError: (error: unknown) => {
       const err = error as { response?: { data?: { error?: string } } };
@@ -3127,7 +3131,10 @@ function Tasks() {
           }}
           onStatusChange={(status) => {
             statusMutation.mutate({ id: viewingTask.id, status });
-            setViewingTask(undefined);
+            // Закрываем модалку только при завершении или отмене
+            if (status === 'completed' || status === 'cancelled') {
+              setViewingTask(undefined);
+            }
           }}
           onCompleteWithFiles={async (files, comment) => {
             // Сначала загружаем файлы результатов (если есть)
