@@ -40,7 +40,7 @@ function TaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
   return (
     <div 
       onClick={onClick}
-      className={`p-3 sm:p-4 rounded-xl border transition-all cursor-pointer hover:scale-[1.02] hover:shadow-lg ${
+      className={`p-3 sm:p-4 rounded-xl border transition-all cursor-pointer hover:shadow-lg ${
         isOverdue 
           ? 'bg-red-500/5 border-red-500/20 hover:bg-red-500/10' 
           : isDueToday 

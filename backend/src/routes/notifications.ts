@@ -73,6 +73,7 @@ export const NotificationTypes = {
   SUBTASK_COMPLETED: 'subtask_completed',
   TASK_REVISION: 'task_revision',
   TASK_CLARIFICATION: 'task_clarification',
+  TASK_COMMENT: 'task_comment',
 } as const;
 
 // Получить уведомления текущего пользователя
@@ -441,6 +442,57 @@ export function notifyTaskClarification(
     message,
     task.id
   );
+}
+
+// Уведомление о новом комментарии к задаче
+export function notifyTaskComment(
+  task: Task,
+  commentAuthorId: string,
+  commentAuthorName: string,
+  commentText: string
+): void {
+  console.log(`🔔 [Notify] notifyTaskComment для задачи ${task.task_number || task.id}`);
+  console.log(`🔔 [Notify] Автор комментария: ${commentAuthorId}`);
+  
+  const taskNum = task.task_number ? `#${task.task_number}` : '';
+  const geoInfo = task.geo ? ` [${task.geo.toUpperCase()}]` : '';
+  
+  // Уведомляем всех связанных с задачей, кроме автора комментария
+  const usersToNotify = new Set<string>();
+  
+  if (task.customer_id !== commentAuthorId) {
+    usersToNotify.add(task.customer_id);
+    console.log(`🔔 [Notify] Добавлен заказчик ${task.customer_id} в список уведомлений`);
+  }
+  if (task.executor_id !== commentAuthorId) {
+    usersToNotify.add(task.executor_id);
+    console.log(`🔔 [Notify] Добавлен исполнитель ${task.executor_id} в список уведомлений`);
+  }
+  
+  if (usersToNotify.size === 0) {
+    console.log(`⏭️ [Notify] Нет пользователей для уведомления`);
+    return;
+  }
+  
+  console.log(`🔔 [Notify] Итого уведомляем ${usersToNotify.size} пользователей`);
+  
+  const truncatedComment = commentText.length > 200 
+    ? commentText.substring(0, 200) + '...' 
+    : commentText;
+  
+  let message = `💬 Задача ${taskNum}${geoInfo}: ${task.title}\n\n`;
+  message += `👤 ${commentAuthorName} оставил комментарий:\n\n`;
+  message += `"${truncatedComment}"`;
+
+  usersToNotify.forEach((userId) => {
+    createNotification(
+      userId,
+      NotificationTypes.TASK_COMMENT,
+      `Новый комментарий к задаче ${taskNum}`,
+      message,
+      task.id
+    );
+  });
 }
 
 export default router;

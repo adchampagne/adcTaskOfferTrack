@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../database';
 import { authenticateToken } from '../middleware/auth';
+import { notifyTaskComment } from './notifications';
 
 const router = Router();
 
@@ -42,6 +43,19 @@ router.get('/task/:taskId', authenticateToken, (req: Request, res: Response): vo
   }
 });
 
+// Интерфейс для задачи с полной информацией
+interface TaskForNotification {
+  id: string;
+  task_number?: number;
+  title: string;
+  description?: string | null;
+  deadline?: string;
+  geo?: string | null;
+  department?: string | null;
+  customer_id: string;
+  executor_id: string;
+}
+
 // Добавить комментарий к задаче
 router.post('/task/:taskId', authenticateToken, (req: Request, res: Response): void => {
   try {
@@ -54,8 +68,11 @@ router.post('/task/:taskId', authenticateToken, (req: Request, res: Response): v
       return;
     }
 
-    // Проверяем существование задачи
-    const task = db.prepare('SELECT id, customer_id, executor_id FROM tasks WHERE id = ?').get(taskId) as { id: string; customer_id: string; executor_id: string } | undefined;
+    // Проверяем существование задачи и получаем полную информацию
+    const task = db.prepare(`
+      SELECT id, task_number, title, description, deadline, geo, department, customer_id, executor_id 
+      FROM tasks WHERE id = ?
+    `).get(taskId) as TaskForNotification | undefined;
     if (!task) {
       res.status(404).json({ error: 'Задача не найдена' });
       return;
@@ -74,6 +91,11 @@ router.post('/task/:taskId', authenticateToken, (req: Request, res: Response): v
       LEFT JOIN users u ON c.user_id = u.id
       WHERE c.id = ?
     `).get(id) as TaskComment;
+
+    // Отправляем уведомления связанным пользователям
+    if (userId && comment.user_name) {
+      notifyTaskComment(task, userId, comment.user_name, message.trim());
+    }
 
     res.status(201).json(comment);
   } catch (error) {

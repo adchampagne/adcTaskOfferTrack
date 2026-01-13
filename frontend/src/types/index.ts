@@ -329,12 +329,15 @@ export interface TaskComment {
 
 export type NotificationType = 
   | 'task_assigned'
+  | 'task_reassigned'
   | 'task_status_changed'
   | 'task_deadline_soon'
   | 'task_overdue'
   | 'task_completed'
   | 'subtask_completed'
-  | 'task_revision';
+  | 'task_revision'
+  | 'task_clarification'
+  | 'task_comment';
 
 export interface Notification {
   id: string;
