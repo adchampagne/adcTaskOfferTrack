@@ -80,6 +80,8 @@ interface OfferFormData {
   landing_price: string;
   promo_link: string;
   payout: string;
+  garant: string;
+  cap: string;
 }
 
 function OfferModal({
@@ -103,6 +105,8 @@ function OfferModal({
     landing_price: offer?.landing_price || '',
     promo_link: offer?.promo_link || '',
     payout: offer?.payout || '',
+    garant: offer?.garant || '',
+    cap: offer?.cap || '',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -257,6 +261,34 @@ function OfferModal({
             />
           </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-2">
+                Гарант
+              </label>
+              <input
+                type="text"
+                value={formData.garant}
+                onChange={(e) => setFormData({ ...formData, garant: e.target.value })}
+                className="glass-input w-full"
+                placeholder="10%"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-2">
+                Капа
+              </label>
+              <input
+                type="text"
+                value={formData.cap}
+                onChange={(e) => setFormData({ ...formData, cap: e.target.value })}
+                className="glass-input w-full"
+                placeholder="100 лидов/день"
+              />
+            </div>
+          </div>
+
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="btn-secondary flex-1">
               Отмена
@@ -341,6 +373,16 @@ function OfferCard({
         {offer.landing_price && (
           <span className="text-dark-400 font-mono text-sm">{offer.landing_price}</span>
         )}
+        {offer.garant && (
+          <span className="px-2 py-1 bg-yellow-500/10 text-yellow-400 text-xs rounded-md border border-yellow-500/20">
+            Гарант: {offer.garant}
+          </span>
+        )}
+        {offer.cap && (
+          <span className="px-2 py-1 bg-purple-500/10 text-purple-400 text-xs rounded-md border border-purple-500/20">
+            Капа: {offer.cap}
+          </span>
+        )}
       </div>
 
       {((canViewPPLinks && offer.partner_link) || offer.promo_link) && (
@@ -385,11 +427,16 @@ function Offers() {
   const [filterPaymentType, setFilterPaymentType] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Открытие модалки создания по URL параметру ?new=1
+  // Открытие модалки создания по URL параметру ?new=1, или установка поиска по ?search=
   useEffect(() => {
     if (searchParams.get('new') === '1') {
       setShowModal(true);
       setEditingOffer(undefined);
+      setSearchParams({}, { replace: true });
+    }
+    const search = searchParams.get('search');
+    if (search) {
+      setSearchQuery(search);
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, setSearchParams]);
@@ -650,6 +697,8 @@ function Offers() {
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Оплата</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Ставка</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Цена</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Гарант</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Капа</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Ссылки</th>
                   {canEditOffers() && (
                     <th className="text-right py-3 px-4 text-sm font-medium text-dark-400">Действия</th>
@@ -705,6 +754,24 @@ function Offers() {
                       <span className="text-dark-300 font-mono text-sm">
                         {offer.landing_price || '—'}
                       </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      {offer.garant ? (
+                        <span className="px-2 py-1 bg-yellow-500/10 text-yellow-400 text-xs rounded-md border border-yellow-500/20">
+                          {offer.garant}
+                        </span>
+                      ) : (
+                        <span className="text-dark-500">—</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-4">
+                      {offer.cap ? (
+                        <span className="px-2 py-1 bg-purple-500/10 text-purple-400 text-xs rounded-md border border-purple-500/20">
+                          {offer.cap}
+                        </span>
+                      ) : (
+                        <span className="text-dark-500">—</span>
+                      )}
                     </td>
                     <td className="py-4 px-4">
                       <div className="flex gap-2">

@@ -36,6 +36,8 @@ export interface Offer {
   landing_price: string | null;
   promo_link: string | null;
   payout: string | null;
+  garant: string | null;
+  cap: string | null;
   created_at: string;
   created_by: string | null;
   partner_name?: string;
@@ -93,6 +95,7 @@ export interface Task {
   executor_name?: string;
   executor_username?: string;
   offer_name?: string;
+  offer_promo_link?: string | null;
   parent_task_title?: string;
   parent_task_number?: number;
   subtasks_count?: number;

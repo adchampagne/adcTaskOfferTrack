@@ -29,6 +29,7 @@ router.get('/', authenticateToken, (req: Request, res: Response): void => {
              e.full_name as executor_name,
              e.username as executor_username,
              o.name as offer_name,
+             o.promo_link as offer_promo_link,
              pt.title as parent_task_title,
              pt.task_number as parent_task_number,
              (SELECT COUNT(*) FROM tasks st WHERE st.parent_task_id = t.id) as subtasks_count,
@@ -81,6 +82,7 @@ router.get('/my', authenticateToken, (req: Request, res: Response): void => {
              e.full_name as executor_name,
              e.username as executor_username,
              o.name as offer_name,
+             o.promo_link as offer_promo_link,
              pt.title as parent_task_title,
              pt.task_number as parent_task_number,
              (SELECT COUNT(*) FROM tasks st WHERE st.parent_task_id = t.id) as subtasks_count,
@@ -111,6 +113,7 @@ router.get('/:id', authenticateToken, (req: Request, res: Response): void => {
              e.full_name as executor_name,
              e.username as executor_username,
              o.name as offer_name,
+             o.promo_link as offer_promo_link,
              pt.title as parent_task_title,
              pt.task_number as parent_task_number
       FROM tasks t
@@ -244,7 +247,8 @@ router.post('/', authenticateToken, (req: Request, res: Response): void => {
              c.username as customer_username,
              e.full_name as executor_name,
              e.username as executor_username,
-             o.name as offer_name
+             o.name as offer_name,
+             o.promo_link as offer_promo_link
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
       LEFT JOIN users e ON t.executor_id = e.id
@@ -300,6 +304,7 @@ router.patch('/:id/status', authenticateToken, (req: Request, res: Response): vo
              e.full_name as executor_name,
              e.username as executor_username,
              o.name as offer_name,
+             o.promo_link as offer_promo_link,
              pt.title as parent_task_title,
              pt.task_number as parent_task_number
       FROM tasks t
@@ -425,7 +430,8 @@ router.put('/:id', authenticateToken, (req: Request, res: Response): void => {
              c.username as customer_username,
              e.full_name as executor_name,
              e.username as executor_username,
-             o.name as offer_name
+             o.name as offer_name,
+             o.promo_link as offer_promo_link
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
       LEFT JOIN users e ON t.executor_id = e.id
@@ -509,7 +515,8 @@ router.patch('/:id/rate', authenticateToken, (req: Request, res: Response): void
              c.username as customer_username,
              e.full_name as executor_name,
              e.username as executor_username,
-             o.name as offer_name
+             o.name as offer_name,
+             o.promo_link as offer_promo_link
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
       LEFT JOIN users e ON t.executor_id = e.id
@@ -574,7 +581,8 @@ router.patch('/:id/revision', authenticateToken, (req: Request, res: Response): 
              c.username as customer_username,
              e.full_name as executor_name,
              e.username as executor_username,
-             o.name as offer_name
+             o.name as offer_name,
+             o.promo_link as offer_promo_link
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
       LEFT JOIN users e ON t.executor_id = e.id
@@ -645,7 +653,8 @@ router.patch('/:id/clarification', authenticateToken, (req: Request, res: Respon
              c.username as customer_username,
              e.full_name as executor_name,
              e.username as executor_username,
-             o.name as offer_name
+             o.name as offer_name,
+             o.promo_link as offer_promo_link
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
       LEFT JOIN users e ON t.executor_id = e.id
@@ -691,7 +700,8 @@ router.get('/:id/subtasks', authenticateToken, (req: Request, res: Response): vo
              c.username as customer_username,
              e.full_name as executor_name,
              e.username as executor_username,
-             o.name as offer_name
+             o.name as offer_name,
+             o.promo_link as offer_promo_link
       FROM tasks t
       LEFT JOIN users c ON t.customer_id = c.id
       LEFT JOIN users e ON t.executor_id = e.id
@@ -716,7 +726,8 @@ router.post('/:id/subtasks', authenticateToken, (req: Request, res: Response): v
 
     // Проверяем родительскую задачу
     const parentTask = db.prepare(`
-      SELECT t.*, o.name as offer_name 
+      SELECT t.*, o.name as offer_name,
+             o.promo_link as offer_promo_link 
       FROM tasks t
       LEFT JOIN offers o ON t.offer_id = o.id
       WHERE t.id = ?
@@ -792,6 +803,7 @@ router.post('/:id/subtasks', authenticateToken, (req: Request, res: Response): v
              e.full_name as executor_name,
              e.username as executor_username,
              o.name as offer_name,
+             o.promo_link as offer_promo_link,
              pt.title as parent_task_title,
              pt.task_number as parent_task_number
       FROM tasks t

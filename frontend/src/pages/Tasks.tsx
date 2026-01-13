@@ -6,7 +6,7 @@ import {
   AlertCircle, PlayCircle, CheckCircle, XCircle, Edit2, Trash2,
   Eye, FileText, ArrowRight, Upload, Download, Image, Video, 
   FileArchive, File, Paperclip, Loader2, HelpCircle, Filter, Send, MessageSquare,
-  GitBranch, ChevronRight, RotateCcw
+  GitBranch, ChevronRight, RotateCcw, ExternalLink
 } from 'lucide-react';
 import UserLink from '../components/UserLink';
 import { tasksApi, authApi, filesApi, headDashboardApi, offersApi, commentsApi } from '../api';
@@ -1629,10 +1629,26 @@ function TaskViewModal({
                 {task.geo && task.geo !== 'any' && <span className="ml-2 text-xs sm:text-sm font-normal text-dark-400 bg-dark-700/50 px-2 py-0.5 rounded">{task.geo.toUpperCase()}</span>}
               </h2>
               {task.offer_name && (
-                <div className="mt-2">
-                  <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-500/10 text-purple-400 text-xs sm:text-sm rounded border border-purple-500/30">
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                  <Link
+                    to={`/offers?search=${encodeURIComponent(task.offer_name)}`}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-purple-500/10 text-purple-400 text-xs sm:text-sm rounded border border-purple-500/30 hover:bg-purple-500/20 transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     📦 Оффер: {task.offer_name}
-                  </span>
+                  </Link>
+                  {task.offer_promo_link && (
+                    <a
+                      href={task.offer_promo_link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 px-2 py-1 bg-green-500/10 text-green-400 text-xs sm:text-sm rounded border border-green-500/30 hover:bg-green-500/20 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Промо
+                    </a>
+                  )}
                 </div>
               )}
               {/* Индикатор подзадачи */}
@@ -2411,9 +2427,27 @@ function TaskCard({
                   {taskTypeLabels[task.task_type]}
                 </span>
                 {task.offer_name && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-500/10 text-purple-400 text-xs rounded border border-purple-500/30">
-                    📦 {task.offer_name}
-                  </span>
+                  <>
+                    <Link
+                      to={`/offers?search=${encodeURIComponent(task.offer_name)}`}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-500/10 text-purple-400 text-xs rounded border border-purple-500/30 hover:bg-purple-500/20 transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      📦 {task.offer_name}
+                    </Link>
+                    {task.offer_promo_link && (
+                      <a
+                        href={task.offer_promo_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-500/10 text-green-400 text-xs rounded border border-green-500/30 hover:bg-green-500/20 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Промо
+                      </a>
+                    )}
+                  </>
                 )}
                 {task.geo && task.geo !== 'any' && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/10 text-blue-400 text-xs rounded border border-blue-500/30">

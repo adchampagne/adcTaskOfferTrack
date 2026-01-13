@@ -261,6 +261,20 @@ try {
     console.log('✅ Миграция payment_type для офферов завершена');
   }
 
+  // Миграция offers: garant колонка
+  if (!offerColumnNames.includes('garant')) {
+    console.log('🔄 Миграция: добавление garant к офферам...');
+    db.exec("ALTER TABLE offers ADD COLUMN garant TEXT");
+    console.log('✅ Миграция garant для офферов завершена');
+  }
+
+  // Миграция offers: cap колонка
+  if (!offerColumnNames.includes('cap')) {
+    console.log('🔄 Миграция: добавление cap к офферам...');
+    db.exec("ALTER TABLE offers ADD COLUMN cap TEXT");
+    console.log('✅ Миграция cap для офферов завершена');
+  }
+
   // Миграция tasks: priority колонка
   if (!taskColumnNames.includes('priority')) {
     console.log('🔄 Миграция: добавление приоритета к задачам...');
