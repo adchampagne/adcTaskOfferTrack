@@ -290,12 +290,26 @@ router.patch('/:id/status', authenticateToken, (req: Request, res: Response): vo
     }
 
     const completed_at = status === 'completed' ? new Date().toISOString() : null;
+    
+    // Устанавливаем started_at при первом переходе в "В работе"
+    const existingTask = existing as Task & { started_at?: string };
+    const started_at = (status === 'in_progress' && !existingTask.started_at) 
+      ? new Date().toISOString() 
+      : undefined;
 
-    db.prepare(`
-      UPDATE tasks 
-      SET status = ?, completed_at = ?
-      WHERE id = ?
-    `).run(status, completed_at, id);
+    if (started_at) {
+      db.prepare(`
+        UPDATE tasks 
+        SET status = ?, completed_at = ?, started_at = ?
+        WHERE id = ?
+      `).run(status, completed_at, started_at, id);
+    } else {
+      db.prepare(`
+        UPDATE tasks 
+        SET status = ?, completed_at = ?
+        WHERE id = ?
+      `).run(status, completed_at, id);
+    }
 
     const task = db.prepare(`
       SELECT t.*, 

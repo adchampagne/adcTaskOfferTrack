@@ -677,6 +677,8 @@ export interface TopExecutor {
   username: string;
   tasks_completed: number;
   avg_hours: number;
+  avg_hours_total: number | null;
+  avg_hours_work: number | null;
 }
 
 export const analyticsApi = {

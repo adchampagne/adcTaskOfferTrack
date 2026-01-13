@@ -275,6 +275,13 @@ try {
     console.log('✅ Миграция cap для офферов завершена');
   }
 
+  // Миграция tasks: started_at колонка (когда задача взята в работу)
+  if (!taskColumnNames.includes('started_at')) {
+    console.log('🔄 Миграция: добавление started_at к задачам...');
+    db.exec("ALTER TABLE tasks ADD COLUMN started_at DATETIME");
+    console.log('✅ Миграция started_at для задач завершена');
+  }
+
   // Миграция tasks: priority колонка
   if (!taskColumnNames.includes('priority')) {
     console.log('🔄 Миграция: добавление приоритета к задачам...');

@@ -355,7 +355,14 @@ router.get('/top-executors', authenticateToken, (req: Request, res: Response): v
         COUNT(*) as tasks_completed,
         AVG(
           CAST((julianday(t.completed_at) - julianday(t.created_at)) * 24 AS REAL)
-        ) as avg_hours
+        ) as avg_hours_total,
+        AVG(
+          CASE 
+            WHEN t.started_at IS NOT NULL 
+            THEN CAST((julianday(t.completed_at) - julianday(t.started_at)) * 24 AS REAL)
+            ELSE NULL
+          END
+        ) as avg_hours_work
       FROM tasks t
       JOIN users u ON t.executor_id = u.id
       WHERE t.status = 'completed' 
@@ -379,12 +386,16 @@ router.get('/top-executors', authenticateToken, (req: Request, res: Response): v
       full_name: string;
       username: string;
       tasks_completed: number;
-      avg_hours: number;
+      avg_hours_total: number | null;
+      avg_hours_work: number | null;
     }>;
     
     const formatted = results.map(r => ({
       ...r,
-      avg_hours: Math.round(r.avg_hours * 10) / 10
+      avg_hours_total: r.avg_hours_total ? Math.round(r.avg_hours_total * 10) / 10 : null,
+      avg_hours_work: r.avg_hours_work ? Math.round(r.avg_hours_work * 10) / 10 : null,
+      // Для обратной совместимости оставляем avg_hours
+      avg_hours: r.avg_hours_total ? Math.round(r.avg_hours_total * 10) / 10 : 0
     }));
     
     res.json(formatted);

@@ -225,7 +225,8 @@ function TopExecutorsTable({ data }: { data: TopExecutor[] }) {
                 <th className="text-left py-3 px-2 text-sm font-medium text-dark-400">#</th>
                 <th className="text-left py-3 px-2 text-sm font-medium text-dark-400">Сотрудник</th>
                 <th className="text-center py-3 px-2 text-sm font-medium text-dark-400">Задач</th>
-                <th className="text-center py-3 px-2 text-sm font-medium text-dark-400">Ср. время</th>
+                <th className="text-center py-3 px-2 text-sm font-medium text-dark-400" title="От создания до завершения">Общее</th>
+                <th className="text-center py-3 px-2 text-sm font-medium text-dark-400" title="От взятия в работу до завершения">В работе</th>
               </tr>
             </thead>
             <tbody>
@@ -254,9 +255,14 @@ function TopExecutorsTable({ data }: { data: TopExecutor[] }) {
                       {executor.tasks_completed}
                     </span>
                   </td>
-                  <td className="py-3 px-2 text-center">
+                  <td className="py-3 px-2 text-center" title="От создания до завершения">
                     <span className="text-dark-300 text-sm">
-                      {executor.avg_hours}ч
+                      {executor.avg_hours_total !== null ? `${executor.avg_hours_total}ч` : '—'}
+                    </span>
+                  </td>
+                  <td className="py-3 px-2 text-center" title="От взятия в работу до завершения">
+                    <span className="text-blue-400 text-sm font-medium">
+                      {executor.avg_hours_work !== null ? `${executor.avg_hours_work}ч` : '—'}
                     </span>
                   </td>
                 </tr>
