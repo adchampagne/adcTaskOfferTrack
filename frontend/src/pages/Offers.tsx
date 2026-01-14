@@ -22,6 +22,26 @@ Object.entries(translitMap).forEach(([rus, eng]) => {
   if (eng) reverseTranslitMap[eng] = rus;
 });
 
+// Список тематик для офферов
+const themeOptions = [
+  'Суставы',
+  'Гипертония',
+  'Паразиты',
+  'Похудение',
+  'Диабет',
+  'Простатит',
+  'Зрение',
+  'Сердце',
+  'Потенция',
+  'Грибок',
+  'Варикоз',
+  'Память',
+  'Печень',
+  'Почки',
+  'Слух',
+  'Иммунитет',
+];
+
 // Транслитерирует русский текст в английский
 function transliterate(text: string): string {
   return text.toLowerCase().split('').map(char => translitMap[char] || char).join('');
@@ -171,13 +191,18 @@ function OfferModal({
               <label className="block text-sm font-medium text-dark-300 mb-2">
                 Тематика *
               </label>
-              <input
-                type="text"
+              <select
                 value={formData.theme}
                 onChange={(e) => setFormData({ ...formData, theme: e.target.value })}
                 className="glass-input w-full"
-                placeholder="Суставы/гипер/паразиты/похудение"
-              />
+              >
+                <option value="">Выберите тематику...</option>
+                {themeOptions.map((theme) => (
+                  <option key={theme} value={theme}>
+                    {theme}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -502,6 +527,8 @@ function Offers() {
       landing_price: data.landing_price,
       promo_link: data.promo_link,
       payout: data.payout,
+      garant: data.garant,
+      cap: data.cap,
     };
     
     if (editingOffer) {
