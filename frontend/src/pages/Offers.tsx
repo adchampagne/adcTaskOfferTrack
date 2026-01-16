@@ -375,12 +375,12 @@ function OfferCard({
       </div>
       
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <span className="px-2 py-1 bg-primary-500/10 text-primary-400 text-xs rounded-md border border-primary-500/20">
+        <span className="px-2 py-1 bg-primary-500/10 text-primary-400 text-xs rounded-md border border-primary-500/20 whitespace-nowrap">
           {offer.theme}
         </span>
         {offer.geo && (
-          <span className="px-2 py-1 bg-blue-500/10 text-blue-400 text-xs rounded-md border border-blue-500/20 flex items-center gap-1">
-            <Globe className="w-3 h-3" />
+          <span className="px-2 py-1 bg-blue-500/10 text-blue-400 text-xs rounded-md border border-blue-500/20 flex items-center gap-1 whitespace-nowrap">
+            <Globe className="w-3 h-3 flex-shrink-0" />
             {geoOptions.find(g => g.code === offer.geo)?.label || offer.geo.toUpperCase()}
           </span>
         )}
@@ -747,13 +747,13 @@ function Offers() {
                       <span className="text-dark-300">{offer.partner_name}</span>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="px-2 py-1 bg-primary-500/10 text-primary-400 text-xs rounded-md border border-primary-500/20">
+                      <span className="px-2 py-1 bg-primary-500/10 text-primary-400 text-xs rounded-md border border-primary-500/20 whitespace-nowrap">
                         {offer.theme}
                       </span>
                     </td>
                     <td className="py-4 px-4">
                       {offer.geo ? (
-                        <span className="px-2 py-1 bg-blue-500/10 text-blue-400 text-xs rounded-md border border-blue-500/20">
+                        <span className="px-2 py-1 bg-blue-500/10 text-blue-400 text-xs rounded-md border border-blue-500/20 whitespace-nowrap">
                           {geoOptions.find(g => g.code === offer.geo)?.label || offer.geo.toUpperCase()}
                         </span>
                       ) : (
