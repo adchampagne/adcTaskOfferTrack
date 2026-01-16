@@ -1386,7 +1386,7 @@ function TaskViewModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [showAssignSelect, setShowAssignSelect] = useState(false);
-  const [selectedExecutor, setSelectedExecutor] = useState('');
+  const [selectedExecutors, setSelectedExecutors] = useState<string[]>([]);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showSubtaskModal, setShowSubtaskModal] = useState(false);
   const [showRevisionModal, setShowRevisionModal] = useState(false);
@@ -1405,20 +1405,30 @@ function TaskViewModal({
     enabled: headCheck?.isHead,
   });
 
-  // Мутация для переназначения задачи
+  // Мутация для назначения задачи (одному или нескольким сотрудникам)
   const reassignMutation = useMutation({
-    mutationFn: (executorId: string) => headDashboardApi.updateTask(task.id, { executor_id: executorId }),
-    onSuccess: () => {
+    mutationFn: (executorIds: string[]) => headDashboardApi.assignMultiple(task.id, executorIds),
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['head-tasks'] });
       setShowAssignSelect(false);
-      setSelectedExecutor('');
-      toast.success('Задача назначена сотруднику');
+      setSelectedExecutors([]);
+      toast.success(data.message);
     },
     onError: (error: unknown) => {
       const err = error as { response?: { data?: { error?: string } } };
       toast.error(err.response?.data?.error || 'Ошибка назначения');
     },
   });
+
+  // Переключение выбора сотрудника
+  const toggleExecutorSelection = (userId: string) => {
+    setSelectedExecutors(prev => 
+      prev.includes(userId)
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
 
   const isOverdue = isPast(new Date(task.deadline)) && task.status !== 'completed' && task.status !== 'cancelled';
   const isDueToday = isToday(new Date(task.deadline));
@@ -1982,7 +1992,7 @@ function TaskViewModal({
             <div className="bg-orange-500/10 rounded-xl p-3 sm:p-4 border border-orange-500/30 mb-4 sm:mb-6">
               <h3 className="text-sm font-medium text-orange-400 mb-3 flex items-center gap-2">
                 <User className="w-4 h-4" />
-                Назначить задачу сотруднику
+                Назначить задачу сотрудникам
               </h3>
               {!showAssignSelect ? (
                 <button
@@ -1990,38 +2000,61 @@ function TaskViewModal({
                   className="btn-primary w-full flex items-center justify-center gap-2"
                 >
                   <ArrowRight className="w-4 h-4" />
-                  Назначить сотруднику отдела
+                  Назначить сотрудникам отдела
                 </button>
               ) : (
                 <div className="space-y-3">
-                  <select
-                    value={selectedExecutor}
-                    onChange={(e) => setSelectedExecutor(e.target.value)}
-                    className="glass-input w-full"
-                  >
-                    <option value="">Выберите сотрудника...</option>
+                  <p className="text-xs text-dark-400">
+                    Выберите одного или нескольких сотрудников. При выборе нескольких будут созданы копии задачи для каждого.
+                  </p>
+                  <div className="max-h-48 overflow-y-auto space-y-1 bg-dark-800/50 rounded-lg p-2">
                     {departmentMembers.map((m) => (
-                      <option key={m.user_id} value={m.user_id}>
-                        {m.user_name}
-                      </option>
+                      <label 
+                        key={m.user_id} 
+                        className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
+                          selectedExecutors.includes(m.user_id) 
+                            ? 'bg-primary-500/20 border border-primary-500/40' 
+                            : 'hover:bg-dark-700/50 border border-transparent'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedExecutors.includes(m.user_id)}
+                          onChange={() => toggleExecutorSelection(m.user_id)}
+                          className="w-4 h-4 rounded border-dark-500 bg-dark-700 text-primary-500 focus:ring-primary-500/50"
+                        />
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                            {m.user_name?.charAt(0).toUpperCase()}
+                          </div>
+                          <span className="text-sm text-dark-200 truncate">{m.user_name}</span>
+                        </div>
+                      </label>
                     ))}
-                  </select>
+                  </div>
+                  {selectedExecutors.length > 0 && (
+                    <p className="text-xs text-primary-400">
+                      Выбрано: {selectedExecutors.length} {selectedExecutors.length === 1 ? 'сотрудник' : 
+                        selectedExecutors.length < 5 ? 'сотрудника' : 'сотрудников'}
+                    </p>
+                  )}
                   <div className="flex gap-2">
                     <button
                       onClick={() => {
                         setShowAssignSelect(false);
-                        setSelectedExecutor('');
+                        setSelectedExecutors([]);
                       }}
                       className="btn-secondary flex-1"
                     >
                       Отмена
                     </button>
                     <button
-                      onClick={() => selectedExecutor && reassignMutation.mutate(selectedExecutor)}
-                      disabled={!selectedExecutor || reassignMutation.isPending}
+                      onClick={() => selectedExecutors.length > 0 && reassignMutation.mutate(selectedExecutors)}
+                      disabled={selectedExecutors.length === 0 || reassignMutation.isPending}
                       className="btn-primary flex-1 disabled:opacity-50"
                     >
-                      {reassignMutation.isPending ? 'Назначаем...' : 'Назначить'}
+                      {reassignMutation.isPending ? 'Назначаем...' : 
+                        selectedExecutors.length > 1 ? `Назначить (${selectedExecutors.length})` : 'Назначить'}
                     </button>
                   </div>
                 </div>

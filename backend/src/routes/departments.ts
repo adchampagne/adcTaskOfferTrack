@@ -55,6 +55,111 @@ interface UserDepartment {
   user_role?: string;
 }
 
+// Создать отдел (только админ)
+router.post('/', authenticateToken, requireAdmin, (req: Request, res: Response): void => {
+  try {
+    const { name, code } = req.body;
+
+    if (!name || !code) {
+      res.status(400).json({ error: 'Название и код отдела обязательны' });
+      return;
+    }
+
+    // Проверяем уникальность кода
+    const existing = db.prepare('SELECT id FROM departments WHERE code = ?').get(code);
+    if (existing) {
+      res.status(400).json({ error: 'Отдел с таким кодом уже существует' });
+      return;
+    }
+
+    const id = uuidv4();
+    const now = new Date().toISOString();
+
+    db.prepare(`
+      INSERT INTO departments (id, name, code, head_id, created_at)
+      VALUES (?, ?, ?, NULL, ?)
+    `).run(id, name, code, now);
+
+    const department = db.prepare('SELECT * FROM departments WHERE id = ?').get(id) as Department;
+
+    res.status(201).json({
+      ...department,
+      heads: [],
+      head_name: null,
+      members_count: 0,
+    });
+  } catch (error) {
+    console.error('Create department error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Обновить отдел (только админ)
+router.put('/:id', authenticateToken, requireAdmin, (req: Request, res: Response): void => {
+  try {
+    const { id } = req.params;
+    const { name, code } = req.body;
+
+    const department = db.prepare('SELECT * FROM departments WHERE id = ?').get(id) as Department | undefined;
+    if (!department) {
+      res.status(404).json({ error: 'Отдел не найден' });
+      return;
+    }
+
+    // Проверяем уникальность кода если он изменился
+    if (code && code !== department.code) {
+      const existing = db.prepare('SELECT id FROM departments WHERE code = ? AND id != ?').get(code, id);
+      if (existing) {
+        res.status(400).json({ error: 'Отдел с таким кодом уже существует' });
+        return;
+      }
+    }
+
+    db.prepare(`
+      UPDATE departments SET name = ?, code = ? WHERE id = ?
+    `).run(name || department.name, code || department.code, id);
+
+    const updated = db.prepare(`
+      SELECT 
+        d.*,
+        (SELECT COUNT(*) FROM user_departments WHERE department_id = d.id) as members_count
+      FROM departments d WHERE d.id = ?
+    `).get(id) as Department & { members_count: number };
+
+    res.json({
+      ...updated,
+      heads: getDepartmentHeads(id),
+      head_name: null,
+    });
+  } catch (error) {
+    console.error('Update department error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Удалить отдел (только админ)
+router.delete('/:id', authenticateToken, requireAdmin, (req: Request, res: Response): void => {
+  try {
+    const { id } = req.params;
+
+    const department = db.prepare('SELECT * FROM departments WHERE id = ?').get(id) as Department | undefined;
+    if (!department) {
+      res.status(404).json({ error: 'Отдел не найден' });
+      return;
+    }
+
+    // Удаляем связанные данные
+    db.prepare('DELETE FROM department_heads WHERE department_id = ?').run(id);
+    db.prepare('DELETE FROM user_departments WHERE department_id = ?').run(id);
+    db.prepare('DELETE FROM departments WHERE id = ?').run(id);
+
+    res.json({ message: 'Отдел удалён' });
+  } catch (error) {
+    console.error('Delete department error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 // Получить все отделы
 router.get('/', authenticateToken, (_req: Request, res: Response): void => {
   try {

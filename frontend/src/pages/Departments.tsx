@@ -1,29 +1,113 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Building2, Users, Crown, X, UserPlus, UserMinus, Edit2, Plus, Trash2, Send } from 'lucide-react';
+import { Building2, Users, Crown, X, UserPlus, UserMinus, Edit2, Plus, Trash2, Send, FolderPlus } from 'lucide-react';
 import { departmentsApi, authApi, Department } from '../api';
 import { useAuthStore } from '../store/authStore';
 import { User, roleLabels, UserRole } from '../types';
 import toast from 'react-hot-toast';
+
+function CreateDepartmentModal({
+  onClose,
+  onCreate,
+}: {
+  onClose: () => void;
+  onCreate: (data: { name: string; code: string }) => void;
+}) {
+  const [name, setName] = useState('');
+  const [code, setCode] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (name.trim() && code.trim()) {
+      onCreate({ name: name.trim(), code: code.trim().toLowerCase() });
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="glass-card w-full max-w-md p-6 animate-scale-in">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-bold text-dark-100">Создать отдел</h2>
+          <button
+            onClick={onClose}
+            className="text-dark-400 hover:text-dark-200 transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-dark-300 mb-2">
+              Название отдела
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Например: Отдел разработки"
+              className="glass-input w-full"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-dark-300 mb-2">
+              Код отдела
+            </label>
+            <input
+              type="text"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+              placeholder="Например: development"
+              className="glass-input w-full font-mono"
+              required
+            />
+            <p className="text-xs text-dark-500 mt-1">
+              Только латинские буквы, цифры и подчёркивание
+            </p>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose} className="btn-secondary flex-1">
+              Отмена
+            </button>
+            <button
+              type="submit"
+              disabled={!name.trim() || !code.trim()}
+              className="btn-primary flex-1 disabled:opacity-50"
+            >
+              Создать
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 function DepartmentCard({
   department,
   users,
   canEditHead,
   canManageMembers,
+  canDelete,
   onAddHead,
   onRemoveHead,
   onAddMember,
   onViewMembers,
+  onDelete,
 }: {
   department: Department;
   users: User[];
   canEditHead: boolean;
   canManageMembers: boolean;
+  canDelete: boolean;
   onAddHead: (departmentId: string, userId: string) => void;
   onRemoveHead: (departmentId: string, userId: string) => void;
   onAddMember: (departmentId: string) => void;
   onViewMembers: (departmentId: string) => void;
+  onDelete: (departmentId: string) => void;
 }) {
   const [isAddingHead, setIsAddingHead] = useState(false);
   const [selectedHead, setSelectedHead] = useState('');
@@ -68,6 +152,15 @@ function DepartmentCard({
           <h3 className="text-xl font-bold text-dark-100">{department.name}</h3>
           <p className="text-sm text-dark-400">Код: {department.code}</p>
         </div>
+        {canDelete && (
+          <button
+            onClick={() => onDelete(department.id)}
+            className="text-red-400 hover:text-red-300 transition-colors p-2"
+            title="Удалить отдел"
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Руководители */}
@@ -409,6 +502,7 @@ function Departments() {
   const [viewingMembersDeptId, setViewingMembersDeptId] = useState<string | null>(null);
   const [addingMemberDeptId, setAddingMemberDeptId] = useState<string | null>(null);
   const [editingRoleUser, setEditingRoleUser] = useState<User | null>(null);
+  const [isCreatingDepartment, setIsCreatingDepartment] = useState(false);
 
   const isAdmin = hasRole('admin');
 
@@ -426,6 +520,31 @@ function Departments() {
     queryKey: ['department-members', addingMemberDeptId],
     queryFn: () => addingMemberDeptId ? departmentsApi.getMembers(addingMemberDeptId) : Promise.resolve([]),
     enabled: !!addingMemberDeptId,
+  });
+
+  const createDepartmentMutation = useMutation({
+    mutationFn: (data: { name: string; code: string }) =>
+      departmentsApi.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
+      setIsCreatingDepartment(false);
+      toast.success('Отдел создан');
+    },
+    onError: (error: Error & { response?: { data?: { error?: string } } }) => {
+      toast.error(error.response?.data?.error || 'Ошибка создания отдела');
+    },
+  });
+
+  const deleteDepartmentMutation = useMutation({
+    mutationFn: (departmentId: string) =>
+      departmentsApi.delete(departmentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['departments'] });
+      toast.success('Отдел удалён');
+    },
+    onError: () => {
+      toast.error('Ошибка удаления отдела');
+    },
   });
 
   const addHeadMutation = useMutation({
@@ -514,6 +633,13 @@ function Departments() {
     }
   };
 
+  const handleDeleteDepartment = (departmentId: string) => {
+    const dept = departments.find(d => d.id === departmentId);
+    if (confirm(`Удалить отдел "${dept?.name}"? Все сотрудники будут откреплены от отдела.`)) {
+      deleteDepartmentMutation.mutate(departmentId);
+    }
+  };
+
   const viewingDepartment = departments.find((d) => d.id === viewingMembersDeptId);
   const addingDepartment = departments.find((d) => d.id === addingMemberDeptId);
 
@@ -530,6 +656,15 @@ function Departments() {
             Управление отделами и сотрудниками
           </p>
         </div>
+        {isAdmin && (
+          <button
+            onClick={() => setIsCreatingDepartment(true)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <FolderPlus className="w-5 h-5" />
+            Создать отдел
+          </button>
+        )}
       </div>
 
       {/* Scrollable Content */}
@@ -559,10 +694,12 @@ function Departments() {
                 users={users}
                 canEditHead={canEditHead}
                 canManageMembers={canManageMembers}
+                canDelete={isAdmin}
                 onAddHead={handleAddHead}
                 onRemoveHead={handleRemoveHead}
                 onAddMember={setAddingMemberDeptId}
                 onViewMembers={setViewingMembersDeptId}
+                onDelete={handleDeleteDepartment}
               />
             );
           })}
@@ -630,6 +767,13 @@ function Departments() {
       </div>
 
       {/* Modals */}
+      {isCreatingDepartment && (
+        <CreateDepartmentModal
+          onClose={() => setIsCreatingDepartment(false)}
+          onCreate={(data) => createDepartmentMutation.mutate(data)}
+        />
+      )}
+
       {viewingMembersDeptId && viewingDepartment && (
         <MembersModal
           departmentId={viewingMembersDeptId}

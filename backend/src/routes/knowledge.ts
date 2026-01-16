@@ -34,6 +34,9 @@ const departmentHeadRoles: Record<string, string> = {
   'development': 'dev_head',
 };
 
+// Допустимые коды отделов (включая general для общих инструкций)
+const validDepartmentCodes = ['buying', 'creo', 'development', 'general'];
+
 // Проверка, является ли пользователь руководителем отдела
 function isDepartmentHead(userId: string, departmentCode: string): boolean {
   // Проверяем по department_heads
@@ -59,7 +62,7 @@ router.get('/:departmentCode', authenticateToken, (req: Request, res: Response):
   try {
     const { departmentCode } = req.params;
     
-    if (!['buying', 'creo', 'development'].includes(departmentCode)) {
+    if (!validDepartmentCodes.includes(departmentCode)) {
       res.status(400).json({ error: 'Неверный код отдела' });
       return;
     }
@@ -104,15 +107,21 @@ router.post('/categories', authenticateToken, (req: Request, res: Response): voi
       return;
     }
 
-    if (!['buying', 'creo', 'development'].includes(department_code)) {
+    if (!validDepartmentCodes.includes(department_code)) {
       res.status(400).json({ error: 'Неверный код отдела' });
       return;
     }
 
-    // Проверяем права - только руководитель отдела или админ
+    // Проверяем права - только руководитель отдела или админ (для general - только админ)
     const userRole = req.user?.role;
-    if (userRole !== 'admin' && !isDepartmentHead(userId!, department_code)) {
-      res.status(403).json({ error: 'Только руководитель отдела может создавать категории' });
+    const canEditGeneral = department_code === 'general' && userRole === 'admin';
+    const canEditDepartment = department_code !== 'general' && (userRole === 'admin' || isDepartmentHead(userId!, department_code));
+    
+    if (!canEditGeneral && !canEditDepartment) {
+      res.status(403).json({ error: department_code === 'general' 
+        ? 'Только администратор может редактировать общие инструкции' 
+        : 'Только руководитель отдела может создавать категории' 
+      });
       return;
     }
 
@@ -360,8 +369,14 @@ router.get('/:departmentCode/can-edit', authenticateToken, (req: Request, res: R
     const userRole = req.user?.role;
     const { departmentCode } = req.params;
 
-    if (!['buying', 'creo', 'development'].includes(departmentCode)) {
+    if (!validDepartmentCodes.includes(departmentCode)) {
       res.status(400).json({ error: 'Неверный код отдела' });
+      return;
+    }
+
+    // Для general - только админ может редактировать
+    if (departmentCode === 'general') {
+      res.json({ canEdit: userRole === 'admin' });
       return;
     }
 

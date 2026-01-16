@@ -8,7 +8,6 @@ import {
   Code, 
   Globe,
   Search,
-  AlertCircle,
   CheckCircle2,
   Copy,
   Check,
@@ -411,6 +410,7 @@ const roleToDepartment: Record<string, string> = {
 
 // Названия отделов
 const departmentNames: Record<string, string> = {
+  'general': 'Общие',
   'development': 'Разработка',
   'creo': 'Крео',
   'buying': 'Баинг',
@@ -432,16 +432,16 @@ function KnowledgeBase() {
   const userDepartment = user?.role ? roleToDepartment[user.role] : null;
   const isAdmin = hasRole('admin');
   
-  // Доступные отделы для просмотра
+  // Доступные отделы для просмотра (general доступен всем)
   const availableDepartments = isAdmin 
-    ? ['development', 'creo', 'buying'] 
+    ? ['general', 'development', 'creo', 'buying'] 
     : userDepartment 
-      ? [userDepartment] 
-      : [];
+      ? ['general', userDepartment] 
+      : ['general'];
 
   // Текущий выбранный отдел
   const [departmentCode, setDepartmentCode] = useState<string>(
-    availableDepartments[0] || 'development'
+    availableDepartments[0] || 'general'
   );
 
   // Загрузка данных
@@ -550,21 +550,7 @@ function KnowledgeBase() {
     );
   };
 
-  // Проверка доступа
-  const hasAccess = availableDepartments.length > 0;
-  if (!hasAccess) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center p-8">
-        <AlertCircle className="w-16 h-16 text-yellow-500 mb-4" />
-        <h2 className="text-xl font-semibold text-dark-200 mb-2">
-          Доступ ограничен
-        </h2>
-        <p className="text-dark-400 max-w-md">
-          База знаний доступна только сотрудникам отделов.
-        </p>
-      </div>
-    );
-  }
+  // Проверка доступа (general всегда доступен, так что доступ есть у всех)
 
   if (isLoading) {
     return (

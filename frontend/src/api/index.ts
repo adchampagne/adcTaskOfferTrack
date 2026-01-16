@@ -439,6 +439,21 @@ export const departmentsApi = {
     return data;
   },
 
+  create: async (department: { name: string; code: string }) => {
+    const { data } = await api.post<Department>('/departments', department);
+    return data;
+  },
+
+  update: async (id: string, department: { name?: string; code?: string }) => {
+    const { data } = await api.put<Department>(`/departments/${id}`, department);
+    return data;
+  },
+
+  delete: async (id: string) => {
+    const { data } = await api.delete(`/departments/${id}`);
+    return data;
+  },
+
   getMembers: async (departmentId: string) => {
     const { data } = await api.get<DepartmentMember[]>(`/departments/${departmentId}/members`);
     return data;
@@ -497,6 +512,11 @@ export const headDashboardApi = {
 
   updateTask: async (taskId: string, updates: { deadline?: string; priority?: string; executor_id?: string }) => {
     const { data } = await api.patch<Task>(`/head-dashboard/tasks/${taskId}`, updates);
+    return data;
+  },
+
+  assignMultiple: async (taskId: string, executorIds: string[]) => {
+    const { data } = await api.post<{ tasks: Task[]; message: string }>(`/head-dashboard/tasks/${taskId}/assign-multiple`, { executor_ids: executorIds });
     return data;
   },
 };

@@ -1,8 +1,9 @@
 import { Router, Request, Response } from 'express';
-import db from '../database';
+import db, { getNextTaskNumber } from '../database';
 import { authenticateToken } from '../middleware/auth';
 import { TaskWithUsers, Department } from '../types';
 import { notifyTaskReassigned } from './notifications';
+import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
@@ -299,6 +300,149 @@ router.get('/members', authenticateToken, (req: Request, res: Response): void =>
     res.json(members);
   } catch (error) {
     console.error('Get head members error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Массовое назначение задачи нескольким сотрудникам
+// Создаёт копии задачи для каждого выбранного исполнителя
+router.post('/tasks/:id/assign-multiple', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+    const { executor_ids } = req.body as { executor_ids: string[] };
+
+    if (!executor_ids || !Array.isArray(executor_ids) || executor_ids.length === 0) {
+      res.status(400).json({ error: 'Необходимо указать хотя бы одного исполнителя' });
+      return;
+    }
+
+    const department = getHeadDepartment(userId!);
+    
+    if (!department) {
+      res.status(403).json({ error: 'Вы не являетесь руководителем отдела' });
+      return;
+    }
+
+    // Получаем сотрудников отдела
+    const members = getDepartmentMembers(department.id);
+    const memberIds = members.map(m => m.user_id);
+
+    // Проверяем, что все указанные исполнители - сотрудники отдела
+    const invalidExecutors = executor_ids.filter(eid => !memberIds.includes(eid));
+    if (invalidExecutors.length > 0) {
+      res.status(400).json({ error: 'Все исполнители должны быть сотрудниками вашего отдела' });
+      return;
+    }
+
+    // Добавляем руководителя в список для проверки доступа к задаче
+    const allMemberIds = [...memberIds, userId!];
+
+    // Получаем оригинальную задачу
+    const originalTask = db.prepare(`
+      SELECT t.*, 
+             c.full_name as customer_name,
+             c.username as customer_username
+      FROM tasks t
+      LEFT JOIN users c ON t.customer_id = c.id
+      WHERE t.id = ?
+    `).get(id) as TaskWithUsers | undefined;
+    
+    if (!originalTask) {
+      res.status(404).json({ error: 'Задача не найдена' });
+      return;
+    }
+
+    // Проверяем, что задача принадлежит отделу (назначена руководителю или сотруднику)
+    if (!allMemberIds.includes(originalTask.executor_id)) {
+      res.status(403).json({ error: 'Эта задача не принадлежит вашему отделу' });
+      return;
+    }
+
+    const createdTasks: TaskWithUsers[] = [];
+    const headName = db.prepare('SELECT full_name FROM users WHERE id = ?').get(userId) as { full_name: string } | undefined;
+
+    // Если только один исполнитель - просто переназначаем оригинальную задачу
+    if (executor_ids.length === 1) {
+      const executorId = executor_ids[0];
+      const oldExecutorId = originalTask.executor_id;
+      
+      db.prepare('UPDATE tasks SET executor_id = ? WHERE id = ?').run(executorId, id);
+      
+      const updated = db.prepare(`
+        SELECT t.*, 
+               c.full_name as customer_name,
+               c.username as customer_username,
+               e.full_name as executor_name,
+               e.username as executor_username
+        FROM tasks t
+        LEFT JOIN users c ON t.customer_id = c.id
+        LEFT JOIN users e ON t.executor_id = e.id
+        WHERE t.id = ?
+      `).get(id) as TaskWithUsers;
+
+      if (executorId !== oldExecutorId) {
+        notifyTaskReassigned(updated, headName?.full_name || 'Руководитель', executorId);
+      }
+
+      res.json({ tasks: [updated], message: 'Задача назначена сотруднику' });
+      return;
+    }
+
+    // Если несколько исполнителей - создаём копии задачи для каждого
+    for (const executorId of executor_ids) {
+      const newTaskId = uuidv4();
+      const taskNumber = getNextTaskNumber();
+
+      db.prepare(`
+        INSERT INTO tasks (
+          id, task_number, title, description, task_type, geo, priority, 
+          department, offer_id, customer_id, executor_id, deadline, parent_task_id, status
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+      `).run(
+        newTaskId,
+        taskNumber,
+        originalTask.title,
+        originalTask.description,
+        originalTask.task_type,
+        originalTask.geo,
+        originalTask.priority,
+        originalTask.department,
+        originalTask.offer_id,
+        originalTask.customer_id,
+        executorId,
+        originalTask.deadline,
+        originalTask.parent_task_id
+      );
+
+      const newTask = db.prepare(`
+        SELECT t.*, 
+               c.full_name as customer_name,
+               c.username as customer_username,
+               e.full_name as executor_name,
+               e.username as executor_username
+        FROM tasks t
+        LEFT JOIN users c ON t.customer_id = c.id
+        LEFT JOIN users e ON t.executor_id = e.id
+        WHERE t.id = ?
+      `).get(newTaskId) as TaskWithUsers;
+
+      createdTasks.push(newTask);
+
+      // Отправляем уведомление каждому исполнителю
+      notifyTaskReassigned(newTask, headName?.full_name || 'Руководитель', executorId);
+    }
+
+    // Отменяем оригинальную задачу (опционально - можно удалить или оставить)
+    db.prepare("UPDATE tasks SET status = 'cancelled' WHERE id = ?").run(id);
+
+    res.json({ 
+      tasks: createdTasks, 
+      message: `Задача назначена ${createdTasks.length} сотрудникам` 
+    });
+  } catch (error) {
+    console.error('Assign multiple error:', error);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 });
