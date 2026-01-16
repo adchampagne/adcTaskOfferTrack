@@ -338,6 +338,9 @@ router.get('/top-executors', authenticateToken, (req: Request, res: Response): v
   try {
     const userId = req.user?.userId;
     const role = req.user?.role;
+    const period = req.query.period as string || 'month';
+    const dateFrom = req.query.dateFrom as string;
+    const dateTo = req.query.dateTo as string;
     
     if (!role || !hasAnalyticsAccess(role)) {
       res.status(403).json({ error: 'Нет доступа к аналитике' });
@@ -345,7 +348,46 @@ router.get('/top-executors', authenticateToken, (req: Request, res: Response): v
     }
 
     const departmentCode = getUserDepartment(userId!, role);
-    const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    
+    // Вычисляем дату начала и конца периода
+    let periodStart: Date;
+    let periodEnd: Date | null = null;
+    const now = new Date();
+    
+    // Если переданы кастомные даты
+    if (period === 'custom' && dateFrom) {
+      periodStart = new Date(dateFrom);
+      periodStart.setHours(0, 0, 0, 0);
+      if (dateTo) {
+        periodEnd = new Date(dateTo);
+        periodEnd.setHours(23, 59, 59, 999);
+      }
+    } else {
+      switch (period) {
+        case 'day':
+          periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          break;
+        case 'week':
+          const dayOfWeek = now.getDay();
+          const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Понедельник = начало недели
+          periodStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diff);
+          break;
+        case 'quarter':
+          const quarter = Math.floor(now.getMonth() / 3);
+          periodStart = new Date(now.getFullYear(), quarter * 3, 1);
+          break;
+        case 'year':
+          periodStart = new Date(now.getFullYear(), 0, 1);
+          break;
+        case 'month':
+        default:
+          periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          break;
+      }
+    }
+    
+    const periodStartISO = periodStart.toISOString();
+    const periodEndISO = periodEnd ? periodEnd.toISOString() : null;
     
     let query = `
       SELECT 
@@ -368,7 +410,13 @@ router.get('/top-executors', authenticateToken, (req: Request, res: Response): v
       WHERE t.status = 'completed' 
       AND t.completed_at >= ?
     `;
-    const params: string[] = [monthAgo];
+    const params: string[] = [periodStartISO];
+    
+    // Добавляем конец периода если задан
+    if (periodEndISO) {
+      query += ' AND t.completed_at <= ?';
+      params.push(periodEndISO);
+    }
     
     if (departmentCode) {
       query += ' AND t.department = ?';

@@ -712,8 +712,17 @@ export const analyticsApi = {
     return data;
   },
 
-  getTopExecutors: async () => {
-    const { data } = await api.get<TopExecutor[]>('/analytics/top-executors');
+  getTopExecutors: async (
+    period: 'day' | 'week' | 'month' | 'quarter' | 'year' | 'custom' = 'month',
+    dateFrom?: string,
+    dateTo?: string
+  ) => {
+    const params: Record<string, string> = { period };
+    if (period === 'custom' && dateFrom) {
+      params.dateFrom = dateFrom;
+      if (dateTo) params.dateTo = dateTo;
+    }
+    const { data } = await api.get<TopExecutor[]>('/analytics/top-executors', { params });
     return data;
   },
 };

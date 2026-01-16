@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { 
   BarChart3, 
@@ -27,6 +28,17 @@ import {
 } from 'recharts';
 import { analyticsApi, TasksByWeek, AvgCompletionTime, TopExecutor, DepartmentStats } from '../api';
 import { taskTypeLabels, departmentLabels, Department } from '../types';
+
+type ExecutorsPeriod = 'day' | 'week' | 'month' | 'quarter' | 'year' | 'custom';
+
+const periodLabels: Record<ExecutorsPeriod, string> = {
+  day: 'День',
+  week: 'Неделя',
+  month: 'Месяц',
+  quarter: 'Квартал',
+  year: 'Год',
+  custom: 'Период',
+};
 
 // Цвета для графиков
 const COLORS = {
@@ -207,13 +219,74 @@ function AvgTimeChart({ data }: { data: AvgCompletionTime[] }) {
   );
 }
 
-function TopExecutorsTable({ data }: { data: TopExecutor[] }) {
+function TopExecutorsTable({ 
+  data, 
+  period, 
+  onPeriodChange,
+  dateFrom,
+  dateTo,
+  onDateFromChange,
+  onDateToChange
+}: { 
+  data: TopExecutor[]; 
+  period: ExecutorsPeriod;
+  onPeriodChange: (period: ExecutorsPeriod) => void;
+  dateFrom: string;
+  dateTo: string;
+  onDateFromChange: (date: string) => void;
+  onDateToChange: (date: string) => void;
+}) {
   return (
     <div className="glass-card p-4 sm:p-6">
-      <h3 className="text-lg font-semibold text-dark-100 mb-4 flex items-center gap-2">
-        <Users className="w-5 h-5 text-green-400" />
-        Топ исполнителей за месяц
-      </h3>
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h3 className="text-lg font-semibold text-dark-100 flex items-center gap-2">
+            <Users className="w-5 h-5 text-green-400" />
+            Топ исполнителей
+          </h3>
+          
+          <div className="flex items-center gap-1 bg-dark-800/50 rounded-lg p-1 flex-wrap">
+            {(Object.keys(periodLabels) as ExecutorsPeriod[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => onPeriodChange(p)}
+                className={`px-2 sm:px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                  period === p
+                    ? 'bg-primary-500 text-white shadow-lg'
+                    : 'text-dark-400 hover:text-dark-200 hover:bg-dark-700/50'
+                }`}
+              >
+                {periodLabels[p]}
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        {/* Календарь для выбора произвольного периода */}
+        {period === 'custom' && (
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 bg-dark-800/30 rounded-lg border border-dark-700/50">
+            <span className="text-xs text-dark-400">С:</span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => onDateFromChange(e.target.value)}
+              className="glass-input text-sm px-3 py-1.5 w-full sm:w-auto"
+            />
+            <span className="text-xs text-dark-400">По:</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => onDateToChange(e.target.value)}
+              className="glass-input text-sm px-3 py-1.5 w-full sm:w-auto"
+            />
+            {dateFrom && dateTo && (
+              <span className="text-xs text-dark-500 ml-auto">
+                {new Date(dateFrom).toLocaleDateString('ru-RU')} — {new Date(dateTo).toLocaleDateString('ru-RU')}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
       
       {data.length === 0 ? (
         <p className="text-dark-400 text-center py-8">Нет данных</p>
@@ -330,6 +403,10 @@ function DepartmentPieChart({ data }: { data: DepartmentStats[] }) {
 }
 
 function Analytics() {
+  const [executorsPeriod, setExecutorsPeriod] = useState<ExecutorsPeriod>('month');
+  const [customDateFrom, setCustomDateFrom] = useState<string>('');
+  const [customDateTo, setCustomDateTo] = useState<string>('');
+  
   // Проверка доступа
   const { data: accessCheck, isLoading: accessLoading } = useQuery({
     queryKey: ['analytics-access'],
@@ -356,9 +433,9 @@ function Analytics() {
   });
 
   const { data: topExecutors = [] } = useQuery({
-    queryKey: ['analytics-top-executors'],
-    queryFn: analyticsApi.getTopExecutors,
-    enabled: accessCheck?.hasAccess,
+    queryKey: ['analytics-top-executors', executorsPeriod, customDateFrom, customDateTo],
+    queryFn: () => analyticsApi.getTopExecutors(executorsPeriod, customDateFrom, customDateTo),
+    enabled: accessCheck?.hasAccess && (executorsPeriod !== 'custom' || !!customDateFrom),
   });
 
   const { data: departmentStats = [] } = useQuery({
@@ -452,7 +529,15 @@ function Analytics() {
 
           {/* Bottom section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <TopExecutorsTable data={topExecutors} />
+            <TopExecutorsTable 
+              data={topExecutors} 
+              period={executorsPeriod}
+              onPeriodChange={setExecutorsPeriod}
+              dateFrom={customDateFrom}
+              dateTo={customDateTo}
+              onDateFromChange={setCustomDateFrom}
+              onDateToChange={setCustomDateTo}
+            />
             {departmentStats.length > 0 && (
               <DepartmentPieChart data={departmentStats} />
             )}
