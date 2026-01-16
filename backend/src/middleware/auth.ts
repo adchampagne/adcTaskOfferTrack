@@ -14,8 +14,11 @@ export function hasPermission(userId: string, permission: string): boolean {
 }
 
 export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
+  // Получаем токен из заголовка Authorization или из query параметра
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const headerToken = authHeader && authHeader.split(' ')[1];
+  const queryToken = req.query.token as string;
+  const token = headerToken || queryToken;
 
   if (!token) {
     res.status(401).json({ error: 'Требуется авторизация' });

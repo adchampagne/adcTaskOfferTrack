@@ -5,8 +5,7 @@ import { Building2, Plus, ExternalLink, Edit2, Trash2, X } from 'lucide-react';
 import { partnersApi } from '../api';
 import { useAuthStore } from '../store/authStore';
 import { Partner } from '../types';
-import { format } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import { formatMoscow } from '../utils/dateUtils';
 import toast from 'react-hot-toast';
 
 interface PartnerFormData {
@@ -282,7 +281,7 @@ function Partners() {
                   <span className="text-xs sm:text-sm text-dark-500">Нет сайта</span>
                 )}
                 <span className="text-xs text-dark-500">
-                  {format(new Date(partner.created_at), 'd MMM', { locale: ru })}
+                  {formatMoscow(new Date(partner.created_at), 'd MMM')}
                 </span>
               </div>
             </div>

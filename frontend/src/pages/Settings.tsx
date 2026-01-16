@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { telegramApi, authApi } from '../api';
 import { useSettingsStore, themes, backgroundOptions } from '../store/settingsStore';
+import { formatMoscow } from '../utils/dateUtils';
 import { roleLabels } from '../types';
 
 type SettingsSection = 'profile' | 'telegram' | 'personalization' | null;
@@ -163,11 +164,7 @@ function ProfileSection() {
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
+    return formatMoscow(new Date(dateStr), 'd MMMM yyyy');
   };
 
   if (isLoading) {

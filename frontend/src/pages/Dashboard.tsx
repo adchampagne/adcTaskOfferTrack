@@ -4,8 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { partnersApi, offersApi, tasksApi } from '../api';
 import { useAuthStore } from '../store/authStore';
 import { taskStatusLabels, taskTypeLabels, Task } from '../types';
-import { format, isPast, isToday } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import { isPast, isToday } from 'date-fns';
+import { formatMoscow } from '../utils/dateUtils';
 
 function StatCard({ 
   icon: Icon, 
@@ -64,7 +64,7 @@ function TaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
           </span>
           <p className={`text-xs mt-1 sm:mt-2 ${isOverdue ? 'text-red-400' : 'text-dark-400'}`}>
             {isOverdue && <AlertCircle className="w-3 h-3 inline mr-1" />}
-            {format(new Date(task.deadline), 'd MMM', { locale: ru })}
+            {formatMoscow(new Date(task.deadline), 'd MMM')}
           </p>
         </div>
       </div>

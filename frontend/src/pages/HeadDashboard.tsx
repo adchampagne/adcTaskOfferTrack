@@ -9,7 +9,7 @@ import {
 import { headDashboardApi, filesApi, commentsApi } from '../api';
 import { Task, TaskStatus, TaskPriority, taskStatusLabels, taskPriorityLabels, taskTypeLabels, TaskFile } from '../types';
 import { format, isPast, isToday, isYesterday, isTomorrow, startOfDay, parseISO } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import { formatMoscow, toMoscowTime } from '../utils/dateUtils';
 import toast from 'react-hot-toast';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
@@ -50,7 +50,7 @@ function TaskEditModal({
   onSave: (updates: { deadline?: string; priority?: TaskPriority; executor_id?: string }) => void;
 }) {
   const [deadline, setDeadline] = useState(
-    format(new Date(task.deadline), "yyyy-MM-dd'T'HH:mm")
+    format(toMoscowTime(new Date(task.deadline)), "yyyy-MM-dd'T'HH:mm")
   );
   const [priority, setPriority] = useState<TaskPriority>(task.priority);
   const [executorId, setExecutorId] = useState(task.executor_id);
@@ -334,7 +334,7 @@ function TaskViewModal({
           <div className={`p-4 rounded-xl ${isOverdue ? 'bg-red-500/10 border border-red-500/20' : isDueToday ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-dark-800/50'}`}>
             <p className="text-xs text-dark-400 mb-1">Дедлайн</p>
             <p className={`font-medium ${isOverdue ? 'text-red-400' : isDueToday ? 'text-amber-400' : 'text-dark-100'}`}>
-              {format(new Date(task.deadline), 'd MMMM yyyy, HH:mm', { locale: ru })}
+              {formatMoscow(new Date(task.deadline), 'd MMMM yyyy, HH:mm')}
               {isOverdue && ' (просрочено)'}
               {isDueToday && !isOverdue && ' (сегодня)'}
             </p>
@@ -445,7 +445,7 @@ function TaskViewModal({
                             </div>
                             <span className="text-sm font-medium text-dark-200">{comment.user_name}</span>
                             <span className="text-xs text-dark-500">
-                              {format(new Date(comment.created_at), 'd MMM, HH:mm', { locale: ru })}
+                              {formatMoscow(new Date(comment.created_at), 'd MMM, HH:mm')}
                             </span>
                           </div>
                           {(comment.user_id === user?.id || user?.role === 'admin') && (
@@ -572,11 +572,11 @@ function HeadDashboard() {
     const groups: { [key: string]: { date: Date; label: string; tasks: Task[] } } = {};
     
     sorted.forEach(task => {
-      const taskDate = parseISO(task.deadline);
+      const taskDate = toMoscowTime(parseISO(task.deadline));
       const dayKey = format(startOfDay(taskDate), 'yyyy-MM-dd');
       
       if (!groups[dayKey]) {
-        let label = format(taskDate, 'd MMMM yyyy', { locale: ru });
+        let label = formatMoscow(taskDate, 'd MMMM yyyy');
         
         if (isToday(taskDate)) {
           label = 'Сегодня';
@@ -982,7 +982,7 @@ function HeadDashboard() {
                                 
                                 <div className="text-right flex-shrink-0">
                                   <p className={`text-sm font-medium ${isOverdue ? 'text-red-400' : isDueToday ? 'text-amber-400' : 'text-dark-300'}`}>
-                                    {format(new Date(task.deadline), 'HH:mm')}
+                                    {formatMoscow(new Date(task.deadline), 'HH:mm')}
                                   </p>
                                   {isOverdue && (
                                     <p className="text-xs text-red-400">просрочено</p>

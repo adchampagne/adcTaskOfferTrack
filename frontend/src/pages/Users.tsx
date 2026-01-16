@@ -4,8 +4,7 @@ import { Users as UsersIcon, Plus, X, Shield, ShoppingCart, Code, Palette, Crown
 import { authApi } from '../api';
 import { useAuthStore } from '../store/authStore';
 import { User, UserRole, roleLabels } from '../types';
-import { format } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import { formatMoscow } from '../utils/dateUtils';
 import toast from 'react-hot-toast';
 import { Navigate } from 'react-router-dom';
 
@@ -448,7 +447,7 @@ function Users() {
                   {roleLabels[u.role]}
                 </span>
                 <span className="text-xs text-dark-500">
-                  {format(new Date(u.created_at), 'd MMM yyyy', { locale: ru })}
+                  {formatMoscow(new Date(u.created_at), 'd MMM yyyy')}
                 </span>
               </div>
             </div>

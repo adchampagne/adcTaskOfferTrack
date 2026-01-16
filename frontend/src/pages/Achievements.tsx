@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { achievementsApi, departmentsApi } from '../api';
 import { useAuthStore } from '../store/authStore';
+import { formatMoscow } from '../utils/dateUtils';
 import { roleLabels } from '../types';
 
 const categoryLabels: Record<string, { name: string; icon: typeof Trophy; color: string }> = {
@@ -172,7 +173,7 @@ export default function Achievements() {
                           </p>
                           {achievement.earned && achievement.earned_at && (
                             <p className="text-xs text-yellow-400/70 mt-2">
-                              {new Date(achievement.earned_at).toLocaleDateString('ru-RU')}
+                              {formatMoscow(new Date(achievement.earned_at), 'd MMM yyyy')}
                             </p>
                           )}
                           {achievement.earned && (

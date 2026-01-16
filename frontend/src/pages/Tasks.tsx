@@ -14,7 +14,7 @@ import { useAuthStore } from '../store/authStore';
 import { Task, TaskStatus, TaskType, TaskPriority, TaskRating, Department, taskTypeLabels, taskStatusLabels, taskPriorityLabels, taskRatingLabels, departmentLabels, User as UserType, TaskFile, roleLabels } from '../types';
 import GeoSelect from '../components/GeoSelect';
 import { format, isPast, isToday, isTomorrow } from 'date-fns';
-import { ru } from 'date-fns/locale';
+import { formatMoscow, toMoscowTime } from '../utils/dateUtils';
 import toast from 'react-hot-toast';
 
 // Функция для форматирования размера файла
@@ -229,8 +229,8 @@ function TaskModal({
     executor_id: task?.executor_id || '',
     offer_id: task?.offer_id || 'none',
     deadline: task?.deadline 
-      ? format(new Date(task.deadline), "yyyy-MM-dd'T'HH:mm")
-      : format(new Date(Date.now() + 24 * 60 * 60 * 1000), "yyyy-MM-dd'T'HH:mm"),
+      ? format(toMoscowTime(new Date(task.deadline)), "yyyy-MM-dd'T'HH:mm")
+      : format(toMoscowTime(new Date(Date.now() + 24 * 60 * 60 * 1000)), "yyyy-MM-dd'T'HH:mm"),
   });
 
   // При включении "Назначить себе" устанавливаем executor_id
@@ -771,7 +771,7 @@ function TaskModal({
                 multiple
                 onChange={handleFileSelect}
                 className="hidden"
-                accept="image/*,video/*,.zip,.rar,.7z,.gz,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                accept="image/*,video/*,application/zip,application/x-zip-compressed,application/x-rar-compressed,application/x-7z-compressed,application/gzip,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,.zip,.rar,.7z,.gz,.pdf,.doc,.docx,.xls,.xlsx,.txt"
               />
               <button
                 type="button"
@@ -929,7 +929,7 @@ function CompleteTaskModal({
             multiple
             onChange={handleFileSelect}
             className="hidden"
-            accept="image/*,video/*,.zip,.rar,.7z,.gz,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+            accept="image/*,video/*,application/zip,application/x-zip-compressed,application/x-rar-compressed,application/x-7z-compressed,application/gzip,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,.zip,.rar,.7z,.gz,.pdf,.doc,.docx,.xls,.xlsx,.txt"
           />
           
           <button
@@ -1210,7 +1210,7 @@ function SubtaskModal({
     geo: parentTask.geo || '',
     priority: 'normal' as TaskPriority,
     department: '' as Department | '',
-    deadline: format(new Date(Date.now() + 24 * 60 * 60 * 1000), "yyyy-MM-dd'T'HH:mm"),
+    deadline: format(toMoscowTime(new Date(Date.now() + 24 * 60 * 60 * 1000)), "yyyy-MM-dd'T'HH:mm"),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -1744,10 +1744,10 @@ function TaskViewModal({
             <div className="bg-dark-800/50 rounded-xl p-3 sm:p-4 border border-dark-700/50">
               <h3 className="text-xs font-medium text-dark-500 mb-1">Создано</h3>
               <p className="text-dark-200 font-medium text-sm sm:text-base">
-                {format(new Date(task.created_at), 'd MMM yyyy', { locale: ru })}
+                {formatMoscow(new Date(task.created_at), 'd MMM yyyy')}
               </p>
               <p className="text-xs text-dark-500">
-                {format(new Date(task.created_at), 'HH:mm')}
+                {formatMoscow(new Date(task.created_at), 'HH:mm')}
               </p>
             </div>
 
@@ -1757,10 +1757,10 @@ function TaskViewModal({
                 Дедлайн
               </h3>
               <p className={`font-medium text-sm sm:text-base ${isOverdue ? 'text-red-400' : isDueToday ? 'text-yellow-400' : 'text-dark-200'}`}>
-                {format(new Date(task.deadline), 'd MMM yyyy', { locale: ru })}
+                {formatMoscow(new Date(task.deadline), 'd MMM yyyy')}
               </p>
               <p className={`text-xs ${isOverdue ? 'text-red-400/70' : 'text-dark-500'}`}>
-                {format(new Date(task.deadline), 'HH:mm')}
+                {formatMoscow(new Date(task.deadline), 'HH:mm')}
               </p>
             </div>
 
@@ -1769,10 +1769,10 @@ function TaskViewModal({
               {task.completed_at ? (
                 <>
                   <p className="text-green-400 font-medium text-sm sm:text-base">
-                    {format(new Date(task.completed_at), 'd MMM yyyy', { locale: ru })}
+                    {formatMoscow(new Date(task.completed_at), 'd MMM yyyy')}
                   </p>
                   <p className="text-xs text-dark-500">
-                    {format(new Date(task.completed_at), 'HH:mm')}
+                    {formatMoscow(new Date(task.completed_at), 'HH:mm')}
                   </p>
                 </>
               ) : (
@@ -1797,7 +1797,7 @@ function TaskViewModal({
                     multiple
                     onChange={handleFileUpload}
                     className="hidden"
-                    accept="image/*,video/*,.zip,.rar,.7z,.gz,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                    accept="image/*,video/*,application/zip,application/x-zip-compressed,application/x-rar-compressed,application/x-7z-compressed,application/gzip,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,.zip,.rar,.7z,.gz,.pdf,.doc,.docx,.xls,.xlsx,.txt"
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
@@ -2054,7 +2054,7 @@ function TaskViewModal({
                             </div>
                             <span className="text-sm font-medium text-dark-200">{comment.user_name}</span>
                             <span className="text-xs text-dark-500">
-                              {format(new Date(comment.created_at), 'd MMM, HH:mm', { locale: ru })}
+                              {formatMoscow(new Date(comment.created_at), 'd MMM, HH:mm')}
                             </span>
                           </div>
                           {(comment.user_id === currentUserData?.id || currentUserData?.role === 'admin') && (
@@ -2374,10 +2374,10 @@ function TaskCard({
           <Calendar className="w-3 h-3" />
           <span>
             {isDueToday 
-              ? format(new Date(task.deadline), 'HH:mm')
+              ? formatMoscow(new Date(task.deadline), 'HH:mm')
               : isDueTomorrow
                 ? 'Завтра'
-                : format(new Date(task.deadline), 'd MMM', { locale: ru })
+                : formatMoscow(new Date(task.deadline), 'd MMM')
             }
           </span>
         </div>
@@ -2572,10 +2572,10 @@ function TaskCard({
               <Calendar className="w-4 h-4" />
               <span>
                 {isDueToday 
-                  ? `Сегодня, ${format(new Date(task.deadline), 'HH:mm')}`
+                  ? `Сегодня, ${formatMoscow(new Date(task.deadline), 'HH:mm')}`
                   : isDueTomorrow
-                    ? `Завтра, ${format(new Date(task.deadline), 'HH:mm')}`
-                    : format(new Date(task.deadline), 'd MMM, HH:mm', { locale: ru })
+                    ? `Завтра, ${formatMoscow(new Date(task.deadline), 'HH:mm')}`
+                    : formatMoscow(new Date(task.deadline), 'd MMM, HH:mm')
                 }
               </span>
             </div>
