@@ -4,7 +4,8 @@ import {
   ShieldCheck, 
   ImageIcon,
   ArrowRight,
-  Users
+  Users,
+  Calculator
 } from 'lucide-react';
 import { useSettingsStore } from '../store/settingsStore';
 
@@ -80,6 +81,14 @@ function Tools() {
       description: 'Создание случайных имён, телефонов и email для разных гео с учётом страны и пола',
       gradient: 'bg-gradient-to-br from-purple-500 to-pink-600',
       tags: ['Имена', 'Телефоны', 'Email', 'Гео', 'Тесты']
+    },
+    {
+      to: '/tools/roi-calculator',
+      icon: Calculator,
+      title: 'Калькулятор ROI',
+      description: 'Расчёт ROI, профита, CR, EPC, CPA, eCPC, eCPM и других важных метрик',
+      gradient: 'bg-gradient-to-br from-amber-500 to-orange-600',
+      tags: ['ROI', 'EPC', 'CPA', 'CR', 'Профит']
     }
   ];
 

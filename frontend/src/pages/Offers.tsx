@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { Package, Plus, ExternalLink, Edit2, Trash2, X, Filter, Globe, Search } from 'lucide-react';
+import { Package, Plus, ExternalLink, Edit2, Trash2, X, Filter, Globe, Search, Copy } from 'lucide-react';
 import { offersApi, partnersApi } from '../api';
 import { useAuthStore } from '../store/authStore';
 import { Offer, Partner, geoOptions, PaymentType } from '../types';
@@ -779,9 +779,21 @@ function Offers() {
                       </span>
                     </td>
                     <td className="py-4 px-4">
-                      <span className="text-dark-300 font-mono text-sm">
-                        {offer.landing_price || '—'}
-                      </span>
+                      {offer.landing_price ? (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(offer.landing_price || '');
+                            toast.success('Цена скопирована');
+                          }}
+                          className="text-dark-300 font-mono text-sm hover:text-primary-400 transition-colors cursor-pointer flex items-center gap-1.5 group"
+                          title="Нажмите, чтобы скопировать"
+                        >
+                          {offer.landing_price}
+                          <Copy className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </button>
+                      ) : (
+                        <span className="text-dark-500">—</span>
+                      )}
                     </td>
                     <td className="py-4 px-4">
                       {offer.garant ? (
