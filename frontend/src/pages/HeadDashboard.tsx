@@ -343,7 +343,7 @@ function TaskViewModal({
           {task.description && (
             <div className="p-4 bg-dark-800/50 rounded-xl">
               <p className="text-xs text-dark-400 mb-2">Описание</p>
-              <p className="text-dark-200 whitespace-pre-wrap">{task.description}</p>
+              <p className="text-dark-200 whitespace-pre-wrap break-all">{task.description}</p>
             </div>
           )}
 

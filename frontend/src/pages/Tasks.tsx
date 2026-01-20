@@ -1699,7 +1699,7 @@ function TaskViewModal({
             </h3>
             <div className="bg-dark-800/50 rounded-xl p-3 sm:p-4 border border-dark-700/50">
               {task.description ? (
-                <p className="text-dark-200 whitespace-pre-wrap text-sm sm:text-base">{task.description}</p>
+                <p className="text-dark-200 whitespace-pre-wrap break-all text-sm sm:text-base">{task.description}</p>
               ) : (
                 <p className="text-dark-500 italic text-sm">Описание не указано</p>
               )}
