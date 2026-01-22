@@ -24,29 +24,29 @@ function ToolCard({ to, icon: Icon, title, description, gradient, tags }: ToolCa
   return (
     <Link 
       to={to}
-      className="glass-card p-6 hover:border-primary-500/30 transition-all group animate-fade-in h-full flex flex-col"
+      className="glass-card p-4 hover:border-primary-500/30 transition-all group animate-fade-in h-full flex flex-col"
     >
-      <div className="flex items-start gap-4 flex-1">
+      <div className="flex items-start gap-3 flex-1">
         <div 
-          className={`w-14 h-14 rounded-xl ${gradient} flex items-center justify-center shadow-lg flex-shrink-0 group-hover:scale-110 transition-transform`}
+          className={`w-10 h-10 rounded-lg ${gradient} flex items-center justify-center shadow-lg flex-shrink-0 group-hover:scale-110 transition-transform`}
         >
-          <Icon className="w-7 h-7 text-white" />
+          <Icon className="w-5 h-5 text-white" />
         </div>
         
         <div className="flex-1 min-w-0 flex flex-col">
-          <h3 className="text-lg font-semibold text-dark-100 group-hover:text-primary-400 transition-colors flex items-center gap-2">
+          <h3 className="text-base font-semibold text-dark-100 group-hover:text-primary-400 transition-colors flex items-center gap-1.5">
             {title}
-            <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
           </h3>
-          <p className="text-sm text-dark-400 mt-1 flex-1">{description}</p>
+          <p className="text-xs text-dark-400 mt-0.5 line-clamp-2">{description}</p>
         </div>
       </div>
       
-      <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-dark-700/50">
-        {tags.map(tag => (
+      <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-dark-700/50">
+        {tags.slice(0, 4).map(tag => (
           <span 
             key={tag}
-            className="px-2 py-0.5 text-xs bg-dark-700 text-dark-300 rounded-md"
+            className="px-1.5 py-0.5 text-xs bg-dark-700 text-dark-300 rounded"
           >
             {tag}
           </span>
@@ -137,9 +137,9 @@ function Tools() {
       </div>
 
       {/* Tools Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {tools.map((tool, index) => (
-          <div key={tool.to} style={{ animationDelay: `${index * 100}ms` }} className="flex">
+          <div key={tool.to} style={{ animationDelay: `${index * 50}ms` }} className="flex">
             <ToolCard {...tool} />
           </div>
         ))}
