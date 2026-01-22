@@ -165,6 +165,79 @@ router.get('/leaderboard/:departmentCode', authenticateToken, (req: Request, res
   }
 });
 
+// Функция расчёта стрика рабочих дней (пн-пт)
+function calculateWorkdayStreak(userId: string): number {
+  // Получаем все уникальные даты выполнения задач
+  const completedDates = db.prepare(`
+    SELECT DISTINCT date(completed_at) as date_only
+    FROM tasks 
+    WHERE executor_id = ? AND status = 'completed' AND completed_at IS NOT NULL
+    ORDER BY date_only DESC
+  `).all(userId) as { date_only: string }[];
+  
+  if (completedDates.length === 0) return 0;
+  
+  // Создаём Set для быстрой проверки дат
+  const completedSet = new Set(completedDates.map(d => d.date_only));
+  
+  // Функция проверки рабочего дня (0=вс, 1=пн, ..., 6=сб)
+  const isWorkday = (date: Date): boolean => {
+    const day = date.getDay();
+    return day >= 1 && day <= 5; // Пн-Пт
+  };
+  
+  // Функция получения предыдущего рабочего дня
+  const getPreviousWorkday = (date: Date): Date => {
+    const prev = new Date(date);
+    do {
+      prev.setDate(prev.getDate() - 1);
+    } while (!isWorkday(prev));
+    return prev;
+  };
+  
+  // Функция форматирования даты в YYYY-MM-DD
+  const formatDate = (date: Date): string => {
+    return date.toISOString().split('T')[0];
+  };
+  
+  // Начинаем с сегодня и ищем текущий/последний рабочий день
+  let currentDate = new Date();
+  currentDate.setHours(12, 0, 0, 0); // Убираем проблемы с часовыми поясами
+  
+  // Если сегодня выходной, начинаем с последней пятницы
+  while (!isWorkday(currentDate)) {
+    currentDate = getPreviousWorkday(currentDate);
+  }
+  
+  let streak = 0;
+  
+  // Считаем стрик: идём назад по рабочим дням
+  while (true) {
+    const dateStr = formatDate(currentDate);
+    
+    if (completedSet.has(dateStr)) {
+      streak++;
+      currentDate = getPreviousWorkday(currentDate);
+    } else {
+      // Если в текущий рабочий день нет задач - проверяем, может это сегодня 
+      // и день ещё не закончился, тогда смотрим предыдущий рабочий день
+      const today = new Date();
+      today.setHours(12, 0, 0, 0);
+      
+      if (formatDate(currentDate) === formatDate(today)) {
+        // Сегодня ещё не выполнили задачу - проверяем стрик от вчера
+        currentDate = getPreviousWorkday(currentDate);
+        continue;
+      }
+      
+      // Стрик прерывается
+      break;
+    }
+  }
+  
+  return streak;
+}
+
 // Функция проверки и начисления достижений
 export function checkAndGrantAchievements(userId: string): Achievement[] {
   const newAchievements: Achievement[] = [];
@@ -229,6 +302,14 @@ export function checkAndGrantAchievements(userId: string): Achievement[] {
     AND date(completed_at) = date(deadline)
   `).get(userId) as { count: number };
 
+  // Задачи выполненные в выходные (0 = воскресенье, 6 = суббота)
+  const weekendTasks = db.prepare(`
+    SELECT COUNT(*) as count FROM tasks 
+    WHERE executor_id = ? AND status = 'completed' AND completed_at IS NOT NULL
+    AND (CAST(strftime('%w', completed_at) AS INTEGER) = 0 
+         OR CAST(strftime('%w', completed_at) AS INTEGER) = 6)
+  `).get(userId) as { count: number };
+
   // Получаем все достижения
   const allAchievements = db.prepare('SELECT * FROM achievements').all() as Achievement[];
 
@@ -288,10 +369,17 @@ export function checkAndGrantAchievements(userId: string): Achievement[] {
           case 'prophet':
             earned = onTimeExact.count >= achievement.threshold;
             break;
+          case 'weekend_warrior':
+            earned = weekendTasks.count >= achievement.threshold;
+            break;
           // Отделные и редкие достижения проверяются отдельно
         }
         break;
-      // streak проверяется отдельно (более сложная логика)
+      case 'streak':
+        // Стрик рабочих дней (пн-пт, выходные пропускаются)
+        const currentStreak = calculateWorkdayStreak(userId);
+        earned = currentStreak >= achievement.threshold;
+        break;
     }
 
     if (earned) {

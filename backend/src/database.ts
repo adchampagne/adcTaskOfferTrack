@@ -1376,11 +1376,11 @@ try {
       { code: 'speed_50', name: 'Молния', description: '50 задач досрочно', icon: '💨', category: 'speed', threshold: 50, sort_order: 3 },
       { code: 'speed_100', name: 'Формула-1', description: '100 задач досрочно', icon: '🏎️', category: 'speed', threshold: 100, sort_order: 4 },
       
-      // === По стрику ===
-      { code: 'streak_7', name: 'Неделя огня', description: '7 дней подряд с выполненными задачами', icon: '📅', category: 'streak', threshold: 7, sort_order: 1 },
-      { code: 'streak_30', name: 'Месяц в ударе', description: '30 дней стрик', icon: '🔥', category: 'streak', threshold: 30, sort_order: 2 },
-      { code: 'streak_100', name: 'Неостановимый', description: '100 дней стрик', icon: '💪', category: 'streak', threshold: 100, sort_order: 3 },
-      { code: 'streak_365', name: 'Железная воля', description: '365 дней стрик', icon: '🏆', category: 'streak', threshold: 365, sort_order: 4 },
+      // === По стрику (только рабочие дни пн-пт) ===
+      { code: 'streak_7', name: 'Неделя огня', description: '7 рабочих дней подряд с выполненными задачами', icon: '📅', category: 'streak', threshold: 7, sort_order: 1 },
+      { code: 'streak_30', name: 'Месяц в ударе', description: '30 рабочих дней стрик', icon: '🔥', category: 'streak', threshold: 30, sort_order: 2 },
+      { code: 'streak_100', name: 'Неостановимый', description: '100 рабочих дней стрик', icon: '💪', category: 'streak', threshold: 100, sort_order: 3 },
+      { code: 'streak_365', name: 'Железная воля', description: '365 рабочих дней стрик', icon: '🏆', category: 'streak', threshold: 365, sort_order: 4 },
       
       // === Специальные ===
       { code: 'first_task', name: 'Первый шаг', description: 'Выполнить первую задачу', icon: '🎯', category: 'special', threshold: 1, sort_order: 1 },
@@ -1402,6 +1402,7 @@ try {
       { code: 'marathon', name: 'Марафонец', description: '20 задач за одну неделю', icon: '🏃', category: 'special', threshold: 20, sort_order: 21 },
       { code: 'universal', name: 'Универсал', description: 'Задачи во всех типах', icon: '🎪', category: 'special', threshold: 5, sort_order: 22 },
       { code: 'prophet', name: 'Провидец', description: '5 задач выполнены ровно в дедлайн', icon: '🔮', category: 'special', threshold: 5, sort_order: 23 },
+      { code: 'weekend_warrior', name: 'Воин выходного дня', description: 'Выполнить задачу в субботу или воскресенье', icon: '🦸', category: 'special', threshold: 1, sort_order: 24 },
     ];
 
     const insertAchievement = db.prepare(`
@@ -1417,6 +1418,19 @@ try {
     }
 
     console.log('✅ Достижения созданы/обновлены');
+  }
+
+  // Миграция: обновление описаний стриков (рабочие дни вместо обычных)
+  const streakDescCheck = db.prepare("SELECT description FROM achievements WHERE code = 'streak_7'").get() as { description: string } | undefined;
+  if (streakDescCheck && !streakDescCheck.description.includes('рабочих')) {
+    console.log('🔄 Миграция: обновление описаний стриков на рабочие дни...');
+    
+    db.prepare("UPDATE achievements SET description = '7 рабочих дней подряд с выполненными задачами' WHERE code = 'streak_7'").run();
+    db.prepare("UPDATE achievements SET description = '30 рабочих дней стрик' WHERE code = 'streak_30'").run();
+    db.prepare("UPDATE achievements SET description = '100 рабочих дней стрик' WHERE code = 'streak_100'").run();
+    db.prepare("UPDATE achievements SET description = '365 рабочих дней стрик' WHERE code = 'streak_365'").run();
+    
+    console.log('✅ Описания стриков обновлены');
   }
 } catch (e) {
   console.error('Migration error:', e);
