@@ -6,7 +6,7 @@ import {
   AlertCircle, PlayCircle, CheckCircle, XCircle, Edit2, Trash2,
   Eye, FileText, ArrowRight, Upload, Download, Image, Video, 
   FileArchive, File, Paperclip, Loader2, HelpCircle, Filter, Send, MessageSquare,
-  GitBranch, ChevronRight, RotateCcw, ExternalLink
+  GitBranch, ChevronRight, RotateCcw, ExternalLink, ArrowUp, ArrowDown
 } from 'lucide-react';
 import UserLink from '../components/UserLink';
 import { tasksApi, authApi, filesApi, headDashboardApi, offersApi, commentsApi } from '../api';
@@ -2684,6 +2684,10 @@ function Tasks() {
   const [offerFilter, setOfferFilter] = useState<string>('');
   const [deadlineFilter, setDeadlineFilter] = useState<'today' | 'tomorrow' | 'overdue' | ''>('');
 
+  // Сортировка
+  const [sortField, setSortField] = useState<'created_at' | 'deadline'>('created_at');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
   const { data: users = [] } = useQuery({
     queryKey: ['users'],
     queryFn: authApi.getUsers,
@@ -2852,13 +2856,18 @@ function Tasks() {
   // Количество активных фильтров
   const activeFiltersCount = [geoFilter, departmentFilter, priorityFilter, taskTypeFilter, offerFilter, deadlineFilter].filter(Boolean).length;
 
-  // Sort: overdue first, then by deadline
+  // Сортировка задач
   filteredTasks = [...filteredTasks].sort((a, b) => {
-    const aOverdue = isPast(new Date(a.deadline)) && a.status !== 'completed';
-    const bOverdue = isPast(new Date(b.deadline)) && b.status !== 'completed';
+    // Просроченные задачи всегда наверху
+    const aOverdue = isPast(new Date(a.deadline)) && a.status !== 'completed' && a.status !== 'cancelled';
+    const bOverdue = isPast(new Date(b.deadline)) && b.status !== 'completed' && b.status !== 'cancelled';
     if (aOverdue && !bOverdue) return -1;
     if (!aOverdue && bOverdue) return 1;
-    return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+    
+    // Сортировка по выбранному полю
+    const dateA = new Date(sortField === 'created_at' ? a.created_at : a.deadline).getTime();
+    const dateB = new Date(sortField === 'created_at' ? b.created_at : b.deadline).getTime();
+    return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
   });
 
   return (
@@ -2877,6 +2886,29 @@ function Tasks() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {/* Кнопка сортировки */}
+            <div className="flex items-center">
+              <select
+                value={sortField}
+                onChange={(e) => setSortField(e.target.value as 'created_at' | 'deadline')}
+                className="bg-dark-700/50 border border-dark-600 text-dark-300 text-sm rounded-l-xl px-3 py-2.5 sm:py-3 focus:outline-none focus:border-primary-500/50 hover:text-dark-100 transition-colors"
+              >
+                <option value="created_at">По дате создания</option>
+                <option value="deadline">По дедлайну</option>
+              </select>
+              <button
+                onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+                className="flex items-center gap-1 px-3 py-2.5 sm:py-3 bg-dark-700/50 border border-l-0 border-dark-600 text-dark-300 hover:text-dark-100 rounded-r-xl transition-colors"
+                title={sortDirection === 'desc' ? 'Сначала новые' : 'Сначала старые'}
+              >
+                {sortDirection === 'desc' ? (
+                  <ArrowDown className="w-4 h-4" />
+                ) : (
+                  <ArrowUp className="w-4 h-4" />
+                )}
+              </button>
+            </div>
+
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border transition-all text-sm ${
