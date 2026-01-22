@@ -18,6 +18,9 @@ import Tools from './pages/Tools';
 import ImageConverter from './pages/ImageConverter';
 import DataGenerator from './pages/DataGenerator';
 import ROICalculator from './pages/ROICalculator';
+import UTMGenerator from './pages/UTMGenerator';
+import RedirectChecker from './pages/RedirectChecker';
+import TimezoneConverter from './pages/TimezoneConverter';
 import Achievements from './pages/Achievements';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -74,6 +77,9 @@ function App() {
         <Route path="tools/image-converter" element={<ImageConverter />} />
         <Route path="tools/data-generator" element={<DataGenerator />} />
         <Route path="tools/roi-calculator" element={<ROICalculator />} />
+        <Route path="tools/utm-generator" element={<UTMGenerator />} />
+        <Route path="tools/redirect-checker" element={<RedirectChecker />} />
+        <Route path="tools/timezone-converter" element={<TimezoneConverter />} />
         <Route path="metadata-cleaner" element={<Navigate to="/tools/metadata-cleaner" />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="achievements" element={<Achievements />} />

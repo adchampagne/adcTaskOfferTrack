@@ -5,7 +5,9 @@ import {
   ImageIcon,
   ArrowRight,
   Users,
-  Calculator
+  Calculator,
+  Link2,
+  Globe
 } from 'lucide-react';
 import { useSettingsStore } from '../store/settingsStore';
 
@@ -89,6 +91,30 @@ function Tools() {
       description: 'Расчёт ROI, профита, CR, EPC, CPA, eCPC, eCPM и других важных метрик',
       gradient: 'bg-gradient-to-br from-amber-500 to-orange-600',
       tags: ['ROI', 'EPC', 'CPA', 'CR', 'Профит']
+    },
+    {
+      to: '/tools/utm-generator',
+      icon: Link2,
+      title: 'UTM генератор',
+      description: 'Создание ссылок с UTM-метками для кампаний с шаблонами под разные источники',
+      gradient: 'bg-gradient-to-br from-indigo-500 to-purple-600',
+      tags: ['UTM', 'Ссылки', 'FB', 'TikTok', 'Google']
+    },
+    {
+      to: '/tools/redirect-checker',
+      icon: ArrowRight,
+      title: 'Проверка редиректов',
+      description: 'Анализ цепочки редиректов, статус-коды и финальный URL',
+      gradient: 'bg-gradient-to-br from-rose-500 to-pink-600',
+      tags: ['Редиректы', 'HTTP', 'Дебаг', 'Клоака']
+    },
+    {
+      to: '/tools/timezone-converter',
+      icon: Globe,
+      title: 'Часовые пояса',
+      description: 'Конвертация времени между часовыми поясами для планирования кампаний',
+      gradient: 'bg-gradient-to-br from-cyan-500 to-blue-600',
+      tags: ['Время', 'US', 'EU', 'Гео', 'Расписание']
     }
   ];
 
@@ -119,12 +145,6 @@ function Tools() {
         ))}
       </div>
 
-      {/* Coming Soon */}
-      <div className="glass-card p-6 border-dashed opacity-60">
-        <div className="text-center">
-          <p className="text-dark-400">Скоро появятся новые инструменты...</p>
-        </div>
-      </div>
     </div>
   );
 }

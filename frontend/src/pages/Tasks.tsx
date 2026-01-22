@@ -2891,14 +2891,14 @@ function Tasks() {
               <select
                 value={sortField}
                 onChange={(e) => setSortField(e.target.value as 'created_at' | 'deadline')}
-                className="bg-dark-700/50 border border-dark-600 text-dark-300 text-sm rounded-l-xl px-3 py-2.5 sm:py-3 focus:outline-none focus:border-primary-500/50 hover:text-dark-100 transition-colors"
+                className="bg-dark-700/50 border border-dark-600 text-dark-300 text-sm rounded-l-xl px-3 h-10 sm:h-11 focus:outline-none focus:border-primary-500/50 hover:text-dark-100 transition-colors"
               >
                 <option value="created_at">По дате создания</option>
                 <option value="deadline">По дедлайну</option>
               </select>
               <button
                 onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-                className="flex items-center gap-1 px-3 py-2.5 sm:py-3 bg-dark-700/50 border border-l-0 border-dark-600 text-dark-300 hover:text-dark-100 rounded-r-xl transition-colors"
+                className="flex items-center justify-center w-10 sm:w-11 h-10 sm:h-11 bg-dark-700/50 border border-l-0 border-dark-600 text-dark-300 hover:text-dark-100 rounded-r-xl transition-colors"
                 title={sortDirection === 'desc' ? 'Сначала новые' : 'Сначала старые'}
               >
                 {sortDirection === 'desc' ? (
