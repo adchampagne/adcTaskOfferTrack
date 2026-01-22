@@ -1,11 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
-import { Building2, Package, CheckSquare, Clock, AlertCircle } from 'lucide-react';
+import { Building2, Package, CheckSquare, Clock, AlertCircle, TrendingUp, Calendar } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { partnersApi, offersApi, tasksApi } from '../api';
 import { useAuthStore } from '../store/authStore';
-import { taskStatusLabels, taskTypeLabels, Task } from '../types';
-import { isPast, isToday } from 'date-fns';
+import { taskStatusLabels, taskTypeLabels, Task, UserRole } from '../types';
+import { isPast, isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { formatMoscow } from '../utils/dateUtils';
+
+// Роли, для которых показываем партнёрки и офферы
+const buyerRoles: UserRole[] = ['buyer', 'buying_head', 'bizdev', 'admin'];
+
+// Роли разработки и крео - показываем статистику по задачам
+const devCreoRoles: UserRole[] = ['webdev', 'creo_manager', 'dev_head', 'creo_head'];
 
 function StatCard({ 
   icon: Icon, 
@@ -75,20 +81,27 @@ function TaskCard({ task, onClick }: { task: Task; onClick: () => void }) {
 function Dashboard() {
   const { user } = useAuthStore();
   const navigate = useNavigate();
+  
+  const userRole = user?.role as UserRole;
+  const showBuyerStats = buyerRoles.includes(userRole);
+  const showDevCreoStats = devCreoRoles.includes(userRole);
 
   const { data: partners = [] } = useQuery({
     queryKey: ['partners'],
     queryFn: partnersApi.getAll,
+    enabled: showBuyerStats,
   });
 
   const { data: offers = [] } = useQuery({
     queryKey: ['offers'],
     queryFn: () => offersApi.getAll(),
+    enabled: showBuyerStats,
   });
 
   const { data: tasks = [] } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => tasksApi.getAll(),
+    refetchInterval: 60000, // Обновляем каждую минуту
   });
 
   const myTasks = tasks.filter(
@@ -96,6 +109,15 @@ function Dashboard() {
   );
   const pendingTasks = myTasks.filter((t) => t.status === 'pending' || t.status === 'in_progress');
   const overdueTasks = pendingTasks.filter((t) => isPast(new Date(t.deadline)));
+  
+  // Статистика для разработчиков и крео
+  const myCompletedTasks = myTasks.filter((t) => t.status === 'completed' && t.completed_at);
+  const completedThisWeek = myCompletedTasks.filter((t) => 
+    t.completed_at && isThisWeek(new Date(t.completed_at), { weekStartsOn: 1 })
+  ).length;
+  const completedThisMonth = myCompletedTasks.filter((t) => 
+    t.completed_at && isThisMonth(new Date(t.completed_at))
+  ).length;
 
   return (
     <div className="space-y-4 sm:space-y-8">
@@ -111,18 +133,55 @@ function Dashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <StatCard
-          icon={Building2}
-          label="Партнёрок"
-          value={partners.length}
-          gradient="bg-gradient-to-br from-blue-500 to-blue-600"
-        />
-        <StatCard
-          icon={Package}
-          label="Офферов"
-          value={offers.length}
-          gradient="bg-gradient-to-br from-green-500 to-green-600"
-        />
+        {showBuyerStats ? (
+          // Статистика для байеров
+          <>
+            <StatCard
+              icon={Building2}
+              label="Партнёрок"
+              value={partners.length}
+              gradient="bg-gradient-to-br from-blue-500 to-blue-600"
+            />
+            <StatCard
+              icon={Package}
+              label="Офферов"
+              value={offers.length}
+              gradient="bg-gradient-to-br from-green-500 to-green-600"
+            />
+          </>
+        ) : showDevCreoStats ? (
+          // Статистика для разработчиков и крео
+          <>
+            <StatCard
+              icon={TrendingUp}
+              label="Выполнено за неделю"
+              value={completedThisWeek}
+              gradient="bg-gradient-to-br from-blue-500 to-blue-600"
+            />
+            <StatCard
+              icon={Calendar}
+              label="Выполнено за месяц"
+              value={completedThisMonth}
+              gradient="bg-gradient-to-br from-green-500 to-green-600"
+            />
+          </>
+        ) : (
+          // Fallback для других ролей
+          <>
+            <StatCard
+              icon={TrendingUp}
+              label="Выполнено за неделю"
+              value={completedThisWeek}
+              gradient="bg-gradient-to-br from-blue-500 to-blue-600"
+            />
+            <StatCard
+              icon={Calendar}
+              label="Выполнено за месяц"
+              value={completedThisMonth}
+              gradient="bg-gradient-to-br from-green-500 to-green-600"
+            />
+          </>
+        )}
         <StatCard
           icon={CheckSquare}
           label="Активных задач"

@@ -114,6 +114,17 @@ export default function Notifications() {
     refetchInterval: 30000, // Проверяем каждые 30 секунд
   });
 
+  // При изменении количества уведомлений - обновляем задачи
+  const prevUnreadCountRef = useRef(unreadCount);
+  useEffect(() => {
+    if (unreadCount > prevUnreadCountRef.current) {
+      // Появились новые уведомления - обновляем задачи
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['head-tasks'] });
+    }
+    prevUnreadCountRef.current = unreadCount;
+  }, [unreadCount, queryClient]);
+
   // Получаем все уведомления когда дропдаун открыт
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ['notifications'],
@@ -174,8 +185,10 @@ export default function Notifications() {
     
     // Если есть привязанная задача - переходим к задачам
     if (notification.task_id) {
+      // Обновляем кэш задач перед переходом
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
       setIsOpen(false);
-      navigate('/tasks');
+      navigate(`/tasks?task=${notification.task_id}`);
     }
   };
 
