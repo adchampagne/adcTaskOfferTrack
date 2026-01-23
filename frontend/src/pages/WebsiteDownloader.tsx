@@ -10,7 +10,8 @@ import {
   AlertCircle,
   Send,
   Archive,
-  Info
+  Info,
+  Clipboard
 } from 'lucide-react';
 import { useSettingsStore } from '../store/settingsStore';
 
@@ -18,6 +19,7 @@ function WebsiteDownloader() {
   const { getTheme } = useSettingsStore();
   const [url, setUrl] = useState('');
   const [copied, setCopied] = useState(false);
+  const [copiedAndOpened, setCopiedAndOpened] = useState(false);
   const [error, setError] = useState('');
 
   // Валидация URL
@@ -38,44 +40,42 @@ function WebsiteDownloader() {
     return trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
   };
 
-  // Генерация deeplink для Telegram бота
-  const generateDeeplink = (): string => {
-    const normalizedUrl = normalizeUrl(url);
-    // Telegram deeplink с параметром start
-    return `https://t.me/webtozip_bot?start=${encodeURIComponent(normalizedUrl)}`;
-  };
-
-  // Открыть в Telegram
-  const handleOpenTelegram = () => {
+  // Открыть в Telegram (сначала копируем URL, потом открываем бот)
+  const handleOpenTelegram = async () => {
     if (!validateUrl(url)) {
       setError('Введите корректный URL сайта');
       return;
     }
     setError('');
-    window.open(generateDeeplink(), '_blank');
-  };
-
-  // Копировать deeplink
-  const handleCopyDeeplink = async () => {
-    if (!validateUrl(url)) {
-      setError('Введите корректный URL сайта');
-      return;
-    }
-    setError('');
+    
     try {
-      await navigator.clipboard.writeText(generateDeeplink());
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      // Копируем URL в буфер обмена
+      await navigator.clipboard.writeText(normalizeUrl(url));
+      setCopiedAndOpened(true);
+      
+      // Открываем бот
+      window.open('https://t.me/webtozip_bot', '_blank');
+      
+      // Сбрасываем состояние через 5 секунд
+      setTimeout(() => setCopiedAndOpened(false), 5000);
     } catch (err) {
-      console.error('Ошибка копирования:', err);
+      console.error('Ошибка:', err);
+      // Если не удалось скопировать, всё равно открываем бот
+      window.open('https://t.me/webtozip_bot', '_blank');
     }
   };
 
-  // Копировать нормализованный URL
+  // Копировать URL
   const handleCopyUrl = async () => {
-    if (!validateUrl(url)) return;
+    if (!validateUrl(url)) {
+      setError('Введите корректный URL сайта');
+      return;
+    }
+    setError('');
     try {
       await navigator.clipboard.writeText(normalizeUrl(url));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Ошибка копирования:', err);
     }
@@ -138,7 +138,11 @@ function WebsiteDownloader() {
               <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-500" />
               {url && isValidUrl && (
                 <button
-                  onClick={handleCopyUrl}
+                  onClick={() => {
+                    navigator.clipboard.writeText(normalizeUrl(url));
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-400 hover:text-dark-200 transition-colors"
                   title="Копировать URL"
                 >
@@ -164,6 +168,14 @@ function WebsiteDownloader() {
               </div>
             )}
 
+            {/* Уведомление о копировании */}
+            {copiedAndOpened && (
+              <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/30 rounded-lg text-green-400">
+                <Clipboard className="w-4 h-4" />
+                <span className="text-sm">URL скопирован! Вставьте его в чат с ботом (Ctrl+V)</span>
+              </div>
+            )}
+
             {/* Кнопки */}
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <button
@@ -172,11 +184,11 @@ function WebsiteDownloader() {
                 className="btn-primary flex-1 flex items-center justify-center gap-2"
               >
                 <Send className="w-4 h-4" />
-                Открыть в Telegram
+                Скопировать и открыть бот
               </button>
               
               <button
-                onClick={handleCopyDeeplink}
+                onClick={handleCopyUrl}
                 disabled={!url.trim()}
                 className="btn-secondary flex items-center justify-center gap-2"
               >
@@ -188,7 +200,7 @@ function WebsiteDownloader() {
                 ) : (
                   <>
                     <Copy className="w-4 h-4" />
-                    Копировать ссылку
+                    Копировать URL
                   </>
                 )}
               </button>
@@ -224,8 +236,8 @@ function WebsiteDownloader() {
                 <span className="text-xs font-bold text-primary-400">2</span>
               </div>
               <div>
-                <div className="text-sm font-medium text-dark-200">Откройте Telegram бот</div>
-                <div className="text-xs text-dark-500 mt-0.5">Нажмите кнопку "Открыть в Telegram"</div>
+                <div className="text-sm font-medium text-dark-200">Нажмите "Скопировать и открыть бот"</div>
+                <div className="text-xs text-dark-500 mt-0.5">URL автоматически скопируется в буфер обмена</div>
               </div>
             </div>
 
@@ -234,7 +246,7 @@ function WebsiteDownloader() {
                 <span className="text-xs font-bold text-primary-400">3</span>
               </div>
               <div>
-                <div className="text-sm font-medium text-dark-200">Отправьте ссылку боту</div>
+                <div className="text-sm font-medium text-dark-200">Вставьте URL в чат (Ctrl+V)</div>
                 <div className="text-xs text-dark-500 mt-0.5">Бот начнёт скачивать сайт и пришлёт ZIP-архив</div>
               </div>
             </div>
