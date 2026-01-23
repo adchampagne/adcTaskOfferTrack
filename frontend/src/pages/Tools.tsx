@@ -11,7 +11,6 @@ import {
   Download
 } from 'lucide-react';
 import { useSettingsStore } from '../store/settingsStore';
-import { useAuthStore } from '../store/authStore';
 
 interface ToolCardProps {
   to: string;
@@ -60,8 +59,6 @@ function ToolCard({ to, icon: Icon, title, description, gradient, tags }: ToolCa
 
 function Tools() {
   const { getTheme } = useSettingsStore();
-  const { hasRole } = useAuthStore();
-  const isAdmin = hasRole('admin');
 
   const tools: ToolCardProps[] = [
     {
@@ -120,15 +117,14 @@ function Tools() {
       gradient: 'bg-gradient-to-br from-cyan-500 to-blue-600',
       tags: ['Время', 'US', 'EU', 'Гео', 'Расписание']
     },
-    // Только для админов
-    ...(isAdmin ? [{
+    {
       to: '/tools/website-downloader',
       icon: Download,
       title: 'Скачать сайт',
-      description: 'Скачивание сайта в ZIP-архив через Telegram бот @webtozip_bot',
+      description: 'Скачивание сайта в ZIP-архив через Telegram бот или веб-сервис',
       gradient: 'bg-gradient-to-br from-teal-500 to-cyan-600',
       tags: ['Сайт', 'ZIP', 'Telegram', 'Архив']
-    }] : [])
+    }
   ];
 
   return (
