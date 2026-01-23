@@ -22,6 +22,7 @@ import UTMGenerator from './pages/UTMGenerator';
 import RedirectChecker from './pages/RedirectChecker';
 import TimezoneConverter from './pages/TimezoneConverter';
 import Achievements from './pages/Achievements';
+import WebsiteDownloader from './pages/WebsiteDownloader';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -80,6 +81,7 @@ function App() {
         <Route path="tools/utm-generator" element={<UTMGenerator />} />
         <Route path="tools/redirect-checker" element={<RedirectChecker />} />
         <Route path="tools/timezone-converter" element={<TimezoneConverter />} />
+        <Route path="tools/website-downloader" element={<WebsiteDownloader />} />
         <Route path="metadata-cleaner" element={<Navigate to="/tools/metadata-cleaner" />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="achievements" element={<Achievements />} />
