@@ -36,6 +36,7 @@ export interface Offer {
   landing_price: string | null;
   promo_link: string | null;
   payout: string | null;
+  comment: string | null;
   created_at: string;
   created_by: string | null;
 }

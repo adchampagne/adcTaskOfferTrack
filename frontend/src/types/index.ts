@@ -38,6 +38,7 @@ export interface Offer {
   payout: string | null;
   garant: string | null;
   cap: string | null;
+  comment: string | null;
   created_at: string;
   created_by: string | null;
   partner_name?: string;

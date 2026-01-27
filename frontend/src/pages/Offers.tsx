@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { Package, Plus, ExternalLink, Edit2, Trash2, X, Filter, Globe, Search, Copy } from 'lucide-react';
+import { Package, Plus, ExternalLink, Edit2, Trash2, X, Filter, Globe, Search, Copy, MessageSquare } from 'lucide-react';
 import { offersApi, partnersApi } from '../api';
 import { useAuthStore } from '../store/authStore';
 import { Offer, Partner, geoOptions, PaymentType } from '../types';
@@ -103,6 +103,7 @@ interface OfferFormData {
   payout: string;
   garant: string;
   cap: string;
+  comment: string;
 }
 
 function OfferModal({
@@ -128,6 +129,7 @@ function OfferModal({
     payout: offer?.payout || '',
     garant: offer?.garant || '',
     cap: offer?.cap || '',
+    comment: offer?.comment || '',
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -315,6 +317,19 @@ function OfferModal({
             </div>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-dark-300 mb-2">
+              Комментарий
+            </label>
+            <textarea
+              value={formData.comment}
+              onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
+              className="glass-input w-full resize-none"
+              rows={3}
+              placeholder="Дополнительная информация об оффере..."
+            />
+          </div>
+
           <div className="flex gap-3 pt-4">
             <button type="button" onClick={onClose} className="btn-secondary flex-1">
               Отмена
@@ -411,8 +426,17 @@ function OfferCard({
         )}
       </div>
 
+      {offer.comment && (
+        <div className="mt-3 pt-3 border-t border-dark-700/50">
+          <div className="flex items-start gap-2 text-sm text-dark-300">
+            <MessageSquare className="w-4 h-4 flex-shrink-0 mt-0.5 text-dark-400" />
+            <span className="whitespace-pre-wrap">{offer.comment}</span>
+          </div>
+        </div>
+      )}
+
       {((canViewPPLinks && offer.partner_link) || offer.promo_link) && (
-        <div className="mt-3 pt-3 border-t border-dark-700/50 flex gap-2 flex-wrap">
+        <div className={`mt-3 pt-3 border-t border-dark-700/50 flex gap-2 flex-wrap ${offer.comment ? '' : ''}`}>
           {canViewPPLinks && offer.partner_link && (
             <a
               href={offer.partner_link}
@@ -530,6 +554,7 @@ function Offers() {
       payout: data.payout,
       garant: data.garant,
       cap: data.cap,
+      comment: data.comment,
     };
     
     if (editingOffer) {
@@ -727,6 +752,7 @@ function Offers() {
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Цена</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Гарант</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Капа</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Комментарий</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-dark-400">Ссылки</th>
                   {canEditOffers() && (
                     <th className="text-right py-3 px-4 text-sm font-medium text-dark-400">Действия</th>
@@ -808,6 +834,15 @@ function Offers() {
                       {offer.cap ? (
                         <span className="px-2 py-1 bg-purple-500/10 text-purple-400 text-xs rounded-md border border-purple-500/20">
                           {offer.cap}
+                        </span>
+                      ) : (
+                        <span className="text-dark-500">—</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-4 max-w-[200px]">
+                      {offer.comment ? (
+                        <span className="text-dark-300 text-sm line-clamp-2" title={offer.comment}>
+                          {offer.comment}
                         </span>
                       ) : (
                         <span className="text-dark-500">—</span>

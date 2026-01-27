@@ -275,6 +275,13 @@ try {
     console.log('✅ Миграция cap для офферов завершена');
   }
 
+  // Миграция offers: comment колонка
+  if (!offerColumnNames.includes('comment')) {
+    console.log('🔄 Миграция: добавление comment к офферам...');
+    db.exec("ALTER TABLE offers ADD COLUMN comment TEXT");
+    console.log('✅ Миграция comment для офферов завершена');
+  }
+
   // Миграция tasks: started_at колонка (когда задача взята в работу)
   if (!taskColumnNames.includes('started_at')) {
     console.log('🔄 Миграция: добавление started_at к задачам...');
