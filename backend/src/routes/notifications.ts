@@ -74,6 +74,7 @@ export const NotificationTypes = {
   TASK_REVISION: 'task_revision',
   TASK_CLARIFICATION: 'task_clarification',
   TASK_COMMENT: 'task_comment',
+  EMPLOYEE_CREATED_TASK: 'employee_created_task',
 } as const;
 
 // Получить уведомления текущего пользователя
@@ -489,6 +490,52 @@ export function notifyTaskComment(
       userId,
       NotificationTypes.TASK_COMMENT,
       `Новый комментарий к задаче ${taskNum}`,
+      message,
+      task.id
+    );
+  });
+}
+
+// Уведомление руководителю о создании задачи сотрудником
+export function notifyHeadAboutEmployeeTask(
+  task: Task,
+  employeeName: string,
+  headUserIds: string[]
+): void {
+  console.log(`🔔 [Notify] notifyHeadAboutEmployeeTask для задачи ${task.task_number || task.id}`);
+  console.log(`🔔 [Notify] Сотрудник: ${employeeName}, руководители: ${headUserIds.join(', ')}`);
+  
+  if (headUserIds.length === 0) {
+    console.log(`⏭️ [Notify] Нет руководителей для уведомления`);
+    return;
+  }
+
+  const taskNum = task.task_number ? `#${task.task_number}` : '';
+  const desc = truncateDescription(task.description);
+  const deadline = formatDeadline(task.deadline);
+  const geoInfo = task.geo ? ` [${task.geo.toUpperCase()}]` : '';
+  const deptInfo = task.department ? departmentLabels[task.department] || task.department : '';
+  
+  let message = `📋 Задача ${taskNum}${geoInfo}: ${task.title}\n`;
+  if (deptInfo) message += `\n🏢 На отдел: ${deptInfo}\n`;
+  if (desc) message += `\n${desc}\n`;
+  message += `\n👤 Сотрудник: ${employeeName}`;
+  if (task.executor_name) message += `\n👷 Исполнитель: ${task.executor_name}`;
+  if (deadline) message += `\n⏰ Дедлайн: ${deadline}`;
+
+  const title = `Ваш сотрудник ${employeeName} создал задачу ${taskNum}`;
+
+  headUserIds.forEach((headUserId) => {
+    // Не уведомляем если руководитель сам создал задачу
+    if (headUserId === task.customer_id) {
+      console.log(`⏭️ [Notify] Пропуск руководителя ${headUserId} - он же создатель задачи`);
+      return;
+    }
+    
+    createNotification(
+      headUserId,
+      NotificationTypes.EMPLOYEE_CREATED_TASK,
+      title,
       message,
       task.id
     );

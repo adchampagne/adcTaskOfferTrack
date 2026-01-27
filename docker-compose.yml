@@ -13,8 +13,8 @@ services:
       - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
     volumes:
-      - backend-data:/app/data
-      - backend-uploads:/app/uploads
+      - ./backend/data:/app/data
+      - ./backend/uploads:/app/uploads
     networks:
       - app-network
     healthcheck:
@@ -36,10 +36,6 @@ services:
       - backend
     networks:
       - app-network
-
-volumes:
-  backend-data:
-  backend-uploads:
 
 networks:
   app-network:

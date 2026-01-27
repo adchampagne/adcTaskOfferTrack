@@ -4,7 +4,7 @@ import {
   BarChart3, Users, CheckCircle, Clock, AlertCircle, 
   Calendar, TrendingUp, X, ArrowUpRight, Send, Paperclip,
   Download, MessageSquare, Trash2, Image, Video, FileArchive, File,
-  ChevronDown, ChevronRight, ArrowUp, ArrowDown
+  ChevronDown, ChevronRight, ArrowUp, ArrowDown, ExternalLink
 } from 'lucide-react';
 import { headDashboardApi, filesApi, commentsApi } from '../api';
 import { Task, TaskStatus, TaskPriority, taskStatusLabels, taskPriorityLabels, taskTypeLabels, TaskFile } from '../types';
@@ -540,6 +540,13 @@ function HeadDashboard() {
     enabled: headCheck?.isHead,
   });
 
+  // Задачи, созданные сотрудниками отдела (на другие отделы)
+  const { data: memberCreatedTasks = [], isLoading: memberTasksLoading } = useQuery({
+    queryKey: ['head-member-created-tasks'],
+    queryFn: headDashboardApi.getTasksCreatedByMembers,
+    enabled: headCheck?.isHead,
+  });
+
   const updateMutation = useMutation({
     mutationFn: ({ taskId, updates }: { taskId: string; updates: { deadline?: string; priority?: string; executor_id?: string } }) =>
       headDashboardApi.updateTask(taskId, updates),
@@ -798,6 +805,90 @@ function HeadDashboard() {
             </div>
           )}
         </div>
+
+        {/* Tasks Created By Members - Задачи, созданные сотрудниками */}
+        {memberCreatedTasks.length > 0 && (
+          <div className="glass-card p-6 animate-fade-in">
+            <h2 className="text-lg font-bold text-dark-100 mb-4 flex items-center gap-2">
+              <ExternalLink className="w-5 h-5 text-amber-400" />
+              Задачи от сотрудников
+              <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-amber-500/10 text-amber-400">
+                {memberCreatedTasks.length}
+              </span>
+            </h2>
+            <p className="text-dark-400 text-sm mb-4">
+              Задачи, которые ваши сотрудники поставили на другие отделы
+            </p>
+            
+            {memberTasksLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="skeleton h-16 rounded-xl" />
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-dark-700/50">
+                      <th className="text-left py-3 px-4 text-dark-400 font-medium">Задача</th>
+                      <th className="text-left py-3 px-4 text-dark-400 font-medium">Создал</th>
+                      <th className="text-left py-3 px-4 text-dark-400 font-medium">Исполнитель</th>
+                      <th className="text-left py-3 px-4 text-dark-400 font-medium">Статус</th>
+                      <th className="text-left py-3 px-4 text-dark-400 font-medium">Дедлайн</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {memberCreatedTasks.map((task) => {
+                      const isOverdue = isPast(new Date(task.deadline)) && task.status !== 'completed' && task.status !== 'cancelled';
+                      const isDueToday = isToday(new Date(task.deadline));
+                      
+                      return (
+                        <tr 
+                          key={task.id} 
+                          className="border-b border-dark-700/30 hover:bg-dark-800/30 transition-colors cursor-pointer"
+                          onClick={() => setViewingTask(task)}
+                        >
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              {task.task_number && (
+                                <span className="text-xs font-mono text-dark-500">#{task.task_number}</span>
+                              )}
+                              <span className="text-dark-100 font-medium truncate max-w-[200px]">{task.title}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-xs">
+                                {task.customer_name?.charAt(0)}
+                              </div>
+                              <span className="text-dark-200 text-sm">{task.customer_name}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="text-dark-300 text-sm">{task.executor_name}</span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${getStatusColor(task.status)}`}>
+                              {getStatusIcon(task.status)}
+                              {taskStatusLabels[task.status]}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`text-sm ${isOverdue ? 'text-red-400' : isDueToday ? 'text-amber-400' : 'text-dark-300'}`}>
+                              {formatMoscow(new Date(task.deadline), 'd MMM, HH:mm')}
+                              {isOverdue && ' (!)'}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Tasks List */}
         <div className="glass-card p-6 animate-fade-in">

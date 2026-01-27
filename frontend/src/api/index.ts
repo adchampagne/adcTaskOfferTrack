@@ -519,6 +519,22 @@ export const headDashboardApi = {
     const { data } = await api.post<{ tasks: Task[]; message: string }>(`/head-dashboard/tasks/${taskId}/assign-multiple`, { executor_ids: executorIds });
     return data;
   },
+
+  // Задачи, созданные сотрудниками отдела (для внешних отделов)
+  getTasksCreatedByMembers: async () => {
+    const { data } = await api.get<Task[]>('/head-dashboard/created-by-members');
+    return data;
+  },
+
+  updateTaskCreatedByMember: async (taskId: string, updates: Partial<Task>) => {
+    const { data } = await api.put<Task>(`/head-dashboard/created-by-members/${taskId}`, updates);
+    return data;
+  },
+
+  deleteTaskCreatedByMember: async (taskId: string) => {
+    const { data } = await api.delete(`/head-dashboard/created-by-members/${taskId}`);
+    return data;
+  },
 };
 
 // Knowledge Base API (База знаний)

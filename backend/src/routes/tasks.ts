@@ -3,10 +3,57 @@ import { v4 as uuidv4 } from 'uuid';
 import db, { getNextTaskNumber } from '../database';
 import { authenticateToken } from '../middleware/auth';
 import { Task, TaskWithUsers, Department, departmentHeadRole, UserRole } from '../types';
-import { notifyTaskAssigned, notifyStatusChanged, notifySubtaskCompleted, notifyTaskRevision, notifyTaskReassigned, notifyTaskClarification } from './notifications';
+import { notifyTaskAssigned, notifyStatusChanged, notifySubtaskCompleted, notifyTaskRevision, notifyTaskReassigned, notifyTaskClarification, notifyHeadAboutEmployeeTask } from './notifications';
 import { checkAndGrantAchievements } from './achievements';
 
 const router = Router();
+
+// Получить руководителей отделов, в которых состоит пользователь
+function getEmployeeDepartmentHeads(userId: string): string[] {
+  // Находим отделы, в которых состоит пользователь
+  const userDepartments = db.prepare(`
+    SELECT department_id FROM user_departments WHERE user_id = ?
+  `).all(userId) as { department_id: string }[];
+
+  if (userDepartments.length === 0) {
+    return [];
+  }
+
+  // Находим руководителей этих отделов
+  const departmentIds = userDepartments.map(d => d.department_id);
+  const placeholders = departmentIds.map(() => '?').join(',');
+  
+  const heads = db.prepare(`
+    SELECT DISTINCT dh.user_id FROM department_heads dh
+    WHERE dh.department_id IN (${placeholders})
+  `).all(...departmentIds) as { user_id: string }[];
+
+  return heads.map(h => h.user_id);
+}
+
+// Проверить, является ли пользователь руководителем отдела, в котором состоит заказчик
+function isHeadOfCustomerDepartment(headUserId: string, customerId: string): boolean {
+  // Находим отделы, в которых состоит заказчик
+  const customerDepartments = db.prepare(`
+    SELECT department_id FROM user_departments WHERE user_id = ?
+  `).all(customerId) as { department_id: string }[];
+
+  if (customerDepartments.length === 0) {
+    return false;
+  }
+
+  // Проверяем, является ли headUserId руководителем любого из этих отделов
+  const departmentIds = customerDepartments.map(d => d.department_id);
+  const placeholders = departmentIds.map(() => '?').join(',');
+  
+  const result = db.prepare(`
+    SELECT 1 FROM department_heads dh
+    WHERE dh.user_id = ? AND dh.department_id IN (${placeholders})
+    LIMIT 1
+  `).get(headUserId, ...departmentIds);
+
+  return !!result;
+}
 
 // Типы тасков на русском
 const taskTypeLabels: Record<string, string> = {
@@ -259,6 +306,12 @@ router.post('/', authenticateToken, (req: Request, res: Response): void => {
     // Отправляем уведомление исполнителю
     notifyTaskAssigned(task, task.customer_name || 'Пользователь');
 
+    // Уведомляем руководителя отдела сотрудника о создании задачи
+    const headUserIds = getEmployeeDepartmentHeads(customer_id!);
+    if (headUserIds.length > 0) {
+      notifyHeadAboutEmployeeTask(task, task.customer_name || 'Сотрудник', headUserIds);
+    }
+
     res.status(201).json(task);
   } catch (error) {
     console.error('Create task error:', error);
@@ -400,9 +453,10 @@ router.put('/:id', authenticateToken, (req: Request, res: Response): void => {
     // Сохраняем старого исполнителя для проверки изменения
     const oldExecutorId = existing.executor_id;
 
-    // Редактировать может только заказчик
-    if (existing.customer_id !== req.user?.userId && req.user?.role !== 'admin') {
-      res.status(403).json({ error: 'Только заказчик или админ может редактировать задачу' });
+    // Редактировать может заказчик, админ или руководитель отдела заказчика
+    const isHead = isHeadOfCustomerDepartment(req.user?.userId || '', existing.customer_id);
+    if (existing.customer_id !== req.user?.userId && req.user?.role !== 'admin' && !isHead) {
+      res.status(403).json({ error: 'Только заказчик, админ или руководитель отдела может редактировать задачу' });
       return;
     }
 
@@ -477,9 +531,10 @@ router.delete('/:id', authenticateToken, (req: Request, res: Response): void => 
       return;
     }
 
-    // Удалять может заказчик или админ
-    if (existing.customer_id !== req.user?.userId && req.user?.role !== 'admin') {
-      res.status(403).json({ error: 'Только заказчик или админ может удалить задачу' });
+    // Удалять может заказчик, админ или руководитель отдела заказчика
+    const isHead = isHeadOfCustomerDepartment(req.user?.userId || '', existing.customer_id);
+    if (existing.customer_id !== req.user?.userId && req.user?.role !== 'admin' && !isHead) {
+      res.status(403).json({ error: 'Только заказчик, админ или руководитель отдела может удалить задачу' });
       return;
     }
 

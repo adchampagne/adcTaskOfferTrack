@@ -285,6 +285,191 @@ router.patch('/tasks/:id', authenticateToken, (req: Request, res: Response): voi
   }
 });
 
+// Получить задачи, созданные сотрудниками моего отдела (для внешних отделов)
+router.get('/created-by-members', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    const userId = req.user?.userId;
+    const department = getHeadDepartment(userId!);
+    
+    if (!department) {
+      res.status(403).json({ error: 'Вы не являетесь руководителем отдела' });
+      return;
+    }
+
+    const members = getDepartmentMembers(department.id);
+    const memberIds = members.map(m => m.user_id);
+
+    if (memberIds.length === 0) {
+      res.json([]);
+      return;
+    }
+
+    const placeholders = memberIds.map(() => '?').join(',');
+    
+    // Показываем задачи, созданные сотрудниками отдела, НО НЕ для своего отдела
+    // (т.е. задачи, которые сотрудники ставят на другие отделы)
+    const tasks = db.prepare(`
+      SELECT t.*, 
+             c.full_name as customer_name,
+             c.username as customer_username,
+             e.full_name as executor_name,
+             e.username as executor_username,
+             o.name as offer_name,
+             o.promo_link as offer_promo_link,
+             pt.title as parent_task_title,
+             pt.task_number as parent_task_number
+      FROM tasks t
+      LEFT JOIN users c ON t.customer_id = c.id
+      LEFT JOIN users e ON t.executor_id = e.id
+      LEFT JOIN offers o ON t.offer_id = o.id
+      LEFT JOIN tasks pt ON t.parent_task_id = pt.id
+      WHERE t.customer_id IN (${placeholders})
+        AND (t.department IS NULL OR t.department != ?)
+        AND t.executor_id NOT IN (${placeholders})
+      ORDER BY 
+        CASE t.status 
+          WHEN 'in_progress' THEN 1 
+          WHEN 'pending' THEN 2 
+          WHEN 'completed' THEN 3 
+          WHEN 'cancelled' THEN 4 
+        END,
+        t.created_at DESC
+    `).all(...memberIds, department.code, ...memberIds) as TaskWithUsers[];
+
+    res.json(tasks);
+  } catch (error) {
+    console.error('Get tasks created by members error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Обновить задачу, созданную сотрудником (руководитель может редактировать)
+router.put('/created-by-members/:id', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+    const { title, description, task_type, executor_id, deadline, geo, priority, department: taskDepartment, offer_id } = req.body;
+
+    const headDepartment = getHeadDepartment(userId!);
+    
+    if (!headDepartment) {
+      res.status(403).json({ error: 'Вы не являетесь руководителем отдела' });
+      return;
+    }
+
+    // Получаем сотрудников отдела
+    const members = getDepartmentMembers(headDepartment.id);
+    const memberIds = members.map(m => m.user_id);
+
+    // Проверяем, что задача создана сотрудником отдела
+    const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as TaskWithUsers | undefined;
+    
+    if (!task) {
+      res.status(404).json({ error: 'Задача не найдена' });
+      return;
+    }
+
+    if (!memberIds.includes(task.customer_id)) {
+      res.status(403).json({ error: 'Эта задача не создана сотрудником вашего отдела' });
+      return;
+    }
+
+    // Сохраняем старого исполнителя для проверки изменения
+    const oldExecutorId = task.executor_id;
+
+    // Проверяем существование нового исполнителя
+    if (executor_id) {
+      const executor = db.prepare('SELECT id FROM users WHERE id = ?').get(executor_id);
+      if (!executor) {
+        res.status(400).json({ error: 'Исполнитель не найден' });
+        return;
+      }
+    }
+
+    // Обрабатываем offer_id: 'none' означает отсутствие оффера
+    const updateOfferId = offer_id === 'none' ? null : offer_id;
+
+    db.prepare(`
+      UPDATE tasks 
+      SET title = COALESCE(?, title),
+          description = COALESCE(?, description),
+          task_type = COALESCE(?, task_type),
+          geo = COALESCE(?, geo),
+          priority = COALESCE(?, priority),
+          department = COALESCE(?, department),
+          offer_id = COALESCE(?, offer_id),
+          executor_id = COALESCE(?, executor_id),
+          deadline = COALESCE(?, deadline)
+      WHERE id = ?
+    `).run(title, description, task_type, geo, priority, taskDepartment, updateOfferId, executor_id, deadline, id);
+
+    const updated = db.prepare(`
+      SELECT t.*, 
+             c.full_name as customer_name,
+             c.username as customer_username,
+             e.full_name as executor_name,
+             e.username as executor_username,
+             o.name as offer_name,
+             o.promo_link as offer_promo_link
+      FROM tasks t
+      LEFT JOIN users c ON t.customer_id = c.id
+      LEFT JOIN users e ON t.executor_id = e.id
+      LEFT JOIN offers o ON t.offer_id = o.id
+      WHERE t.id = ?
+    `).get(id) as TaskWithUsers;
+
+    // Если исполнитель изменился - уведомляем нового исполнителя
+    if (executor_id && executor_id !== oldExecutorId) {
+      const headUser = db.prepare('SELECT full_name FROM users WHERE id = ?').get(userId) as { full_name: string } | undefined;
+      notifyTaskReassigned(updated, headUser?.full_name || 'Руководитель', executor_id);
+    }
+
+    res.json(updated);
+  } catch (error) {
+    console.error('Update task created by member error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
+// Удалить задачу, созданную сотрудником (руководитель может удалить)
+router.delete('/created-by-members/:id', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    const userId = req.user?.userId;
+    const { id } = req.params;
+
+    const headDepartment = getHeadDepartment(userId!);
+    
+    if (!headDepartment) {
+      res.status(403).json({ error: 'Вы не являетесь руководителем отдела' });
+      return;
+    }
+
+    // Получаем сотрудников отдела
+    const members = getDepartmentMembers(headDepartment.id);
+    const memberIds = members.map(m => m.user_id);
+
+    // Проверяем, что задача создана сотрудником отдела
+    const task = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as TaskWithUsers | undefined;
+    
+    if (!task) {
+      res.status(404).json({ error: 'Задача не найдена' });
+      return;
+    }
+
+    if (!memberIds.includes(task.customer_id)) {
+      res.status(403).json({ error: 'Эта задача не создана сотрудником вашего отдела' });
+      return;
+    }
+
+    db.prepare('DELETE FROM tasks WHERE id = ?').run(id);
+
+    res.json({ message: 'Задача удалена' });
+  } catch (error) {
+    console.error('Delete task created by member error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 // Получить список сотрудников отдела для назначения
 router.get('/members', authenticateToken, (req: Request, res: Response): void => {
   try {
