@@ -8,51 +8,127 @@ import { checkAndGrantAchievements } from './achievements';
 
 const router = Router();
 
+// Маппинг роль -> код отдела
+const roleToDepartment: Record<string, string> = {
+  'buyer': 'buying',
+  'bizdev': 'buying', 
+  'buying_head': 'buying',
+  'creo_manager': 'creo',
+  'creo_head': 'creo',
+  'webdev': 'development',
+  'dev_head': 'development'
+};
+
+// Маппинг код отдела -> роль руководителя
+const departmentToHeadRole: Record<string, string> = {
+  'buying': 'buying_head',
+  'creo': 'creo_head',
+  'development': 'dev_head'
+};
+
 // Получить руководителей отделов, в которых состоит пользователь
 function getEmployeeDepartmentHeads(userId: string): string[] {
-  // Находим отделы, в которых состоит пользователь
+  const headIds = new Set<string>();
+  
+  // 1. Находим отделы через user_departments
   const userDepartments = db.prepare(`
-    SELECT department_id FROM user_departments WHERE user_id = ?
-  `).all(userId) as { department_id: string }[];
+    SELECT d.id, d.code FROM user_departments ud
+    JOIN departments d ON ud.department_id = d.id
+    WHERE ud.user_id = ?
+  `).all(userId) as { id: string; code: string }[];
 
-  if (userDepartments.length === 0) {
-    return [];
+  for (const dept of userDepartments) {
+    // Находим руководителей через department_heads
+    const heads = db.prepare(`
+      SELECT user_id FROM department_heads WHERE department_id = ?
+    `).all(dept.id) as { user_id: string }[];
+    heads.forEach(h => headIds.add(h.user_id));
+    
+    // Также ищем по роли руководителя
+    const headRole = departmentToHeadRole[dept.code];
+    if (headRole) {
+      const roleHeads = db.prepare(`
+        SELECT id FROM users WHERE role = ?
+      `).all(headRole) as { id: string }[];
+      roleHeads.forEach(h => headIds.add(h.id));
+    }
   }
 
-  // Находим руководителей этих отделов
-  const departmentIds = userDepartments.map(d => d.department_id);
-  const placeholders = departmentIds.map(() => '?').join(',');
-  
-  const heads = db.prepare(`
-    SELECT DISTINCT dh.user_id FROM department_heads dh
-    WHERE dh.department_id IN (${placeholders})
-  `).all(...departmentIds) as { user_id: string }[];
+  // 2. Определяем отдел по роли пользователя
+  const user = db.prepare('SELECT role FROM users WHERE id = ?').get(userId) as { role: string } | undefined;
+  if (user && roleToDepartment[user.role]) {
+    const deptCode = roleToDepartment[user.role];
+    const headRole = departmentToHeadRole[deptCode];
+    
+    if (headRole) {
+      // Находим руководителя по роли
+      const roleHeads = db.prepare(`
+        SELECT id FROM users WHERE role = ?
+      `).all(headRole) as { id: string }[];
+      roleHeads.forEach(h => headIds.add(h.id));
+      
+      // Также ищем через department_heads
+      const dept = db.prepare('SELECT id FROM departments WHERE code = ?').get(deptCode) as { id: string } | undefined;
+      if (dept) {
+        const deptHeads = db.prepare(`
+          SELECT user_id FROM department_heads WHERE department_id = ?
+        `).all(dept.id) as { user_id: string }[];
+        deptHeads.forEach(h => headIds.add(h.user_id));
+      }
+    }
+  }
 
-  return heads.map(h => h.user_id);
+  // Исключаем самого пользователя (если он сам руководитель)
+  headIds.delete(userId);
+  
+  return Array.from(headIds);
 }
 
 // Проверить, является ли пользователь руководителем отдела, в котором состоит заказчик
 function isHeadOfCustomerDepartment(headUserId: string, customerId: string): boolean {
-  // Находим отделы, в которых состоит заказчик
+  // Получаем роль потенциального руководителя
+  const headUser = db.prepare('SELECT role FROM users WHERE id = ?').get(headUserId) as { role: string } | undefined;
+  if (!headUser) return false;
+  
+  // 1. Проверяем через user_departments
   const customerDepartments = db.prepare(`
-    SELECT department_id FROM user_departments WHERE user_id = ?
-  `).all(customerId) as { department_id: string }[];
+    SELECT d.id, d.code FROM user_departments ud
+    JOIN departments d ON ud.department_id = d.id
+    WHERE ud.user_id = ?
+  `).all(customerId) as { id: string; code: string }[];
 
-  if (customerDepartments.length === 0) {
-    return false;
+  for (const dept of customerDepartments) {
+    // Проверяем через department_heads
+    const isDeptHead = db.prepare(`
+      SELECT 1 FROM department_heads WHERE user_id = ? AND department_id = ?
+    `).get(headUserId, dept.id);
+    if (isDeptHead) return true;
+    
+    // Проверяем по роли
+    const expectedHeadRole = departmentToHeadRole[dept.code];
+    if (expectedHeadRole && headUser.role === expectedHeadRole) return true;
   }
 
-  // Проверяем, является ли headUserId руководителем любого из этих отделов
-  const departmentIds = customerDepartments.map(d => d.department_id);
-  const placeholders = departmentIds.map(() => '?').join(',');
-  
-  const result = db.prepare(`
-    SELECT 1 FROM department_heads dh
-    WHERE dh.user_id = ? AND dh.department_id IN (${placeholders})
-    LIMIT 1
-  `).get(headUserId, ...departmentIds);
+  // 2. Проверяем по роли заказчика
+  const customer = db.prepare('SELECT role FROM users WHERE id = ?').get(customerId) as { role: string } | undefined;
+  if (customer && roleToDepartment[customer.role]) {
+    const customerDeptCode = roleToDepartment[customer.role];
+    const expectedHeadRole = departmentToHeadRole[customerDeptCode];
+    
+    // Если роль руководителя совпадает
+    if (expectedHeadRole && headUser.role === expectedHeadRole) return true;
+    
+    // Проверяем через department_heads
+    const dept = db.prepare('SELECT id FROM departments WHERE code = ?').get(customerDeptCode) as { id: string } | undefined;
+    if (dept) {
+      const isDeptHead = db.prepare(`
+        SELECT 1 FROM department_heads WHERE user_id = ? AND department_id = ?
+      `).get(headUserId, dept.id);
+      if (isDeptHead) return true;
+    }
+  }
 
-  return !!result;
+  return false;
 }
 
 // Типы тасков на русском

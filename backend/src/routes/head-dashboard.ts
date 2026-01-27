@@ -39,7 +39,14 @@ function getHeadDepartment(userId: string): { id: string; name: string; code: st
   return departments.length > 0 ? departments[0] : null;
 }
 
-// Получить сотрудников отдела
+// Роли, связанные с отделами
+const departmentRoles: Record<string, string[]> = {
+  'buying': ['buyer', 'bizdev', 'buying_head'],
+  'creo': ['creo_manager', 'creo_head'],
+  'development': ['webdev', 'dev_head']
+};
+
+// Получить сотрудников отдела (из user_departments)
 function getDepartmentMembers(departmentId: string): DepartmentMember[] {
   return db.prepare(`
     SELECT 
@@ -52,6 +59,37 @@ function getDepartmentMembers(departmentId: string): DepartmentMember[] {
     WHERE ud.department_id = ?
     ORDER BY u.full_name ASC
   `).all(departmentId) as DepartmentMember[];
+}
+
+// Получить всех сотрудников отдела (из user_departments + по ролям)
+function getAllDepartmentMembers(departmentId: string, departmentCode: string): DepartmentMember[] {
+  const fromUserDepartments = getDepartmentMembers(departmentId);
+  const memberIds = new Set(fromUserDepartments.map(m => m.user_id));
+  
+  // Также добавляем пользователей с ролями этого отдела
+  const roles = departmentRoles[departmentCode] || [];
+  if (roles.length > 0) {
+    const placeholders = roles.map(() => '?').join(',');
+    const byRole = db.prepare(`
+      SELECT 
+        u.id as user_id,
+        u.full_name as user_name,
+        u.username as user_username,
+        u.role as user_role
+      FROM users u
+      WHERE u.role IN (${placeholders})
+      ORDER BY u.full_name ASC
+    `).all(...roles) as DepartmentMember[];
+    
+    for (const member of byRole) {
+      if (!memberIds.has(member.user_id)) {
+        fromUserDepartments.push(member);
+        memberIds.add(member.user_id);
+      }
+    }
+  }
+  
+  return fromUserDepartments;
 }
 
 // Проверка, является ли пользователь руководителем отдела
@@ -296,18 +334,22 @@ router.get('/created-by-members', authenticateToken, (req: Request, res: Respons
       return;
     }
 
-    const members = getDepartmentMembers(department.id);
+    // Используем расширенный список сотрудников (user_departments + по ролям)
+    const members = getAllDepartmentMembers(department.id, department.code);
     const memberIds = members.map(m => m.user_id);
+    
+    // Исключаем самого руководителя из списка - его задачи он видит и так
+    const filteredMemberIds = memberIds.filter(id => id !== userId);
 
-    if (memberIds.length === 0) {
+    if (filteredMemberIds.length === 0) {
       res.json([]);
       return;
     }
 
-    const placeholders = memberIds.map(() => '?').join(',');
+    const placeholders = filteredMemberIds.map(() => '?').join(',');
     
-    // Показываем задачи, созданные сотрудниками отдела, НО НЕ для своего отдела
-    // (т.е. задачи, которые сотрудники ставят на другие отделы)
+    // Показываем задачи, созданные сотрудниками отдела (НЕ руководителем)
+    // на другие отделы или без указания отдела
     const tasks = db.prepare(`
       SELECT t.*, 
              c.full_name as customer_name,
@@ -324,8 +366,6 @@ router.get('/created-by-members', authenticateToken, (req: Request, res: Respons
       LEFT JOIN offers o ON t.offer_id = o.id
       LEFT JOIN tasks pt ON t.parent_task_id = pt.id
       WHERE t.customer_id IN (${placeholders})
-        AND (t.department IS NULL OR t.department != ?)
-        AND t.executor_id NOT IN (${placeholders})
       ORDER BY 
         CASE t.status 
           WHEN 'in_progress' THEN 1 
@@ -334,7 +374,7 @@ router.get('/created-by-members', authenticateToken, (req: Request, res: Respons
           WHEN 'cancelled' THEN 4 
         END,
         t.created_at DESC
-    `).all(...memberIds, department.code, ...memberIds) as TaskWithUsers[];
+    `).all(...filteredMemberIds) as TaskWithUsers[];
 
     res.json(tasks);
   } catch (error) {
@@ -357,8 +397,8 @@ router.put('/created-by-members/:id', authenticateToken, (req: Request, res: Res
       return;
     }
 
-    // Получаем сотрудников отдела
-    const members = getDepartmentMembers(headDepartment.id);
+    // Получаем сотрудников отдела (расширенный список)
+    const members = getAllDepartmentMembers(headDepartment.id, headDepartment.code);
     const memberIds = members.map(m => m.user_id);
 
     // Проверяем, что задача создана сотрудником отдела
@@ -444,8 +484,8 @@ router.delete('/created-by-members/:id', authenticateToken, (req: Request, res: 
       return;
     }
 
-    // Получаем сотрудников отдела
-    const members = getDepartmentMembers(headDepartment.id);
+    // Получаем сотрудников отдела (расширенный список)
+    const members = getAllDepartmentMembers(headDepartment.id, headDepartment.code);
     const memberIds = members.map(m => m.user_id);
 
     // Проверяем, что задача создана сотрудником отдела
