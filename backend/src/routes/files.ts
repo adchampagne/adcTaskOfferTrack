@@ -190,16 +190,12 @@ router.get('/download/:fileId', authenticateToken, (req: Request, res: Response)
       return;
     }
 
-    const stat = fs.statSync(filePath);
-    
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.original_name)}"; filename*=UTF-8''${encodeURIComponent(file.original_name)}`);
     res.setHeader('Content-Type', file.mime_type);
-    res.setHeader('Content-Length', stat.size);
-    res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'private, max-age=3600');
     
-    // Отправляем файл с поддержкой range requests
-    res.sendFile(filePath, { acceptRanges: true });
+    // Отправляем файл без range requests для download (избегаем 206 ошибки)
+    res.sendFile(filePath, { acceptRanges: false });
   } catch (error) {
     console.error('Download file error:', error);
     res.status(500).json({ error: 'Ошибка скачивания' });
