@@ -1391,6 +1391,26 @@ function TaskViewModal({
   const [showSubtaskModal, setShowSubtaskModal] = useState(false);
   const [showRevisionModal, setShowRevisionModal] = useState(false);
   const [showClarificationModal, setShowClarificationModal] = useState(false);
+  const [showStartWorkModal, setShowStartWorkModal] = useState(false);
+
+  // Отмечаем просмотр задачи исполнителем при открытии
+  React.useEffect(() => {
+    if (task.executor_id === currentUserId) {
+      tasksApi.markViewed(task.id).catch(() => {
+        // Игнорируем ошибки — это некритичная функция
+      });
+    }
+  }, [task.id, task.executor_id, currentUserId]);
+
+  // Обработчик закрытия модалки с проверкой статуса
+  const handleClose = () => {
+    // Если я исполнитель и задача в статусе "Ожидает" — показываем попап
+    if (task.executor_id === currentUserId && task.status === 'pending') {
+      setShowStartWorkModal(true);
+    } else {
+      onClose();
+    }
+  };
 
   // Проверяем, является ли пользователь руководителем
   const { data: headCheck } = useQuery({
@@ -1681,7 +1701,7 @@ function TaskViewModal({
               )}
             </div>
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="text-dark-400 hover:text-dark-200 transition-colors p-2 hover:bg-dark-700/50 rounded-lg flex-shrink-0"
             >
               <X className="w-6 h-6" />
@@ -2305,9 +2325,48 @@ function TaskViewModal({
           />
         )}
 
+        {/* Модальное окно "Начать работу?" */}
+        {showStartWorkModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <div className="glass-card w-full max-w-md p-6 animate-scale-in">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 mx-auto mb-4 bg-blue-500/20 rounded-full flex items-center justify-center">
+                  <PlayCircle className="w-8 h-8 text-blue-400" />
+                </div>
+                <h3 className="text-xl font-bold text-dark-100 mb-2">Начать работу над задачей?</h3>
+                <p className="text-dark-400 text-sm">
+                  Задача всё ещё в статусе "Ожидает". Хотите изменить статус на "В работе"?
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowStartWorkModal(false);
+                    onClose();
+                  }}
+                  className="btn-secondary flex-1"
+                >
+                  Нет, позже
+                </button>
+                <button
+                  onClick={() => {
+                    onStatusChange('in_progress');
+                    setShowStartWorkModal(false);
+                    onClose();
+                  }}
+                  className="btn-primary flex-1 flex items-center justify-center gap-2"
+                >
+                  <PlayCircle className="w-4 h-4" />
+                  Да, начать
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="p-4 border-t border-dark-700 flex gap-3">
-          <button onClick={onClose} className="btn-secondary flex-1 text-sm sm:text-base">
+          <button onClick={handleClose} className="btn-secondary flex-1 text-sm sm:text-base">
             Закрыть
           </button>
           {canEdit && (

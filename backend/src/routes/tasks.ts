@@ -825,6 +825,32 @@ router.get('/types/list', authenticateToken, (_req: Request, res: Response): voi
   res.json(taskTypeLabels);
 });
 
+// Отметить задачу как просмотренную исполнителем
+router.patch('/:id/view', authenticateToken, (req: Request, res: Response): void => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.userId;
+
+    const existing = db.prepare('SELECT * FROM tasks WHERE id = ?').get(id) as Task | undefined;
+    if (!existing) {
+      res.status(404).json({ error: 'Задача не найдена' });
+      return;
+    }
+
+    // Записываем время просмотра только если это исполнитель и задача ещё не просмотрена
+    if (existing.executor_id === userId && !(existing as Task & { viewed_at?: string }).viewed_at) {
+      db.prepare(`
+        UPDATE tasks SET viewed_at = ? WHERE id = ?
+      `).run(new Date().toISOString(), id);
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Mark task viewed error:', error);
+    res.status(500).json({ error: 'Ошибка сервера' });
+  }
+});
+
 // ===== ПОДЗАДАЧИ =====
 
 // Получить подзадачи для задачи

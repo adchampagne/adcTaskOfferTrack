@@ -1427,6 +1427,13 @@ try {
     console.log('✅ Достижения созданы/обновлены');
   }
 
+  // Миграция tasks: viewed_at колонка (время первого просмотра исполнителем)
+  if (!taskColumnNames.includes('viewed_at')) {
+    console.log('🔄 Миграция: добавление viewed_at к задачам...');
+    db.exec("ALTER TABLE tasks ADD COLUMN viewed_at DATETIME");
+    console.log('✅ Миграция viewed_at для задач завершена');
+  }
+
   // Миграция: обновление описаний стриков (рабочие дни вместо обычных)
   const streakDescCheck = db.prepare("SELECT description FROM achievements WHERE code = 'streak_7'").get() as { description: string } | undefined;
   if (streakDescCheck && !streakDescCheck.description.includes('рабочих')) {

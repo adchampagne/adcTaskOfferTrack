@@ -317,6 +317,12 @@ export const tasksApi = {
     const { data } = await api.post<Task>(`/tasks/${parentTaskId}/subtasks`, subtask);
     return data;
   },
+
+  // Отметить задачу как просмотренную исполнителем
+  markViewed: async (id: string) => {
+    const { data } = await api.patch(`/tasks/${id}/view`);
+    return data;
+  },
 };
 
 // Notifications API
