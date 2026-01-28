@@ -515,6 +515,14 @@ function HeadDashboard() {
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
+  const [memberTasksCollapsed, setMemberTasksCollapsed] = useState(false);
+  const [departmentTasksCollapsed, setDepartmentTasksCollapsed] = useState(false);
+  
+  // Состояния для секции "Задачи от сотрудников"
+  type MemberTasksSortType = 'date' | 'employee';
+  const [memberTasksSortType, setMemberTasksSortType] = useState<MemberTasksSortType>('date');
+  const [memberTasksSortDirection, setMemberTasksSortDirection] = useState<SortDirection>('desc');
+  const [collapsedMemberGroups, setCollapsedMemberGroups] = useState<Set<string>>(new Set());
 
   // Проверяем, является ли пользователь руководителем
   const { data: headCheck, isLoading: checkLoading } = useQuery({
@@ -612,6 +620,102 @@ function HeadDashboard() {
       })
       .map(([key, value]) => ({ dayKey: key, ...value }));
   }, [tasks, statusFilter, sortDirection]);
+
+  // Группировка задач от сотрудников (по дням или по сотрудникам)
+  const groupedMemberTasks = useMemo(() => {
+    if (memberTasksSortType === 'employee') {
+      // Группировка по сотрудникам
+      const groups: { [key: string]: { label: string; tasks: Task[] } } = {};
+      
+      const sorted = [...memberCreatedTasks].sort((a, b) => {
+        const nameA = a.customer_name || '';
+        const nameB = b.customer_name || '';
+        const compare = nameA.localeCompare(nameB);
+        return memberTasksSortDirection === 'asc' ? compare : -compare;
+      });
+      
+      sorted.forEach(task => {
+        const employeeKey = task.customer_id || 'unknown';
+        const employeeName = task.customer_name || 'Неизвестно';
+        
+        if (!groups[employeeKey]) {
+          groups[employeeKey] = {
+            label: employeeName,
+            tasks: []
+          };
+        }
+        
+        groups[employeeKey].tasks.push(task);
+      });
+      
+      return Object.entries(groups).map(([key, value]) => ({ 
+        groupKey: key, 
+        ...value 
+      }));
+    } else {
+      // Группировка по дням
+      const groups: { [key: string]: { date: Date; label: string; tasks: Task[] } } = {};
+      
+      const sorted = [...memberCreatedTasks].sort((a, b) => {
+        const dateA = new Date(a.deadline).getTime();
+        const dateB = new Date(b.deadline).getTime();
+        return memberTasksSortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+      });
+      
+      sorted.forEach(task => {
+        const taskDate = toMoscowTime(parseISO(task.deadline));
+        const dayKey = format(startOfDay(taskDate), 'yyyy-MM-dd');
+        
+        if (!groups[dayKey]) {
+          let label = formatMoscow(taskDate, 'd MMMM yyyy');
+          
+          if (isToday(taskDate)) {
+            label = 'Сегодня';
+          } else if (isYesterday(taskDate)) {
+            label = 'Вчера';
+          } else if (isTomorrow(taskDate)) {
+            label = 'Завтра';
+          }
+          
+          groups[dayKey] = {
+            date: startOfDay(taskDate),
+            label,
+            tasks: []
+          };
+        }
+        
+        groups[dayKey].tasks.push(task);
+      });
+      
+      return Object.entries(groups)
+        .sort(([keyA], [keyB]) => {
+          return memberTasksSortDirection === 'asc' 
+            ? keyA.localeCompare(keyB) 
+            : keyB.localeCompare(keyA);
+        })
+        .map(([key, value]) => ({ groupKey: key, ...value }));
+    }
+  }, [memberCreatedTasks, memberTasksSortType, memberTasksSortDirection]);
+
+  const toggleMemberGroupCollapse = (groupKey: string) => {
+    setCollapsedMemberGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) {
+        next.delete(groupKey);
+      } else {
+        next.add(groupKey);
+      }
+      return next;
+    });
+  };
+
+  const collapseMemberAll = () => {
+    setCollapsedMemberGroups(new Set(groupedMemberTasks.map(g => g.groupKey)));
+  };
+
+  const expandMemberAll = () => {
+    setCollapsedMemberGroups(new Set());
+  };
 
   const toggleDayCollapse = (dayKey: string) => {
     setCollapsedDays(prev => {
@@ -809,83 +913,237 @@ function HeadDashboard() {
         {/* Tasks Created By Members - Задачи, созданные сотрудниками */}
         {memberCreatedTasks.length > 0 && (
           <div className="glass-card p-6 animate-fade-in">
-            <h2 className="text-lg font-bold text-dark-100 mb-4 flex items-center gap-2">
-              <ExternalLink className="w-5 h-5 text-amber-400" />
-              Задачи от сотрудников
-              <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-amber-500/10 text-amber-400">
-                {memberCreatedTasks.length}
-              </span>
-            </h2>
-            <p className="text-dark-400 text-sm mb-4">
-              Задачи, которые ваши сотрудники поставили на другие отделы
-            </p>
-            
-            {memberTasksLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="skeleton h-16 rounded-xl" />
-                ))}
+            <button 
+              onClick={() => setMemberTasksCollapsed(!memberTasksCollapsed)}
+              className="w-full flex items-center justify-between text-left group"
+            >
+              <h2 className="text-lg font-bold text-dark-100 flex items-center gap-2">
+                <ExternalLink className="w-5 h-5 text-amber-400" />
+                Задачи от сотрудников
+                <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-amber-500/10 text-amber-400">
+                  {memberCreatedTasks.length}
+                </span>
+              </h2>
+              <div className="text-dark-400 group-hover:text-dark-200 transition-colors">
+                {memberTasksCollapsed ? (
+                  <ChevronRight className="w-5 h-5" />
+                ) : (
+                  <ChevronDown className="w-5 h-5" />
+                )}
               </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-dark-700/50">
-                      <th className="text-left py-3 px-4 text-dark-400 font-medium">Задача</th>
-                      <th className="text-left py-3 px-4 text-dark-400 font-medium">Создал</th>
-                      <th className="text-left py-3 px-4 text-dark-400 font-medium">Исполнитель</th>
-                      <th className="text-left py-3 px-4 text-dark-400 font-medium">Статус</th>
-                      <th className="text-left py-3 px-4 text-dark-400 font-medium">Дедлайн</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {memberCreatedTasks.map((task) => {
-                      const isOverdue = isPast(new Date(task.deadline)) && task.status !== 'completed' && task.status !== 'cancelled';
-                      const isDueToday = isToday(new Date(task.deadline));
+            </button>
+            
+            {!memberTasksCollapsed && (
+              <>
+                <p className="text-dark-400 text-sm mb-4 mt-4">
+                  Задачи, которые ваши сотрудники поставили на другие отделы
+                </p>
+                
+                {/* Контролы сортировки */}
+                <div className="flex flex-wrap items-center gap-2 mb-4 pb-4 border-b border-dark-700/50">
+                  <button
+                    onClick={() => setMemberTasksSortType('date')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                      memberTasksSortType === 'date' 
+                        ? 'bg-amber-500/20 text-amber-400' 
+                        : 'bg-dark-700/50 text-dark-300 hover:bg-dark-700'
+                    }`}
+                  >
+                    <Calendar className="w-4 h-4" />
+                    По датам
+                  </button>
+                  <button
+                    onClick={() => setMemberTasksSortType('employee')}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+                      memberTasksSortType === 'employee' 
+                        ? 'bg-amber-500/20 text-amber-400' 
+                        : 'bg-dark-700/50 text-dark-300 hover:bg-dark-700'
+                    }`}
+                  >
+                    <Users className="w-4 h-4" />
+                    По сотрудникам
+                  </button>
+                  
+                  <div className="h-4 w-px bg-dark-700/50 mx-1" />
+                  
+                  <button
+                    onClick={() => setMemberTasksSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dark-700/50 text-dark-300 hover:bg-dark-700 transition-colors text-sm"
+                  >
+                    {memberTasksSortDirection === 'desc' ? (
+                      <>
+                        <ArrowDown className="w-4 h-4" />
+                        {memberTasksSortType === 'date' ? 'Сначала новые' : 'А → Я'}
+                      </>
+                    ) : (
+                      <>
+                        <ArrowUp className="w-4 h-4" />
+                        {memberTasksSortType === 'date' ? 'Сначала старые' : 'Я → А'}
+                      </>
+                    )}
+                  </button>
+                  
+                  <div className="h-4 w-px bg-dark-700/50 mx-1" />
+                  
+                  <button
+                    onClick={expandMemberAll}
+                    className="px-3 py-1.5 rounded-lg bg-dark-700/50 text-dark-300 hover:bg-dark-700 transition-colors text-sm"
+                  >
+                    Развернуть все
+                  </button>
+                  <button
+                    onClick={collapseMemberAll}
+                    className="px-3 py-1.5 rounded-lg bg-dark-700/50 text-dark-300 hover:bg-dark-700 transition-colors text-sm"
+                  >
+                    Свернуть все
+                  </button>
+                </div>
+                
+                {memberTasksLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="skeleton h-16 rounded-xl" />
+                    ))}
+                  </div>
+                ) : groupedMemberTasks.length === 0 ? (
+                  <p className="text-dark-400 text-center py-8">
+                    Нет задач
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {groupedMemberTasks.map(({ groupKey, label, tasks: groupTasks }) => {
+                      const isCollapsed = collapsedMemberGroups.has(groupKey);
+                      const isDateGroup = memberTasksSortType === 'date';
+                      
+                      // Считаем статистику по группе
+                      const pendingCount = groupTasks.filter(t => t.status === 'pending').length;
+                      const inProgressCount = groupTasks.filter(t => t.status === 'in_progress').length;
+                      const completedCount = groupTasks.filter(t => t.status === 'completed').length;
                       
                       return (
-                        <tr 
-                          key={task.id} 
-                          className="border-b border-dark-700/30 hover:bg-dark-800/30 transition-colors cursor-pointer"
-                          onClick={() => setViewingTask(task)}
-                        >
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-2">
-                              {task.task_number && (
-                                <span className="text-xs font-mono text-dark-500">#{task.task_number}</span>
+                        <div key={groupKey} className="rounded-xl border border-dark-700/50 overflow-hidden">
+                          {/* Заголовок группы */}
+                          <button
+                            onClick={() => toggleMemberGroupCollapse(groupKey)}
+                            className="w-full flex items-center justify-between p-4 bg-dark-800/50 hover:bg-dark-800/70 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              {isCollapsed ? (
+                                <ChevronRight className="w-5 h-5 text-dark-400" />
+                              ) : (
+                                <ChevronDown className="w-5 h-5 text-dark-400" />
                               )}
-                              <span className="text-dark-100 font-medium truncate max-w-[200px]">{task.title}</span>
-                            </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-2">
-                              <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-xs">
-                                {task.customer_name?.charAt(0)}
+                              <div className="flex items-center gap-2">
+                                {isDateGroup ? (
+                                  <Calendar className="w-4 h-4 text-amber-400" />
+                                ) : (
+                                  <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-xs">
+                                    {label.charAt(0)}
+                                  </div>
+                                )}
+                                <span className="font-semibold text-dark-200">
+                                  {label}
+                                </span>
+                                <span className="text-sm text-dark-500">
+                                  ({groupTasks.length} {groupTasks.length === 1 ? 'задача' : groupTasks.length < 5 ? 'задачи' : 'задач'})
+                                </span>
                               </div>
-                              <span className="text-dark-200 text-sm">{task.customer_name}</span>
                             </div>
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className="text-dark-300 text-sm">{task.executor_name}</span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${getStatusColor(task.status)}`}>
-                              {getStatusIcon(task.status)}
-                              {taskStatusLabels[task.status]}
-                            </span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <span className={`text-sm ${isOverdue ? 'text-red-400' : isDueToday ? 'text-amber-400' : 'text-dark-300'}`}>
-                              {formatMoscow(new Date(task.deadline), 'd MMM, HH:mm')}
-                              {isOverdue && ' (!)'}
-                            </span>
-                          </td>
-                        </tr>
+                            
+                            {/* Мини-статистика по группе */}
+                            <div className="flex items-center gap-2">
+                              {pendingCount > 0 && (
+                                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-amber-500/10 text-amber-400">
+                                  <Clock className="w-3 h-3" />
+                                  {pendingCount}
+                                </span>
+                              )}
+                              {inProgressCount > 0 && (
+                                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-blue-500/10 text-blue-400">
+                                  <AlertCircle className="w-3 h-3" />
+                                  {inProgressCount}
+                                </span>
+                              )}
+                              {completedCount > 0 && (
+                                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-green-500/10 text-green-400">
+                                  <CheckCircle className="w-3 h-3" />
+                                  {completedCount}
+                                </span>
+                              )}
+                            </div>
+                          </button>
+                          
+                          {/* Задачи группы */}
+                          {!isCollapsed && (
+                            <div className="divide-y divide-dark-700/30">
+                              {groupTasks.map((task) => {
+                                const isOverdue = isPast(new Date(task.deadline)) && task.status !== 'completed' && task.status !== 'cancelled';
+                                const isDueToday = isToday(new Date(task.deadline));
+                                
+                                return (
+                                  <div
+                                    key={task.id}
+                                    onClick={() => setViewingTask(task)}
+                                    className="p-4 hover:bg-dark-800/30 transition-colors cursor-pointer flex items-center justify-between gap-4"
+                                  >
+                                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                                      {/* Статус */}
+                                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs flex-shrink-0 ${getStatusColor(task.status)}`}>
+                                        {getStatusIcon(task.status)}
+                                        {taskStatusLabels[task.status]}
+                                      </span>
+                                      
+                                      {/* Задача */}
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                          {task.task_number && (
+                                            <span className="text-xs font-mono text-dark-500 flex-shrink-0">#{task.task_number}</span>
+                                          )}
+                                          <span className="text-dark-100 font-medium truncate">{task.title}</span>
+                                        </div>
+                                        <div className="flex items-center gap-3 mt-1 text-sm text-dark-400">
+                                          {!isDateGroup && (
+                                            <span className={`${isOverdue ? 'text-red-400' : isDueToday ? 'text-amber-400' : ''}`}>
+                                              {formatMoscow(new Date(task.deadline), 'd MMM, HH:mm')}
+                                              {isOverdue && ' (!)'}
+                                            </span>
+                                          )}
+                                          {isDateGroup && (
+                                            <span className="flex items-center gap-1">
+                                              <div className="w-4 h-4 rounded bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white font-bold text-[8px]">
+                                                {task.customer_name?.charAt(0)}
+                                              </div>
+                                              {task.customer_name}
+                                            </span>
+                                          )}
+                                          <span className="text-dark-500">→</span>
+                                          <span>{task.executor_name}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Дедлайн (только для группировки по датам) */}
+                                    {isDateGroup && (
+                                      <div className="text-right flex-shrink-0">
+                                        <p className={`text-sm font-medium ${isOverdue ? 'text-red-400' : isDueToday ? 'text-amber-400' : 'text-dark-300'}`}>
+                                          {formatMoscow(new Date(task.deadline), 'HH:mm')}
+                                        </p>
+                                        {isOverdue && (
+                                          <p className="text-xs text-red-400">просрочено</p>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
-                  </tbody>
-                </table>
-              </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -893,30 +1151,46 @@ function HeadDashboard() {
         {/* Tasks List */}
         <div className="glass-card p-6 animate-fade-in">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-            <h2 className="text-lg font-bold text-dark-100 flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-primary-400" />
-              Задачи отдела
-            </h2>
+            <button 
+              onClick={() => setDepartmentTasksCollapsed(!departmentTasksCollapsed)}
+              className="flex items-center gap-2 group"
+            >
+              <div className="text-dark-400 group-hover:text-dark-200 transition-colors">
+                {departmentTasksCollapsed ? (
+                  <ChevronRight className="w-5 h-5" />
+                ) : (
+                  <ChevronDown className="w-5 h-5" />
+                )}
+              </div>
+              <h2 className="text-lg font-bold text-dark-100 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-primary-400" />
+                Задачи отдела
+              </h2>
+            </button>
             
-            <div className="flex flex-wrap gap-2">
-              {(['all', 'pending', 'in_progress', 'completed'] as const).map((status) => (
-                <button
-                  key={status}
-                  onClick={() => setStatusFilter(status)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    statusFilter === status
-                      ? 'bg-primary-500 text-white'
-                      : 'bg-dark-700/50 text-dark-400 hover:bg-dark-700'
-                  }`}
-                >
-                  {status === 'all' ? 'Все' : taskStatusLabels[status]}
-                </button>
-              ))}
-            </div>
+            {!departmentTasksCollapsed && (
+              <div className="flex flex-wrap gap-2">
+                {(['all', 'pending', 'in_progress', 'completed'] as const).map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => setStatusFilter(status)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      statusFilter === status
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-dark-700/50 text-dark-400 hover:bg-dark-700'
+                    }`}
+                  >
+                    {status === 'all' ? 'Все' : taskStatusLabels[status]}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* Контролы сортировки и сворачивания */}
-          <div className="flex flex-wrap items-center gap-2 mb-4 pb-4 border-b border-dark-700/50">
+          {!departmentTasksCollapsed && (
+            <>
+              {/* Контролы сортировки и сворачивания */}
+              <div className="flex flex-wrap items-center gap-2 mb-4 pb-4 border-b border-dark-700/50">
             <button
               onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-dark-700/50 text-dark-300 hover:bg-dark-700 transition-colors text-sm"
@@ -1089,6 +1363,8 @@ function HeadDashboard() {
                 );
               })}
             </div>
+          )}
+            </>
           )}
         </div>
       </div>
