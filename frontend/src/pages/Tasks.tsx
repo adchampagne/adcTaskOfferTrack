@@ -301,11 +301,16 @@ function TaskModal({
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
-    if (!selectedFiles) return;
-    setPendingFiles(prev => [...prev, ...Array.from(selectedFiles)]);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (!selectedFiles || selectedFiles.length === 0) return;
+    
+    // Сохраняем файлы до сброса input
+    const filesArray = Array.from(selectedFiles);
+    
+    // Сбрасываем input сразу через event target (более надёжно чем через ref)
+    e.target.value = '';
+    
+    // Добавляем файлы к списку
+    setPendingFiles(prev => [...prev, ...filesArray]);
   };
 
   const removePendingFile = (index: number) => {
@@ -879,11 +884,16 @@ function CompleteTaskModal({
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
-    if (!selectedFiles) return;
-    setPendingFiles(prev => [...prev, ...Array.from(selectedFiles)]);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (!selectedFiles || selectedFiles.length === 0) return;
+    
+    // Сохраняем файлы до сброса input
+    const filesArray = Array.from(selectedFiles);
+    
+    // Сбрасываем input сразу через event target
+    e.target.value = '';
+    
+    // Добавляем файлы к списку
+    setPendingFiles(prev => [...prev, ...filesArray]);
   };
 
   const removePendingFile = (index: number) => {
@@ -1601,19 +1611,23 @@ function TaskViewModal({
     const selectedFiles = e.target.files;
     if (!selectedFiles || selectedFiles.length === 0) return;
 
+    // Сохраняем файлы до сброса input
+    const filesArray = Array.from(selectedFiles);
+    const filesCount = filesArray.length;
+    
+    // Сбрасываем input сразу
+    e.target.value = '';
+
     setIsUploading(true);
     try {
-      await filesApi.upload(task.id, Array.from(selectedFiles));
+      await filesApi.upload(task.id, filesArray);
       queryClient.invalidateQueries({ queryKey: ['task-files', task.id] });
-      toast.success(`Загружено файлов: ${selectedFiles.length}`);
+      toast.success(`Загружено файлов: ${filesCount}`);
     } catch (error: unknown) {
       const err = error as { response?: { data?: { error?: string } } };
       toast.error(err.response?.data?.error || 'Ошибка загрузки файлов');
     } finally {
       setIsUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
     }
   };
 
@@ -2930,7 +2944,7 @@ function Tasks() {
   });
 
   return (
-    <div className="flex flex-col h-full overflow-hidden -m-4 sm:-m-6 lg:-m-8">
+    <div className="flex flex-col h-full overflow-hidden min-w-0 -m-4 sm:-m-6 lg:-m-8">
       {/* Sticky Header */}
       <div className="flex-shrink-0 p-4 sm:p-6 lg:p-8 pb-4 space-y-4 border-b border-dark-700/50">
         {/* Header */}
@@ -3187,7 +3201,7 @@ function Tasks() {
       </div>
 
       {/* Scrollable Tasks list */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 pt-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 pt-4">
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (

@@ -265,8 +265,8 @@ function Layout() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 p-4 pt-20 lg:pt-4 min-h-0 flex flex-col">
-        <div className="glass-card flex-1 flex flex-col overflow-auto p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 p-4 pt-20 lg:pt-4 min-h-0 min-w-0 flex flex-col overflow-hidden">
+        <div className="glass-card flex-1 flex flex-col overflow-auto min-w-0 p-4 sm:p-6 lg:p-8">
           <Outlet />
         </div>
       </main>
