@@ -273,7 +273,7 @@ router.put('/users/:id', authenticateToken, (req: Request, res: Response): void 
     }
 
     // Валидация роли
-    if (role && !['admin', 'buyer', 'webdev', 'creo_manager', 'buying_head', 'bizdev', 'creo_head'].includes(role)) {
+    if (role && !['admin', 'buyer', 'webdev', 'creo_manager', 'buying_head', 'bizdev', 'creo_head', 'dev_head'].includes(role)) {
       res.status(400).json({ error: 'Неверная роль' });
       return;
     }
